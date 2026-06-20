@@ -6,9 +6,57 @@ HTML
   </head>
     <body>
       <h1>Estilo Hub</h1>
-      <div id="contenido"></div>
-    <script>
-      document.getElementById("contenido").innerHTML="Esperando datos de Firebase..."
+      <div id="contenido">cargando tareas...</div>
+      
+    <script type="module">
+      import { initializeApp } from
+        "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+      import {
+        getFirestore,
+        collection,
+        getDocs
+      }from 
+        "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+      const firebaseConfig = {
+        apikey: "AizaSyAa3tscobg263CLdVyrUN7ZrB4Lbo-1JgQ",
+        authDomain: "estilo-hub.firebaseapp.com",
+        projectId: "estilo-hub"
+          storageBucket: "estilo-hub.firebasestorange.app",
+        messagingSenderId: "442111984908",
+        appId: "1:442111984908:web:28aa9a2ca682c3174b3529"
+      };
+      
+      const app= initializeApp(firebaseConfig);
+      const db= getFirestore(app);
+
+      const contenedor = document.getElementById("contenido";
+      
+      async function cargarTareas() {
+        try {
+          const snapshot = await getDocs(collection(db."tareas"));
+          let html = "";
+          snapshot.forEach((doc) => {
+            const tarea = doc.data();
+
+            if (tarea.activa === tue) {
+              html +=´
+                <div style="border:1px solid #ccc;padding:15px;margin:15px 0:">
+                <h3>${tarea.titulo || ""}</h3>
+              <p><strong>categoría:</strong> $
+              {tarea.categoria || ""}</p>
+              <p>${tarea.descripcion  || ""}</p>
+              <p><strong>Tiempo:</strong> $
+              {tarea.tiempo_requerido || ""}</p>
+                </div>
+              ´;
+            }
+          }), 
+            contenedor.innerHTML = html || "no se encontraron tareas activas.";
+        }catch (error) {
+          contenedor.innerHTML = "error cargando tareas.";
+          console.error(error);
+        }
+      }
+      cargarTareas();
         </script>
-    </body>
-</html> 
+
