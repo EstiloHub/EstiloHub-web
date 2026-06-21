@@ -54,8 +54,8 @@
             
           contenedor.innerHTML = html || "no se encontraron tareas activas.";
         }catch (error) {
-          contenedor.innerHTML = "error cargando tareas.";
-          console.error(error);
+          contenedor.innerHTML = 
+          "ERROR:" + error.message;
         }
       }
       
