@@ -17,10 +17,11 @@ HTML
         getDocs
       }from 
         "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+     
       const firebaseConfig = {
-        apikey: "AizaSyAa3tscobg263CLdVyrUN7ZrB4Lbo-1JgQ",
+        apikey: "AIzaSyAa3tscObg263CLdVyrUN7ZrB4LbO-1JgQ",
         authDomain: "estilo-hub.firebaseapp.com",
-        projectId: "estilo-hub"
+        projectId: "estilo-hub",
           storageBucket: "estilo-hub.firebasestorange.app",
         messagingSenderId: "442111984908",
         appId: "1:442111984908:web:28aa9a2ca682c3174b3529"
@@ -29,34 +30,36 @@ HTML
       const app= initializeApp(firebaseConfig);
       const db= getFirestore(app);
 
-      const contenedor = document.getElementById("contenido";
+      const contenedor = document.getElementById("contenido");
       
       async function cargarTareas() {
         try {
-          const snapshot = await getDocs(collection(db."tareas"));
+          const snapshot = await getDocs(collection(db,"tareas"));
+          
           let html = "";
+          
           snapshot.forEach((doc) => {
             const tarea = doc.data();
 
             if (tarea.activa === tue) {
-              html +=´
+              html +=`
                 <div style="border:1px solid #ccc;padding:15px;margin:15px 0:">
                 <h3>${tarea.titulo || ""}</h3>
-              <p><strong>categoría:</strong> $
-              {tarea.categoria || ""}</p>
+              <p><strong>categoría:</strong> ${tarea.categoria || ""}</p>
               <p>${tarea.descripcion  || ""}</p>
-              <p><strong>Tiempo:</strong> $
-              {tarea.tiempo_requerido || ""}</p>
+              <p><strong>Tiempo:</strong> ${tarea.tiempo_requerido || ""}</p>
                 </div>
-              ´;
+              `;
             }
-          }), 
-            contenedor.innerHTML = html || "no se encontraron tareas activas.";
+          }); 
+            
+          contenedor.innerHTML = html || "no se encontraron tareas activas.";
         }catch (error) {
           contenedor.innerHTML = "error cargando tareas.";
           console.error(error);
         }
       }
+      
       cargarTareas();
         </script>
 
