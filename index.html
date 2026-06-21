@@ -40,11 +40,11 @@
           snapshot.forEach((doc) => {
             const tarea = doc.data();
 
-            if (1 === 1) {
+            if (tarea.activa) {
               html += `
                 <div style="border:1px solid #ccc;padding:15px;margin:15px ;">
                 <h3>${tarea.titulo || ""}</h3>
-              <p><strong>categoría:</strong> ${tarea.categoria || ""}</p>
+              <p><strong>Categoria:</strong> ${tarea.Categoria || ""}</p>
               <p>${tarea.descripcion  || ""}</p>
               <p><strong>Tiempo:</strong> ${tarea.tiempo_requerido || ""}</p>
                 </div>
