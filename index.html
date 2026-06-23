@@ -1,64 +1,86 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
   <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Estilo Hub</title>
-  </head>
-    <body>
-      <h1>Estilo Hub</h1>
-      <div id="contenido">cargando tareas...</div>
-      
-    <script type="module">
-      import { initializeApp } from
-        "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
-      import {
-        getFirestore,
-        collection,
-        getDocs
-      }from 
-        "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
-     
-      const firebaseConfig = {
-        apikey: "AIzaSyAa3tscObg263CLdVyrUN7ZrB4LbO-1JgQ",
-        authDomain: "estilo-hub.firebaseapp.com",
-        projectId: "estilo-hub",
-          storageBucket: "estilo-hub.firebasestorange.app",
-        messagingSenderId: "442111984908",
-        appId: "1:442111984908:web:28aa9a2ca682c3174b3529"
-      };
-      
-      const app= initializeApp(firebaseConfig);
-      const db= getFirestore(app);
-
-      const contenedor = document.getElementById("contenido");
-      
-      async function cargarTareas() {
-        try {
-          const snapshot = await getDocs(collection(db,"tareas"));
-          
-          let html = "";
-          
-          snapshot.forEach((doc) => {
-            const tarea = doc.data();
-
-            if (tarea.activa) {
-              html += `
-                <div style="border:1px solid #ccc;padding:15px;margin:15px ;">
-                <h3>${tarea.titulo || ""}</h3>
-              <p><strong>Categoria:</strong> ${tarea.Categoria || ""}</p>
-              <p>${tarea.descripcion  || ""}</p>
-              <p><strong>Tiempo:</strong> ${tarea.tiempo_requerido || ""}</p>
-                </div>
-              `;
-            }
-          }); 
-            
-          contenedor.innerHTML = html || "no se encontraron tareas activas.";
-        }catch (error) {
-          contenedor.innerHTML = 
-          "ERROR:" + error.message;
-        }
+    
+    <style>
+   
+      body{
+        margin:0;
+        background:#111;
+        color:white;
+        front-family:arial, sans-serif;
       }
-      
-      cargarTareas();
-        </script>
+      .container{
+        max-width:800px;
+        margin:auto;
+        text_aling:center;
+        padding:60px 20px;
+      }
+      h1{
+        front-size:42px;
+        margin-bottom:30px;
+      }
+      .subtitulo{
+        front-size:20px;
+        margin-bottom:40px;
+      }
+      .botones{
+        margin-bottom:60px;
+      }
+      button{
+        padding:15px 25px;
+        margin:10px;
+        border:none;
+        border-radius:10px;
+        cursor:pointer;
+        font-size:16px;
+      }
+      .crear{
+        background:#4CAF50;
+        color:white;
+      }
+      .long{
+        background:#2196F3;
+        color:white;
+      }
+      .mensaje{
+        margin-top:40px;
+        line-height:1.8;
+        font-size:18px;
+      }
+      </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Estilo Hub</h1>
+      <p class="subtitulo"> 
+        Crea tu cuenta o inicia sesión para comenzar
+      </p>
+      <div class="botones">
+        <button class="crear">
+          Crear cuenta
+        </button>
+        <button class="login">
+          Iniciar sesión
+        </button>
+      </div>
+      <div class="mensaje">
+        <p>
+          Gracias por confiar en Estilo Hub
+        </p>
 
+        <p>
+          Nos encontramos en una estapa de crecimiento y cada usuario que se une ayuda a construir una mejor plataforma para todos.
+        </p>
+
+      </div>
+    </div>
+
+  </body>
+</html> 
+        
+        
+        
