@@ -9,7 +9,7 @@ import {
 } from
   "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 const firebaseConfig= {
-  apikey: "AIzaSyAa3tscObg263CLdVyrUN7ZrB4LbO-1jgQ",
+  apikey: "AIzaSyAa3tscObg263CLdVyrUN7ZrB4LbO-1JgQ",
   authDomain: "estilo-hub.firebaseapp.com",
   projectId: "estilo-hub",
   storangeBucket: "estilo-hub.firebasestorange.app",
