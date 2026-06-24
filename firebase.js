@@ -13,7 +13,7 @@ const firebaseConfig= {
   authDomain: "estilo-hub.firebaseapp.com",
   projectId: "estilo-hub",
   storangeBucket: "estilo-hub.firebasestorange.app",
-  messagingSenderId: "442111984808",
+  messagingSenderId: "442111984908",
   appId: "1.442111984908:web:28aa9a2ca682c3174b3529"
 };
 const app= initializeApp(firebaseConfig);
