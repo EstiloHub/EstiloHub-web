@@ -52,20 +52,25 @@
   <body>
     <div class="container">
       <h1>Registro</h1>
-      <input type="email" placeholder="Correo electrónico:">
-      <input type="password" placeholder="Contraseña:">
-      <input type="password" placeholder="Confirmar contraseña:">
-      <input type="email" placeholder="Correo asociado a Payoneer:">
-      <input type="text" placeholder="Código de acceso:">
-      <button class="crear">
+      <input id="email" type="email" placeholder="Correo electrónico:">
+      <input id="password" type="password" placeholder="Contraseña:">
+      <input id="confirmPassword" type="password" placeholder="Confirmar contraseña:">
+      <input id="payoneer" type="email" placeholder="Correo asociado a Payoneer:">
+      <input id="codigo" type="text" placeholder="Código de acceso:">
+      <button id="crearCuentaBtn" class="crear">
         Crear cuenta
       </button>
       <button class="volver"
         onclick="window.location.href='index.html'">
         Volver atrás
       </button>
-
+    
     </div>
+    <script type="module">
+
+      import { auth,db } from "./firebase.js";
+      console.log("firebase conectado");
+    </script>
 
   </body>
 </html>
