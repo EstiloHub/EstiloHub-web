@@ -51,21 +51,53 @@
   </head>
   <body>
     <div class="container">
+      <h1>Términos y condiciones - Fase 1</h1>
 
-      
-      <h1>Iniciar Sesión</h1>
-      <input type="email" placeholder="Correo electrónico:">
-      <input type="password" placeholder="Contraseña:">
-      <input type="text" placeholder="Código de acceso:">
-      <button class="login">
-        Iniciar sesión
-      </button>
-      <button class="volver"
-        onclick="window.location.href='index.html'">
-        Volver atrás
-      </button>
-
+      <p>
+        Esta plataforma se encuentra en fase de prueba.
+        Los usuarios podrán realizar tareas y participar en el crecimiento del sistema mientras se evalúa el rendimiento general de la plataforma.
+      </p>
+      <h2>Reglas</h2>
+      <ul>
+        <li>Los pagos se enviarán cuando el saldo  acumulado alcance el mínimo permitido por el metodo utilizado durante esta fase.</li>
+        <li>Las recompensas dependen de los ingresos reales generados por la plataforma.</li>
+        <li>No exiten pagos fijos garantizados durante esta fase de prueba.</li>
+        <li>Se recomienda tener una participación activa durante la semana, idealmente alrededor de 1 hora diaria en varios días, para evaluar correctamente el rendimiento del sistema.</li>
+        <li>El acceso es limitado por invitación.</li>
+        <li>El sistema continúa en fase de prueba y puede recibir cambios o actualizaciones.</li>b
+        <li>Esta fase tendrá una duración aproximada de 7-10 días, dependiendo de los resultados y de las pruebas necesarias.</li>
+      </ul>
+      <h2>Requisitos</h2>
+      <ul>
+        <li>Se requiere una cuenta en payoneer para recibir recompensas futuras.</li>
+        <li>El comportamiento abusivo, automarizado o inapropiado puede provocar expulsión.</li>
+      </ul>
+      <div class="checkbox-container">
+        <label>
+          <input type="checkbox" id="Aceptar">
+          He leído y acepto los términos y condiciones
+        </label>
+      </div>
+      <buttom id="continuarBtn"
+        onclick="window.location.href='registro.html'">
+        continuar
+      </buttom>
     </div>
+    <script>
+        const checkbox= document.getElementById("aceptar");
+        const boton= document.getEelementById("conntinuarBtn");
+        
+      checkbox.addEventListener("change", function(){
+          
+        if(this.cheked){
+            boton.style.display="box";
+          } else {
+            boton.style.display="none";
+          }
+
+        });
+
+    </script>
 
   </body>
 </html>
