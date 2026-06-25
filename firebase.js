@@ -33,7 +33,7 @@ const db= getFirestore(app);
 export { 
   auth,
   db,
-  // createUserwithEmailAndPassword,
+  createUserWithEmailAndPassword,
   doc,
   getDoc,
   setDoc,
