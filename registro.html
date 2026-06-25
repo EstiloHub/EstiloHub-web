@@ -57,6 +57,7 @@
       <input id="confirmPassword" type="password" placeholder="Confirmar contraseña:">
       <input id="payoneer" type="email" placeholder="Correo asociado a Payoneer:">
       <input id="codigo" type="text" placeholder="Código de acceso:">
+      
       <button id="crearCuentaBtn" class="crear">
         Crear cuenta
       </button>
@@ -80,6 +81,11 @@
       "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
       
       console.log("registro preparado");
+      
+      const botonCrear= document.getElementById("crearCuentaBtn");
+      botonCrear.addEventListiner("click, () = > {
+                alert("boton funcionando");
+      });
       
     </script>
 
