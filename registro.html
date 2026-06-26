@@ -121,7 +121,7 @@
         return;
       }
         const codigoSnap= await
-          buscadorCodigo(codigo.value.trim());
+          buscarCodigo(codigo.value.trim());
         if (!codigoSnap.exists()){
           alert("Código inválido.");
           return;
