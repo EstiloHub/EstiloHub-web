@@ -95,7 +95,7 @@
       
       console.log(botonCrear);
       botonCrear.addEventListener("click", () => {
-        if(email.value.trim() ===){
+        if(email.value.trim() === ""){
           alert("Ingrese un correo electrónico.");
           return;
         }
@@ -103,7 +103,7 @@
           alert("Ingrese una contraseña.");
           return;
         }
-        if/password.value !== confirmPassword.value){
+        if(password.value !== confirmPassword.value){
           alert("Las contraseñas no coinciden.");
           return;
         }
@@ -112,7 +112,7 @@
         return;
       }
       if(codigo.value.trim() === ""){
-        alert/"Ingrese el código de acceso.");
+        alert("Ingrese el código de acceso.");
         return;
       }
       alert("Validaciones correctas.");
