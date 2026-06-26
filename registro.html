@@ -92,9 +92,14 @@
       const confirmPassword= document.getElementById("confirmPassword");
       const payoneer= document.getElementById("payoneer");
       const codigo= document.getElementById("codigo");
+
+      async function buscarCodigo(codigoIngresado){
+        const codigoRef= doc(db, "codigos", codigoIngresado),
+          const codigoSnap= await getDoc(codigoRef);
+        return codigoSnap;
+      }
       
-      console.log(botonCrear);
-      botonCrear.addEventListener("click", () => {
+      botonCrear.addEventListener("click", async () => {
         if(email.value.trim() === ""){
           alert("Ingrese un correo electrónico.");
           return;
@@ -115,7 +120,13 @@
         alert("Ingrese el código de acceso.");
         return;
       }
-      alert("Validaciones correctas.");
+        const codigoSnap= await
+          buscadorCodigo(codigo.value.trim());
+        if (!codigoSnap.exists()){
+          alert("Código inválido.");
+          return;
+        }
+      alert("Código encontrado.");
                                  
       });
       
