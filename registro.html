@@ -87,7 +87,7 @@
         const codigoRef= doc(db, "codigos", codigoIngresado),
           const codigoSnap= await getDoc(codigoRef);
         return codigoSnap;
-      
+      }
       const botonCrear= document.getElementById("crearCuentaBtn");
       const email= document.getElementById("email");
       const password= document.getElementById("password");
@@ -116,7 +116,6 @@
         alert("Ingrese el código de acceso.");
         return;
       }
-        
         const codigoSnap= await
           buscadorCodigo(codigo.value.trim());
         if (!codigoSnap.exists()){
