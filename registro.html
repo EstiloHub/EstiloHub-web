@@ -86,6 +86,13 @@
       async function buscarCodigo(codigoIngresado) {
         const codigoRef= doc(db, "codigos", codigoIngresado);
         const codigoSnap= await getDoc(codigoRef);
+        if (!codigoSnap.exists()) {
+          console.log("Código no existente");
+          return null;
+        }
+        console.log("Código encontrado:");
+        console.log(codSnap.data());
+        
         return codigoSnap;
       }
 
@@ -98,7 +105,8 @@
       const codigo= document.getElementById("codigo");
       
       botonCrear.addEventListener("click", async () => {
-      
+      console.log("Botón presionado");
+        
         if(email.value.trim() === ""){
           alert("Ingrese un correo electrónico.");
           return;
@@ -121,10 +129,16 @@
       }
         const codigoSnap= await
           buscarCodigo(codigo.value.trim());
-        if (!codigoSnap.exists()){
+        if (!codigoSnap) {
           alert("Código inválido.");
           return;
         }
+        const data=codigoSnap.data();
+        if (!data.activo) {
+          alert("Este codigo está inactivo");
+          return;
+          console.log/"data del código:");
+          console.log(data);
                                  
       });
       
