@@ -83,21 +83,17 @@
       } from
       "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
       
-      console.log("registro preparado");
+      async function buscarCodigo(codigoIngresado){
+        const codigoRef= doc(db, "codigos", codigoIngresado),
+          const codigoSnap= await getDoc(codigoRef);
+        return codigoSnap;
       
-      const botonCrear= 
-        document.getElementById("crearCuentaBtn");
+      const botonCrear= document.getElementById("crearCuentaBtn");
       const email= document.getElementById("email");
       const password= document.getElementById("password");
       const confirmPassword= document.getElementById("confirmPassword");
       const payoneer= document.getElementById("payoneer");
       const codigo= document.getElementById("codigo");
-
-      async function buscarCodigo(codigoIngresado){
-        const codigoRef= doc(db, "codigos", codigoIngresado),
-          const codigoSnap= await getDoc(codigoRef);
-        return codigoSnap;
-      }
       
       botonCrear.addEventListener("click", async () => {
         if(email.value.trim() === ""){
@@ -120,6 +116,7 @@
         alert("Ingrese el código de acceso.");
         return;
       }
+        
         const codigoSnap= await
           buscadorCodigo(codigo.value.trim());
         if (!codigoSnap.exists()){
