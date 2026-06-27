@@ -84,7 +84,7 @@
       "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
     
       async function buscarCodigo(codigoIngresado) {
-        const codigoRef= doc(db, "codigos", codigoIngresado);
+        const codigoRef= doc(db, "codigos_acceso", codigoIngresado);
         const codigoSnap= await getDoc(codigoRef);
         if (!codigoSnap.exists()) {
           console.log("Código no existente");
