@@ -87,6 +87,8 @@
         console.log("Buscando documento:", codigoIngresado);
         const codigoRef= doc(db, "codigos_acceso", codigoIngresado);
         const codigoSnap= await getDoc(codigoRef);
+        console.log("¿Existe?:,codigoSnap.exists());
+                    console.log(codigoSnap);
         if (!codigoSnap.exists()) {
           console.log("Código no existente");
           return null;
