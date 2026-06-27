@@ -130,13 +130,14 @@
         const codigoSnap= await
           buscarCodigo(codigo.value.trim());
         if (!codigoSnap) {
-          alert("Código inválido.");
+          alert("Código inválido");
           return;
         }
-        const data=codigoSnap.data();
+        const data= codigoSnap.data();
         if (!data.activo) {
           alert("Este codigo está inactivo");
           return;
+        }
           console.log("data del código:");
           console.log(data);
                                  
