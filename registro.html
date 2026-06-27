@@ -84,6 +84,7 @@
       "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
     
       async function buscarCodigo(codigoIngresado) {
+        console.log("Buscando documento:"),
         const codigoRef= doc(db, "codigos_acceso", codigoIngresado);
         const codigoSnap= await getDoc(codigoRef);
         if (!codigoSnap.exists()) {
@@ -106,6 +107,7 @@
       
       botonCrear.addEventListener("click", async () => {
       console.log("Botón presionado");
+        console.log("Código escrito:",
         
         if(email.value.trim() === ""){
           alert("Ingrese un correo electrónico.");
@@ -134,11 +136,6 @@
           return;
         }
         const data= codigoSnap.data();
-        if (!data.activo) {
-          alert("Este codigo está inactivo");
-          return;
-        }
-          console.log("data del código:");
           console.log(data);
                                  
       });
