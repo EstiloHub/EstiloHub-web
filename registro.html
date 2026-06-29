@@ -75,28 +75,28 @@
       } from
          "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
         import {
-        doc,
-        getDoc,
-        setDoc,
-        updateDoc,
-        serverTimestamp 
+          collection,
+          query,
+          where,
+          getDocs
       } from
       "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
     
       async function buscarCodigo(codigoIngresado) {
         console.log("Buscando documento:", codigoIngresado);
-        const codigoRef= doc(db, "codigos_acceso", codigoIngresado);
-        const codigoSnap= await getDoc(codigoRef);
-        console.log("¿Existe?:",codigoSnap.exists());
-                    console.log(codigoSnap);
-        if (!codigoSnap.exists()) {
-          console.log("Código no existente");
+        const q= query(
+        collection(db, "codigos_acceso"),
+          where("codigo", "==", codigoIngresado)
+          );
+        const resultado= await getDocs(q);
+        
+        if (resultado.empty){
           return null;
         }
         console.log("Código encontrado:");
         console.log(codSnap.data());
         
-        return codigoSnap;
+        return resultado.docs[0];
       }
 
        const botonCrear= document.getElementById("crearCuentaBtn");
