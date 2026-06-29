@@ -110,17 +110,7 @@
       botonCrear.addEventListener("click", async () => {
       console.log("Botón presionado");
         console.log("Código escrito:", codigo.value.trim());
-      } 
-        const codigoSnap= await
-          buscarCodigo(codigo.value.trim());
-        if (!codigoSnap) {
-          alert("Código inválido");
-          return;
-        }
-        const data= codigoSnap.data();
-          console.log(data);
       }
-        
         if(email.value.trim() === ""){
           alert("Ingrese un correo electrónico.");
           return;
@@ -140,7 +130,16 @@
       if(codigo.value.trim() === ""){
         alert("Ingrese el código de acceso.");
         return;
-                                 
+      } 
+        const codigoSnap= await
+          buscarCodigo(codigo.value.trim());
+        if (!codigoSnap) {
+          alert("Código inválido");
+          return;
+        }
+        const data= codigoSnap.data();
+          console.log(data);                     
+      
       });
       
     </script>
