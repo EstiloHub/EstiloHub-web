@@ -108,25 +108,47 @@
       console.log("Botón presionado");
         console.log("Código escrito:", codigo.value.trim());
       
-        if(email.value.trim() === ""){
+        if(email.value.trim() === "") {
           alert("Ingrese un correo electrónico.");
           return;
         }
-        if(password.value === ""){
+        if(password.value.trim() === "") {
           alert("Ingrese una contraseña.");
           return;
         }
-        if(password.value !== confirmPassword.value){
+        if (confirmPassword.value.trim() === "") {
+          alert("Confirme la contraseña.");
+          return;
+        }
+        if(password.value !== confirmPassword.value) {
           alert("Las contraseñas no coinciden.");
           return;
         }
-        if(payoneer.value.trim() ===""){
+        if(payoneer.value.trim() === "") {
         alert("ingrese su correo de payoneer.");
         return;
       }
-      if(codigo.value.trim() === ""){
+      if(codigo.value.trim() === "") {
         alert("Ingrese el código de acceso.");
         return;
+      }
+        const codigoSnap= await
+        buscarCodigo(codigo.value.trim());
+        if (!codigoSnap) {
+          alert("Código inválido.");
+          return;
+        }
+        const data= codigoSnap.data();
+        if (!data.activo) {
+          alert("Código inactivo.");
+          return;
+        }
+        if (data.usado) {
+          alert("Este código ya fue utilizado.");
+          return;
+        }
+        alert("Todo correcto, Continúa el registro.");
+        
       });
       
     </script>
