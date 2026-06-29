@@ -110,7 +110,8 @@
       botonCrear.addEventListener("click", async () => {
       console.log("Botón presionado");
         console.log("Código escrito:", codigo.value.trim());
-          const codigoSnap= await
+      } 
+        const codigoSnap= await
           buscarCodigo(codigo.value.trim());
         if (!codigoSnap) {
           alert("Código inválido");
