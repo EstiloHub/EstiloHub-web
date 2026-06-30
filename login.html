@@ -18,12 +18,12 @@
       const botonIngresar= document.getElemntById("iniciarSesionBtn");
 
       botonIngresar.addEventListener("click", async () => {
-        if (email.value.trim() === ""){
+        if (email.value.trim() === "") {
           alert("Ingrese su correo electrónico.");
           return;
         }
           if (password.value.trim() === "") {
-            alert("Ingrese su contraseña.") {
+            alert("Ingrese su contraseña."); 
               return;
           }
             try {
@@ -32,9 +32,10 @@
                 email.value.trim(),
                 password.value
                 );
-              alert("¡Bienvenid@!);
+              alert("¡Bienvenid@!");
                     window.location.href= "inicio.html";
-            } catch (error);
+            } catch (error) {
+              console.error(error);
             alert("Correo o contraseña incorrectos.");
           }
       });
