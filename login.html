@@ -73,7 +73,9 @@
       
       const email= document.getElementById("email");
       const password= document.getElementById("password");
+        console.log(document.body.innerHTML);
       const botonIngresar= document.getElementById("iniciarSesionBtn");
+        console.log(botonIngresar);
 
       botonIngresar.addEventListener("click", async () => {
         if (email.value.trim() === "") {
