@@ -5,6 +5,40 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Iniciar Sesión</title>
 
+    <script type="module">
+      import { auth } from "./firebase.js";
+      
+      import {
+    signInWithEmailAndPassword
+    } from
+    "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+      
+      const email= document.getElementById("email");
+      const password= document.getElementById("password");
+      const botonIngresar= document.getElemntById("iniciarSesionBtn");
+
+      botonIngresar.addEventListener("click", async () => {
+        if (email.value.trim() === ""){
+          alert("Ingrese su correo electrónico.");
+          return;
+        }
+          if (password.value.trim() === "") {
+            alert("Ingrese su contraseña.") {
+              return;
+          }
+            try {
+              await singleInWithEmailAndPassword(
+                auth,
+                email.value.trim(),
+                password.value
+                );
+              alert("¡Bienvenid@!);
+                    window.location.href= "inicio.html";
+            } catch (error);
+            alert("Correo o contraseña incorrectos.");
+          }
+      });
+            
     <style>
 
       body{
@@ -52,19 +86,19 @@
   <body>
     <div class="container">
       <h1>Iniciar Sesión</h1>
-      <input type="email" placeholder="Correo electrónico:">
-      <input type="password" placeholder="Contraseña:">
-      <input type="text" placeholder="Código de acceso:">
-      <button class="login">
+      <input id= "email" type= "email" placeholder= "Correo electrónico:">
+      <input id= "password" type= "password" placeholder= "Contraseña:">
+    
+      <button ide= "inciarSeionBtn" class= "login">
         Iniciar sesión
       </button>
-      <button class="volver"
+      <button class= "volver"
         onclick="window.location.href='index.html'">
         Volver atrás
       </button>
 
     </div>
-
+    </script>       
   </body>
 </html>
 
