@@ -74,11 +74,15 @@
         createUserWithEmailAndPassword
       } from
          "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
-        import {
+        
+      import {
           collection,
           query,
           where,
-          getDocs
+          getDocs,
+          doc,
+          setDoc,
+          updateDoc
       } from
       "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
     
@@ -147,9 +151,35 @@
           alert("Este código ya fue utilizado.");
           return;
         }
-        alert("Todo correcto, Continúa el registro.");
-        
+       try {
+         const credencial= await
+         createUserWithEmailAndPassword(
+           auth,
+           email.value.trim(),
+           password.value
+           );
+         const uid= credencial.user.uid;
+         
+         await setDoc(doc(db, "users", uid), {
+           email: email.value.trim(),
+           payoneer: payoneer.value.trim(),
+           fechaRegistro: new Date().toISOString(),
+           admin: false 
       });
+         await updateDoc(codigoSnap.ref, {
+           usado: true,
+           emailUsuario: email.value.trim(),
+           uidUsuario: uid
+         });
+         
+         alert("¡Cuenta creada correctamente!");
+         window.location.href="inicio.html";
+
+       }
+        catch(error){
+          console.error(error);
+          alert("Error al crear la cuenta:" + error.message);
+        }
       
     </script>
 
