@@ -55,7 +55,7 @@
       <input id= "email" type= "email" placeholder= "Correo electrónico:">
       <input id= "password" type= "password" placeholder= "Contraseña:">
     
-      <button id= "inciarSeionBtn" class= "login">
+      <button id= "iniciarSesionBtn" class= "login">
         Iniciar sesión
       </button>
       <button class= "volver"
@@ -87,7 +87,7 @@
               return;
           }
             try {
-              await singleInWithEmailAndPassword(
+              await singInWithEmailAndPassword(
                 auth,
                 email.value.trim(),
                 password.value
