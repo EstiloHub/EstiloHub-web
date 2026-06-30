@@ -123,7 +123,9 @@
           } from
           "https://wwww.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 
+          console.log("script de incio cargado");
           onAuthStateChanged(auth, (user) => {
+          console.log("Usuario:", user);
           if (!user) {
           window.location.href= "login.html";
           return;
