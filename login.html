@@ -4,42 +4,6 @@
     <meta charset="UFT-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Iniciar Sesión</title>
-
-    <script type="module">
-      import { auth } from "./firebase.js";
-      
-      import {
-    signInWithEmailAndPassword
-    } from
-    "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
-      
-      const email= document.getElementById("email");
-      const password= document.getElementById("password");
-      const botonIngresar= document.getElementById("iniciarSesionBtn");
-
-      botonIngresar.addEventListener("click", async () => {
-        if (email.value.trim() === "") {
-          alert("Ingrese su correo electrónico.");
-          return;
-        }
-          if (password.value.trim() === "") {
-            alert("Ingrese su contraseña."); 
-              return;
-          }
-            try {
-              await singleInWithEmailAndPassword(
-                auth,
-                email.value.trim(),
-                password.value
-                );
-              alert("¡Bienvenid@!");
-                    window.location.href= "inicio.html";
-            } catch (error) {
-              console.error(error);
-            alert("Correo o contraseña incorrectos.");
-          }
-      });
-    </script>
             
     <style>
 
@@ -98,8 +62,42 @@
         onclick="window.location.href='index.html'">
         Volver atrás
       </button>
+      
+      <script type="module">
+      import { auth } from "./firebase.js";
+      
+      import {
+    signInWithEmailAndPassword
+    } from
+    "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+      
+      const email= document.getElementById("email");
+      const password= document.getElementById("password");
+      const botonIngresar= document.getElementById("iniciarSesionBtn");
 
-    </div>
+      botonIngresar.addEventListener("click", async () => {
+        if (email.value.trim() === "") {
+          alert("Ingrese su correo electrónico.");
+          return;
+        }
+          if (password.value.trim() === "") {
+            alert("Ingrese su contraseña."); 
+              return;
+          }
+            try {
+              await singleInWithEmailAndPassword(
+                auth,
+                email.value.trim(),
+                password.value
+                );
+              alert("¡Bienvenid@!");
+                    window.location.href= "inicio.html";
+            } catch (error) {
+              console.error(error);
+            alert("Correo o contraseña incorrectos.");
+          }
+      });
+        
     </script>       
   </body>
 </html>
