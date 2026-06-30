@@ -139,16 +139,16 @@
         const codigoSnap= await
         buscarCodigo(codigo.value.trim());
         if (!codigoSnap) {
-          alert("Código inválido.");
+          alert("El código de acceso no es válido.");
           return;
         }
         const data= codigoSnap.data();
         if (!data.activo) {
-          alert("Código inactivo.");
+          alert("El código de acceso no es válido.");
           return;
         }
         if (data.usado) {
-          alert("Este código ya fue utilizado.");
+          alert("El código de acceso no es válido.");
           return;
         }
        try {
