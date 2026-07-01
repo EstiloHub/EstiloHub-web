@@ -99,7 +99,7 @@
         <p><strong>Minutos acumulados:</strong> 0</p>
       </div>
       <hs>Tareas</hs>
-      <div class="Tarea">
+      <div class="tarea">
         <p><strong>Categoría:</strong> Lectura</p>
         <p><strong>Título:</strong> Ejemplo de tarea</p>
         <button class="ver">
@@ -115,10 +115,19 @@
           Cerrar sesión
         </button>
         
-        <script type="module>
-          
-          console.log("Hola desde el módulo");
-          alert("Hola desde el módulo");
+        <script type="module">
+          import { auth, db } from "./firebase.js";
+          import { onAuthStateChanged } from "firebase/auth";
+          onAuthStateChanged(auth, async (user) => {
+            import { onAuthStateChanged } from "https://wwww.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+            import { auth } from ".firebase.js";
+            onAuthStateChanged(auth, (user) => {
+              if (!user) {
+                window.location.href= "index.html";
+                return;
+              }
+              console.log("Usuario autenticado:", user.email);
+            });
           
         </script>
   </body>
