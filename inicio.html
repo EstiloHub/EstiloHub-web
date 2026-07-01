@@ -1,4 +1,3 @@
-<h1 style= "color:red;">PRUEBA INICIO</h1>
 <!DOCTYPE html>
 <html lang="es">
   
@@ -117,23 +116,10 @@
         </button>
         
         <script type="module>
-          import { auth } from "./firebase.js";
-
-          import {
-          onAuthStateChanged
-          } from
-          "https://wwww.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
-
-          console.log("script de incio cargado");
-          onAuthStateChanged(auth, (user) => {
-          console.log("Usuario:", user);
-          if (!user) {
-          window.location.href= "login.html";
-          return;
-          }
-          console.log("Usuario conectado:", user.email);
-          }
-          });
+          
+          console.log("Hola desde el módulo");
+          alert("Hola desde el módulo");
+          
         </script>
   </body>
 </html> 
