@@ -117,7 +117,9 @@
         
         <script type="module">
           import { auth } from "./firebase.js";
-            import { onAuthStateChanged } from 
+            import { 
+              onAuthStateChanged 
+            } from 
               "https://wwww.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
             onAuthStateChanged(auth, (user) => {
               if (!user) {
