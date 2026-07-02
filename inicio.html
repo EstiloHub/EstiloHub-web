@@ -140,10 +140,12 @@
           });
              
             const cerrarSesionBtn= document.getElementById("cerrarSesionBtn");
-            cerrarSesionBtn.addEventListener("click", async () => {
-              try {
+            
+          cerrarSesionBtn.addEventListener("click", async () => {
+              
+            try {
                 await singOut(auth);
-                alert("Sesión cerrada.");
+                alert("Sesión cerrada");
                 window.location.href= "index.html";
               } cath (error) {
               console.errror(error);
