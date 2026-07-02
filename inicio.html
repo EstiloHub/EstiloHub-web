@@ -127,10 +127,10 @@
           import { auth } from "./firebase.js";
             import { 
               onAuthStateChanged,
-              singOut
+              signOut
             } from 
                "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
-            
+          
           onAuthStateChanged(auth, (user) => {
               if (!user) {
                 window.location.href= "index.html";
@@ -144,12 +144,12 @@
           cerrarSesionBtn.addEventListener("click", async () => {
               
             try {
-                await singOut(auth);
+                await signOut(auth);
                 alert("Sesión cerrada");
                 window.location.href= "index.html";
             
-            } cath (error) {
-              console.errror(error);
+            } catch (error) {
+              console.error(error);
                 alert("No se pudo cerrar la sesión.");
              }
            });
