@@ -28,7 +28,7 @@
       .descripcion{
         text-align:center;
         color:#d0d0d0;
-          margin-bottom:35px;
+        margin-bottom:35px;
         line-height:1.6;
       }
       .estadisticas{
@@ -62,7 +62,7 @@
       button{
         width:100%;
         padding:14px;
-        margin-top::15px;
+        margin-top:15px;
         border:none;
         border-radius:10px;
         cursor:pointer;
@@ -102,7 +102,7 @@
         <p><strong>Minutos acumulados:</strong> 0</p>
       </div>
       
-      <hs>Tareas</hs>
+      <h2>Tareas</h2>
       <div class="tarea">
         <p><strong>Categoría:</strong> Lectura</p>
         <p><strong>Título:</strong> Ejemplo de tarea</p>
@@ -139,8 +139,16 @@
               console.log("Usuario autenticado:", user.email);
           });
              
-            const cerrarSesionBtn= document.getElementById("cerrarSesionBtn");
+          document.querySelector(".ver").addEventListener("click), () => {
+               window.location.href= "tarea.html";
+          });
+          
+          document.querySelector(".admin").addEventListener("click", () => {
+            window.location.href= "admin.html";
+          });
             
+          const cerrarSesionBtn= 
+          document.getElementById("cerrarSesionBtn");
           cerrarSesionBtn.addEventListener("click", async () => {
               
             try {
