@@ -136,7 +136,6 @@
                 window.location.href= "index.html";
                 return;
               }
-              console.log("Usuario autenticado:", user.email);
           });
              
           document.querySelector(".ver").addEventListener("click", () => {
@@ -154,7 +153,6 @@
               
             try {
                 await signOut(auth);
-                alert("Sesión cerrada");
                 window.location.href= "index.html";
             
             } catch (error) {
