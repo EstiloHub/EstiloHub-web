@@ -97,9 +97,9 @@
       </p>
       <div class="estadisticas">
         <h2>Tu progreso</h2>
-        <p><strong>Tareas realizadas:</strong> 0</p>
-        <p><strong>Días trabajados:</strong > 0</p>
-        <p><strong>Minutos acumulados:</strong> 0</p>
+        <p><strong>Tareas realizadas:</strong> <span id= "tareasRealizadas">0</span</p>
+        <p><strong>Días trabajados:</strong > <span id= "diasTrabajados">0</span></p>
+        <p><strong>Minutos acumulados:</strong> <span id= "minutosAcumulados">0</span></p>
       </div>
       
       <h2>Tareas</h2>
@@ -124,12 +124,17 @@
       </div>
         
         <script type="module">
-          import { auth } from "./firebase.js";
+          import { auth, db } from "./firebase.js";
             import { 
               onAuthStateChanged,
               signOut
             } from 
                "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+          import {
+            doc,
+            getDoc
+          } from
+            "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
           
           onAuthStateChanged(auth, (user) => {
               if (!user) {
@@ -137,7 +142,16 @@
                 return;
               }
           });
-             
+             try {
+               const usuarioRef= doc(db, "users", user.uid);
+               const usuarioSnap= await getDoc(usuarioRef);
+               if (usuarioSnap.exists()) {
+                 const datos= usuarioSnap.data();
+                 document.getElementById("tareasRealizadas").textContent= datos.tareasRealizadas || 0;
+                 
+
+
+                   
           document.querySelector(".ver").addEventListener("click", () => {
            window.location.hrf= "tarea.html";
           });
@@ -157,8 +171,8 @@
             
             } catch (error) {
               console.error(error);
-                alert("No se pudo cerrar la sesión.");
-             }
+                alert("No se pudo cerrar la sesión."
+             });
            });
           
        </script>
