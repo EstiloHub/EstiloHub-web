@@ -142,16 +142,22 @@
                 return;
               }
           });
-             try {
+             
+          try {
                const usuarioRef= doc(db, "users", user.uid);
                const usuarioSnap= await getDoc(usuarioRef);
                if (usuarioSnap.exists()) {
                  const datos= usuarioSnap.data();
-                 document.getElementById("tareasRealizadas").textContent= datos.tareasRealizadas || 0;
                  
-
-
-                   
+                 document.getElementById("tareasRealizadas").textContent= datos.tareasRealizadas || 0;
+                 document.getElementById("diasTrabajados").textContent= datos.diasTrabajados || 0;
+                 document.getElementById("minutosAcumulados").textContent= datos.minutosAcumulados || 0;
+               }
+             } cath (error) {
+               console.error(error);
+             }
+          });
+          
           document.querySelector(".ver").addEventListener("click", () => {
            window.location.hrf= "tarea.html";
           });
