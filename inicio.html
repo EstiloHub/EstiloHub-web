@@ -103,9 +103,8 @@
       </div>
       
       <h2>Tareas</h2>
-      <div class="tarea">
-        <p><strong>Categoría:</strong> Lectura</p>
-        <p><strong>Título:</strong> Ejemplo de tarea</p>
+      <div id="ListaTareas"></div>
+       
         <button class="ver">
           Ver contenido
         </button>
@@ -131,8 +130,13 @@
             } from 
                "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
           import {
-            doc,
-            getDoc
+            doc
+            getDoc,
+            collection,
+            query,
+            where,
+            ordenBy,
+            getDocs
           } from
             "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
           
@@ -153,13 +157,38 @@
                  document.getElementById("diasTrabajados").textContent= datos.diasTrabajados || 0;
                  document.getElementById("minutosAcumulados").textContent= datos.minutosAcumulados || 0;
                }
-             } cath (error) {
-               console.error(error);
-             }
-          });
+            const listaTareas=document.getElementById("listaTareas");
+            listasTareas.innerHTML= "";
+
+            const consulta= query(
+              collection(db, "tareas"),
+              where("activa", "==", true),
+              where("fase", "==", 1),
+              ordenBy("orden")
+              );
+            const tareaSnap= await
+            getDocs(consulta);
+            tareasSnap.forEach(docu) => {
+              const tarea= docu.data();
+              listaTareas.innerHTML += `
+              
+              </div class="tarea">
+              <p><strong>Categoría:</strong> ${tarea.categoria}</p>
+              <p><strong>Título:</strong> ${tarea.titulo}</p>
+              <p><strong>Tiempo:</strong> ${tarea.tiempo_requerido}</p>
+
+              <button class= "ver"
+              data-id="${docu.id}">
+              ver contenido
+              </button>
+              </div>
+              ;
+              });
           
-          document.querySelector(".ver").addEventListener("click", () => {
-           window.location.hrf= "tarea.html";
+          document.querySelectorAll(".ver").forEach(boton) => {
+           boton.addEventListener("click", () => {
+           const id= boton.dataset.id;
+           window.location.hrf= `tarea.html?id=${id}`;
           });
           
           document.querySelector(".admin").addEventListener("click", () => {
@@ -177,9 +206,10 @@
             
             } catch (error) {
               console.error(error);
-                alert("No se pudo cerrar la sesión."
-             });
+            
            });
+         
+          });
           
        </script>
  </body>
