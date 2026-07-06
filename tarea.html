@@ -1,1 +1,367 @@
+<!DOCTYPE html>
+<html lang="es">
 
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Tarea</title>
+
+<style>
+
+body{
+    margin:0;
+    background:#111;
+    color:white;
+    font-family:Arial, sans-serif;
+}
+
+.container{
+    max-width:800px;
+    margin:auto;
+    padding:40px 20px;
+}
+
+h1{
+    text-align:center;
+    margin-bottom:30px;
+}
+
+.tarjeta{
+
+    background:#1b1b1b;
+
+    border:1px solid #444;
+
+    border-radius:12px;
+
+    padding:25px;
+
+}
+
+p{
+
+    line-height:1.7;
+
+    font-size:17px;
+
+}
+
+.info{
+
+    margin-bottom:20px;
+
+}
+
+button{
+
+    width:100%;
+
+    padding:15px;
+
+    border:none;
+
+    border-radius:10px;
+
+    cursor:pointer;
+
+    font-size:16px;
+
+    margin-top:20px;
+
+}
+
+.completar{
+
+    background:#4CAF50;
+
+    color:white;
+
+}
+
+.volver{
+
+    background:#555;
+
+    color:white;
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<h1 id="titulo">
+Cargando...
+</h1>
+
+<div class="tarjeta">
+
+<div class="info">
+
+<p>
+
+<strong>Categoría:</strong>
+
+<span id="categoria"></span>
+
+</p>
+
+<p>
+
+<strong>Tiempo requerido:</strong>
+
+<span id="tiempo"></span> minutos
+
+</p>
+
+</div>
+
+<p id="contenido">
+
+</p>
+
+<button
+id="completarBtn"
+class="completar">
+
+Completar tarea
+
+</button>
+
+<button
+class="volver"
+onclick="window.location.href='inicio.html'">
+
+Volver
+
+</button>
+
+</div>
+
+</div>
+
+<script type="module">
+  
+import { auth, db } from "./firebase.js";
+
+import {
+  onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+
+import {
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  increment,
+  serverTimestamp
+} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+
+const params = new URLSearchParams(window.location.search);
+
+const tareaId = params.get("id");
+
+onAuthStateChanged(auth, async (user) => {
+
+    if (!user) {
+
+        window.location.href = "index.html";
+
+        return;
+
+    }
+
+    if (!tareaId) {
+
+        alert("No se encontró la tarea.");
+
+        window.location.href = "inicio.html";
+
+        return;
+
+    }
+
+    try {
+
+        const tareaRef = doc(db, "tareas", tareaId);
+
+        const tareaSnap = await getDoc(tareaRef);
+
+        if (!tareaSnap.exists()) {
+
+            alert("La tarea no existe.");
+
+            window.location.href = "inicio.html";
+
+            return;
+
+        }
+
+        const tarea = tareaSnap.data();
+
+        document.getElementById("titulo").textContent =
+            tarea.título;
+
+        document.getElementById("categoria").textContent =
+            tarea.categoría;
+
+        document.getElementById("tiempo").textContent =
+            tarea.tiempo_requerido;
+
+        document.getElementById("contenido").textContent =
+            tarea.descripción;
+
+        document.getElementById("completarBtn").addEventListener("click", async () => {
+                      try {
+
+                const progresoId = `${user.uid}_${tareaId}`;
+
+                const progresoRef = doc(
+                    db,
+                    "progreso_tareas",
+                    progresoId
+                );
+
+                const progresoSnap = await getDoc(progresoRef);
+
+                if (progresoSnap.exists()) {
+
+                    await updateDoc(progresoRef, {
+
+                        veces_realizada: increment(1),
+
+                        fecha_realizada: serverTimestamp(),
+
+                        minutos_realizados: increment(
+                            tarea.tiempo_requerido
+                        )
+
+                    });
+
+                } else {
+
+                    await setDoc(progresoRef, {
+
+                        email: user.email,
+
+                        usuario_id: user.uid,
+
+                        tarea_id: tareaId,
+
+                        fecha_realizada: serverTimestamp(),
+
+                        veces_realizada: 1,
+
+                        minutos_realizados:
+                            tarea.tiempo_requerido
+
+                    });
+
+                }
+
+                const estadisticasRef = doc(
+                    db,
+                    "estadísticas_usuario",
+                    user.uid
+                );
+
+                const estadisticasSnap =
+                    await getDoc(estadisticasRef);
+
+                if (estadisticasSnap.exists()) {
+
+                    const datos =
+                        estadisticasSnap.data();
+
+                    let sumarDia = false;
+
+                    if (!datos.ultima_fecha_trabajo) {
+
+                        sumarDia = true;
+
+                    } else {
+
+                        const ultima =
+                            datos.ultima_fecha_trabajo.toDate();
+
+                        const hoy = new Date();
+
+                        if (
+
+                            ultima.getFullYear() !== hoy.getFullYear() ||
+
+                            ultima.getMonth() !== hoy.getMonth() ||
+
+                            ultima.getDate() !== hoy.getDate()
+
+                        ) {
+
+                            sumarDia = true;
+
+                        }
+
+                    }
+
+                    const actualizar = {
+
+                        tareas_realizadas:
+                            increment(1),
+
+                        minutos_acumulados:
+                            increment(
+                                tarea.tiempo_requerido
+                            ),
+
+                        ultima_fecha_trabajo:
+                            serverTimestamp()
+
+                    };
+
+                    if (sumarDia) {
+
+                        actualizar.dias_trabajados =
+                            increment(1);
+
+                    }
+
+                    await updateDoc(
+                        estadisticasRef,
+                        actualizar
+                    );
+
+  }
+                                        alert("¡Tarea completada!");
+
+                window.location.href = "inicio.html";
+
+            } catch (error) {
+
+                console.error(error);
+
+                alert("Error al completar la tarea.");
+
+            }
+
+        });
+
+    } catch (error) {
+
+        console.error(error);
+
+        alert("Error al cargar la tarea.");
+
+    }
+
+});
+
+</script>
+
+</body>
+
+</html>
