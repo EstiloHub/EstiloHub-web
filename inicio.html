@@ -158,21 +158,21 @@
                  document.getElementById("minutosAcumulados").textContent= datos.minutosAcumulados || 0;
                }
             const listaTareas=document.getElementById("listaTareas");
-            listasTareas.innerHTML= "";
+            listaTareas.innerHTML= "";
 
             const consulta= query(
               collection(db, "tareas"),
               where("activa", "==", true),
               where("fase", "==", 1),
-              ordenBy("orden")
+              orderBy("orden")
               );
-            const tareaSnap= await
+            const tareasSnap= await
             getDocs(consulta);
-            tareasSnap.forEach(docu) => {
+            tareasSnap.forEach((docu) => {
               const tarea= docu.data();
               listaTareas.innerHTML += `
               
-              </div class="tarea">
+              <div class="tarea">
               <p><strong>Categoría:</strong> ${tarea.categoria}</p>
               <p><strong>Título:</strong> ${tarea.titulo}</p>
               <p><strong>Tiempo:</strong> ${tarea.tiempo_requerido}</p>
