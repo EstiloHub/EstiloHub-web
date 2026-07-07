@@ -186,14 +186,19 @@
            window.location.href= `tarea.html?id=${id}`;
           });
           });
-          
-          document.querySelector(".admin").addEventListener("click", () => {
+
+          const adminBtn= 
+            document.querySelector(".admin");
+            if (admiBtn) {
+           adminBtn.addEventListener("click", () => {
             window.location.href= "admin.html";
           });
+            }
             
           const cerrarSesionBtn= 
           document.getElementById("cerrarSesionBtn");
-          console.log(cerrarSesionBtn);
+
+            if (cerrarSesionBtn) {
           cerrarSesionBtn.addEventListener("click", async () => {
               
             try {
@@ -204,12 +209,11 @@
               console.error(error);
             alert("No se pudo cerrar la sesión.");
             }
-           });
-             
-          } catch (error) {
-            console.error(error);
-          }
+          
           });
+             
+          } 
+          
           
        </script>
  </body>
