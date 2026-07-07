@@ -140,7 +140,6 @@
                 window.location.href= "index.html";
                 return;
               }
-          });
              
           try {
                const usuarioRef= doc(db, "estadisticas_usuario", user.uid);
@@ -152,6 +151,10 @@
                  document.getElementById("diasTrabajados").textContent= datos.dias_trabajados || 0;
                  document.getElementById("minutosAcumulados").textContent= datos.minutos_acumulados || 0;
                }
+          } catch (error) {
+            console.error(error);
+          }
+          
             const listaTareas=document.getElementById("listaTareas");
             listaTareas.innerHTML= "";
 
@@ -202,7 +205,7 @@
             
             } catch (error) {
               console.error(error);
-            alert("Error al cargar los datos.");
+            alert("No se pudo cerrar la sesión.");
             }
            });
           
