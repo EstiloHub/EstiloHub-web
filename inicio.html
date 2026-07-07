@@ -165,17 +165,17 @@
             getDocs(consulta);
             tareasSnap.forEach((docu) => {
               const tarea= docu.data();
-              listaTareas.innerHTML += `
               
+              listaTareas.innerHTML += `
               <div class="tarea">
               <p><strong>Categoría:</strong> ${tarea.categoria}</p>
               <p><strong>Título:</strong> ${tarea.titulo}</p>
-              <p><strong>Tiempo:</strong> ${tarea.tiempo_requerido}</p>
 
               <button class= "ver"
               data-id="${docu.id}">
               ver contenido
               </button>
+              
               </div>
               `;
               });
