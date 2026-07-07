@@ -189,7 +189,7 @@
 
           const adminBtn= 
             document.querySelector(".admin");
-            if (admiBtn) {
+            if (adminBtn) {
            adminBtn.addEventListener("click", () => {
             window.location.href= "admin.html";
           });
@@ -211,7 +211,14 @@
             }
           
           });
-             
+
+       }
+            } catch (error) {
+              console.error(error);
+
+          }
+          });
+              
        </script>
  </body>
 </html> 
