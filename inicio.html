@@ -151,10 +151,7 @@
                  document.getElementById("diasTrabajados").textContent= datos.dias_trabajados || 0;
                  document.getElementById("minutosAcumulados").textContent= datos.minutos_acumulados || 0;
                }
-          } catch (error) {
-            console.error(error);
-          }
-          
+            
             const listaTareas=document.getElementById("listaTareas");
             listaTareas.innerHTML= "";
 
@@ -208,6 +205,11 @@
             alert("No se pudo cerrar la sesión.");
             }
            });
+             
+          } catch (error) {
+            console.error(error);
+          }
+          });
           
        </script>
  </body>
