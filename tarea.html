@@ -185,9 +185,8 @@ onAuthStateChanged(auth, async (user) => {
         document.getElementById("titulo").textContent =
             tarea.titulo;
 
-        document.getElementById("tiempo").textContent =
-            `${tarea.tiempo_requerido} minutos‵;
-
+        document.getElementById("tiempo").textContent = `${tarea.tiempo_requerido} minutos`;
+        
         document.getElementById("contenido").textContent =
             tarea.descripcion;
             
