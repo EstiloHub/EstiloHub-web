@@ -219,7 +219,17 @@ onAuthStateChanged(auth, async (user) => {
 
         document.getElementById("completarBtn").addEventListener("click", async () => {
                       try {
+                          
+const completarBtn = document.getElementById("completarBtn");
 
+completarBtn.style.display = "none";
+
+setTimeout(() => {
+
+    completarBtn.style.display = "block";
+
+}, tarea.tiempo_requerido * 60 * 1000);
+                          
                 const progresoId = `${user.uid}_${tareaId}`;
 
                 const progresoRef = doc(
