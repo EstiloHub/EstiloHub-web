@@ -31,19 +31,15 @@ h1{
 .tarjeta{
 
     background:#1b1b1b;
-
     border:1px solid #444;
-
     border-radius:12px;
-
-    padding:25px;
+    padding:15px;
 
 }
 
 p{
 
     line-height:1.7;
-
     font-size:17px;
 }
     #contenido{
@@ -60,17 +56,11 @@ p{
 button{
 
     width:100%;
-
     padding:15px;
-
     border:none;
-
     border-radius:10px;
-
     cursor:pointer;
-
     font-size:16px;
-
     margin-top:20px;
 
 }
@@ -78,15 +68,16 @@ button{
 .completar{
 
     background:#4CAF50;
-
     color:white;
+    width:280px;
+    display:block;
+    margin:20px auto 0;
 
 }
 
 .volver{
 
     background:#555;
-
     color:white;
 
 }
@@ -133,6 +124,8 @@ import {
 
 import {
   doc,
+  query,
+  where,
   getDoc,
   setDoc,
   updateDoc,
@@ -201,7 +194,8 @@ onAuthStateChanged(auth, async (user) => {
      }, tarea.tiempo_requerido * 60 * 1000);
         
         completarBtn.addEventListener("click", async () => {
-                      try {
+            
+    try {
                           
       const progresoId = `${user.uid}_${tareaId}`;
 
@@ -247,14 +241,8 @@ onAuthStateChanged(auth, async (user) => {
 
      }
 
-      const estadisticasRef = doc(
-            db,
-            "estadisticas_usuario",
-             user.uid
-         );
+        
 
-             const estadisticasSnap =
-            await getDoc(estadisticasRef);
 
             if (estadisticasSnap.exists()) {
 
