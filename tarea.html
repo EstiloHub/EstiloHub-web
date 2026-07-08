@@ -116,8 +116,7 @@ Completar tarea
 
 </button>
 
-<button
-class="volver"
+<button class="volver"
 onclick="window.location.href='inicio.html'">
 
 Volver
@@ -188,13 +187,13 @@ onAuthStateChanged(auth, async (user) => {
         const tarea = tareaSnap.data();
 
         document.getElementById("titulo").textContent =
-            tarea.título;
+            tarea.titulo;
 
         document.getElementById("tiempo").textContent =
             tarea.tiempo_requerido;
 
         document.getElementById("contenido").textContent =
-            tarea.descripción;
+            tarea.descripcion;
 
         completarBtn.addEventListener("click", async () => {
                       try {
