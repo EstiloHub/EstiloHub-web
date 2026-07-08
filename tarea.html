@@ -104,31 +104,13 @@ Cargando...
 
 <div class="info">
 
-<p>
-
-<strong>Categoría:</strong>
-
-<span id="categoria"></span>
-
-</p>
-
-<p>
-
-<strong>Tiempo requerido:</strong>
-
-<span id="tiempo"></span> minutos
-
-</p>
+<p><strong>Tiempo requerido:</strong><span id="tiempo"></span> minutos</p>
 
 </div>
 
-<p id="contenido">
+<p id="contenido"></p>
 
-</p>
-
-<button
-id="completarBtn"
-class="completar">
+<button id="completarBtn" class="completar" style="display:none;">
 
 Completar tarea
 
@@ -207,9 +189,6 @@ onAuthStateChanged(auth, async (user) => {
 
         document.getElementById("titulo").textContent =
             tarea.título;
-
-        document.getElementById("categoria").textContent =
-            tarea.categoría;
 
         document.getElementById("tiempo").textContent =
             tarea.tiempo_requerido;
