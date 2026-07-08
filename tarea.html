@@ -217,18 +217,18 @@ onAuthStateChanged(auth, async (user) => {
         document.getElementById("contenido").textContent =
             tarea.descripción;
 
-        document.getElementById("completarBtn").addEventListener("click", async () => {
+        completarBtn.addEventListener("click", async () => {
                       try {
                           
-const completarBtn = document.getElementById("completarBtn");
+      const completarBtn = document.getElementById("completarBtn");
 
-completarBtn.style.display = "none";
+      completarBtn.style.display = "none";
 
-setTimeout(() => {
+      setTimeout(() => {
 
-    completarBtn.style.display = "block";
+     completarBtn.style.display = "block";
 
-}, tarea.tiempo_requerido * 60 * 1000);
+     }, tarea.tiempo_requerido * 60 * 1000);
                           
                 const progresoId = `${user.uid}_${tareaId}`;
 
