@@ -37,16 +37,17 @@
         margin-right:10px;
       }
       #continuarBtn{
-        width: 100%
+        width: 300%;
         display:none;
-        margin-top:30px
-        padding:15px 
+        margin:30px auto 0;
+        padding:18px; 
         border:none;
         border-radius:10px;
         background:#4CAF50;
         color:white;
         cursor:pointer;
-        font-size:16px;
+        font-size:18px;
+        font-weight:bold;
       }
       </style>
   </head>
@@ -87,6 +88,7 @@
     <script>
         const checkbox= document.getElementById("aceptar");
         const boton= document.getElementById("continuarBtn");
+      boton.style.display="none";
         
       checkbox.addEventListener("change", function(){
           
