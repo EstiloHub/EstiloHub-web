@@ -190,11 +190,8 @@ onAuthStateChanged(auth, async (user) => {
 
         document.getElementById("contenido").textContent =
             tarea.descripcion;
-
-        completarBtn.addEventListener("click", async () => {
-                      try {
-                          
-      const completarBtn = document.getElementById("completarBtn");
+            
+     const completarBtn = document.getElementById("completarBtn");
 
       completarBtn.style.display = "none";
 
@@ -203,142 +200,145 @@ onAuthStateChanged(auth, async (user) => {
      completarBtn.style.display = "block";
 
      }, tarea.tiempo_requerido * 60 * 1000);
+        
+        completarBtn.addEventListener("click", async () => {
+                      try {
                           
-                const progresoId = `${user.uid}_${tareaId}`;
+      const progresoId = `${user.uid}_${tareaId}`;
 
-                const progresoRef = doc(
-                    db,
-                    "progreso_tareas",
-                    progresoId
-                );
+      const progresoRef = doc(
+            db,
+            "progreso_tareas",
+             progresoId
+            );
 
-                const progresoSnap = await getDoc(progresoRef);
+      const progresoSnap = await getDoc(progresoRef);
 
-                if (progresoSnap.exists()) {
+      if (progresoSnap.exists()) {
 
-                    await updateDoc(progresoRef, {
+      await updateDoc(progresoRef, {
 
-                        veces_realizada: increment(1),
+      veces_realizada: increment(1),
 
-                        fecha_realizada: serverTimestamp(),
+      fecha_realizada: serverTimestamp(),
 
-                        minutos_realizados: increment(
-                            tarea.tiempo_requerido
-                        )
+      minutos_realizados: increment(
+      tarea.tiempo_requerido
+    )
+    });
 
-                    });
+     } else {
+
+      await setDoc(progresoRef, {
+
+        email: user.email,
+
+        usuario_id: user.uid,
+
+        tarea_id: tareaId,
+
+        fecha_realizada: serverTimestamp(),
+
+        veces_realizada: 1,
+
+        minutos_realizados:
+        tarea.tiempo_requerido
+
+     });
+
+     }
+
+      const estadisticasRef = doc(
+            db,
+            "estadisticas_usuario",
+             user.uid
+         );
+
+             const estadisticasSnap =
+            await getDoc(estadisticasRef);
+
+            if (estadisticasSnap.exists()) {
+
+                const datos =
+                estadisticasSnap.data();
+
+                let sumarDia = false;
+
+            if (!datos.ultima_fecha_trabajo) {
+
+                sumarDia = true;
 
                 } else {
 
-                    await setDoc(progresoRef, {
+                const ultima =
+                datos.ultima_fecha_trabajo.toDate();
 
-                        email: user.email,
+                const hoy = new Date();
 
-                        usuario_id: user.uid,
+             if (
 
-                        tarea_id: tareaId,
+                 ultima.getFullYear() !== hoy.getFullYear() ||
 
-                        fecha_realizada: serverTimestamp(),
+                 ultima.getMonth() !== hoy.getMonth() ||
 
-                        veces_realizada: 1,
+                 ultima.getDate() !== hoy.getDate()
 
-                        minutos_realizados:
-                            tarea.tiempo_requerido
+         ) {
 
-                    });
-
-                }
-
-                const estadisticasRef = doc(
-                    db,
-                    "estadísticas_usuario",
-                    user.uid
-                );
-
-                const estadisticasSnap =
-                    await getDoc(estadisticasRef);
-
-                if (estadisticasSnap.exists()) {
-
-                    const datos =
-                        estadisticasSnap.data();
-
-                    let sumarDia = false;
-
-                    if (!datos.ultima_fecha_trabajo) {
-
-                        sumarDia = true;
-
-                    } else {
-
-                        const ultima =
-                            datos.ultima_fecha_trabajo.toDate();
-
-                        const hoy = new Date();
-
-                        if (
-
-                            ultima.getFullYear() !== hoy.getFullYear() ||
-
-                            ultima.getMonth() !== hoy.getMonth() ||
-
-                            ultima.getDate() !== hoy.getDate()
-
-                        ) {
-
-                            sumarDia = true;
-
-                        }
-
-                    }
-
-                    const actualizar = {
-
-                        tareas_realizadas:
-                            increment(1),
-
-                        minutos_acumulados:
-                            increment(
-                                tarea.tiempo_requerido
-                            ),
-
-                        ultima_fecha_trabajo:
-                            serverTimestamp()
-
-                    };
-
-                    if (sumarDia) {
-
-                        actualizar.dias_trabajados =
-                            increment(1);
-
-                    }
-
-                    await updateDoc(
-                        estadisticasRef,
-                        actualizar
-                    );
-
-  }
-                                        alert("¡Tarea completada!");
-
-                window.location.href = "inicio.html";
-
-            } catch (error) {
-
-                console.error(error);
-
-                alert("Error al completar la tarea.");
+                sumarDia = true;
 
             }
 
-        });
+        }
 
-    } catch (error) {
+          const actualizar = {
 
-        console.error(error);
+          tareas_realizadas:
+            increment(1),
 
-        alert("Error al cargar la tarea.");
+         minutos_acumulados:
+            increment(
+         tarea.tiempo_requerido
+        ),
+
+          ultima_fecha_trabajo:
+            serverTimestamp()
+
+     }};
+
+        if (sumarDia) {
+
+            actualizar.dias_trabajados =
+                increment(1);
+
+        }
+
+         await updateDoc(
+             estadisticasRef,
+             actualizar
+     );
+
+     }
+          alert("¡Tarea completada!");
+          completarBtn.disabled= true;
+
+          window.location.href = "inicio.html";
+
+        } catch (error) {
+
+         console.error(error);
+
+         alert("Error al completar la tarea.");
+
+    }
+
+     });
+
+     } catch (error) {
+
+         console.error(error);
+ 
+         alert("Error al cargar la tarea.");
 
     }
 
