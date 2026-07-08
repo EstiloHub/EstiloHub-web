@@ -45,6 +45,9 @@ p{
     line-height:1.7;
 
     font-size:17px;
+}
+    #contenido{
+    white-space: pre-line;
 
 }
 
@@ -104,7 +107,7 @@ Cargando...
 
 <div class="info">
 
-<p><strong>Tiempo requerido:</strong><span id="tiempo"></span> minutos</p>
+<p><strong>Tiempo requerido:</strong><span id="tiempo"></span></p>
 
 </div>
 
@@ -113,13 +116,6 @@ Cargando...
 <button id="completarBtn" class="completar" style="display:none;">
 
 Completar tarea
-
-</button>
-
-<button class="volver"
-onclick="window.location.href='inicio.html'">
-
-Volver
 
 </button>
 
@@ -190,7 +186,7 @@ onAuthStateChanged(auth, async (user) => {
             tarea.titulo;
 
         document.getElementById("tiempo").textContent =
-            tarea.tiempo_requerido;
+            `${tarea.tiempo_requerido} minutos‵;
 
         document.getElementById("contenido").textContent =
             tarea.descripcion;
