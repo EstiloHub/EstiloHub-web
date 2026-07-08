@@ -265,14 +265,13 @@ onAuthStateChanged(auth, async (user) => {
 
     if (estadisticasSnap.exists()) {
 
-         const datos =
-         estadisticasSnap.data();
+         const datos =estadisticasSnap.data();
 
          let sumarDia = false;
 
-    }if (!datos.ultima_fecha_trabajo) {
+    if (!datos.ultima_fecha_trabajo) {
 
-        } sumarDia = true;
+         sumarDia = true;
 
             } else {
 
@@ -293,9 +292,9 @@ onAuthStateChanged(auth, async (user) => {
 
             sumarDia = true;
 
-        }
+         }
 
-        }
+     }
 
           const actualizar = {
 
