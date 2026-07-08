@@ -244,7 +244,7 @@ onAuthStateChanged(auth, async (user) => {
      }
 
         const consultaEstadisticas = query(
-            
+        console.log("UID autenticado:", user.uid);
     collection(db, "estadisticas_usuario"),
     where("usuario_id", "==", user.uid)
    );
