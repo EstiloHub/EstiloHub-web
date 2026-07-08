@@ -263,37 +263,37 @@ onAuthStateChanged(auth, async (user) => {
     const estadisticasSnap = resultadoEstadisticas.docs[0];
 
 
-            if (estadisticasSnap.exists()) {
+    if (estadisticasSnap.exists()) {
 
-                const datos =
-                estadisticasSnap.data();
+         const datos =
+         estadisticasSnap.data();
 
-                let sumarDia = false;
+         let sumarDia = false;
 
-            if (!datos.ultima_fecha_trabajo) {
+    }if (!datos.ultima_fecha_trabajo) {
 
-                sumarDia = true;
+        } sumarDia = true;
 
-                } else {
+            } else {
 
-                const ultima =
-                datos.ultima_fecha_trabajo.toDate();
+            const ultima =
+            datos.ultima_fecha_trabajo.toDate();
 
-                const hoy = new Date();
+            const hoy = new Date();
 
-             if (
+     if (
 
-                 ultima.getFullYear() !== hoy.getFullYear() ||
+          ultima.getFullYear() !== hoy.getFullYear() ||
 
-                 ultima.getMonth() !== hoy.getMonth() ||
+          ultima.getMonth() !== hoy.getMonth() ||
 
-                 ultima.getDate() !== hoy.getDate()
+          ultima.getDate() !== hoy.getDate()
 
-         ) {
+        ) {
 
-                sumarDia = true;
+            sumarDia = true;
 
-            }
+        }
 
         }
 
