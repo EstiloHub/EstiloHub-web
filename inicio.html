@@ -164,7 +164,22 @@
               );
             const tareasSnap= await
             getDocs(consulta);
-            tareasSnap.forEach((docu) => {
+            
+            const consultaProgreso = query(
+              collection(db, "progreso_tareas"),
+              where("usuario_id", "==", user.uid)
+         );
+
+             const progresoSnap = await getDocs(consultaProgreso);
+
+             const progresoUsuario = {};
+
+             progresoSnap.forEach((docu) => {
+             const datos = docu.data();
+
+            progresoUsuario[datos.tarea_id] = datos.fecha_realizada;
+        });
+             tareasSnap.forEach((docu) => {
               const tarea= docu.data();
               
               listaTareas.innerHTML += `
