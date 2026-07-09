@@ -168,6 +168,7 @@
            codigo_acceso: codigo.value.trim(),
            fechaRegistro: new Date().toISOString(),
            admin: false 
+           activo: true
       });
          
          await setDoc(doc(db, "estadisticas_usuario", uid), {
