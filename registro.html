@@ -172,6 +172,7 @@
       });
          
          await setDoc(doc(db, "estadisticas_usuario", uid), {
+           email: email.value.trim()
            usuario_id: uid,
            tareas_realizadas: 0,
            dias_trabajados: 0,
