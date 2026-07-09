@@ -117,7 +117,217 @@
         </button>
       
       </div>
-        
+
+      <script type="module">
+
+import { auth, db } from "./firebase.js";
+
+import {
+onAuthStateChanged,
+signOut
+} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+
+import {
+doc,
+getDoc,
+collection,
+query,
+where,
+orderBy,
+getDocs
+} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+
+onAuthStateChanged(auth, async (user)=>{
+
+if(!user){
+
+window.location.href="index.html";
+
+return;
+
+}
+
+try{
+
+// ADMIN
+
+const userRef=doc(db,"users",user.uid);
+
+const userSnap=await getDoc(userRef);
+
+if(userSnap.exists()){
+
+const usuario=userSnap.data();
+
+if(usuario.admin===true){
+
+document.querySelector(".admin").style.display="block";
+
+}
+
+}
+
+// ESTADÍSTICAS
+
+const estadisticasRef=doc(db,"estadisticas_usuario",user.uid);
+
+const estadisticasSnap=await getDoc(estadisticasRef);
+
+if(estadisticasSnap.exists()){
+
+const datos=estadisticasSnap.data();
+
+document.getElementById("tareasRealizadas").textContent=datos.tareas_realizadas||0;
+
+document.getElementById("diasTrabajados").textContent=datos.dias_trabajados||0;
+
+document.getElementById("minutosAcumulados").textContent=datos.minutos_acumulados||0;
+
+}
+
+// TAREAS
+
+const listaTareas=document.getElementById("listaTareas");
+
+listaTareas.innerHTML="";
+
+const consulta=query(
+
+collection(db,"tareas"),
+
+where("activa","==",true),
+
+where("fase","==",1),
+
+orderBy("orden")
+
+);
+
+const tareasSnap=await getDocs(consulta);
+
+// PROGRESO
+
+const consultaProgreso=query(
+
+collection(db,"progreso_tareas"),
+
+where("usuario_id","==",user.uid)
+
+);
+
+const progresoSnap=await getDocs(consultaProgreso);
+
+const progresoUsuario={};
+
+progresoSnap.forEach((docu)=>{
+
+const datos=docu.data();
+
+progresoUsuario[datos.tarea_id]=datos.fecha_realizada||null;
+
+});
+
+// LISTA
+
+const lista=[];
+
+tareasSnap.forEach((docu)=>{
+
+lista.push({
+
+id:docu.id,
+
+tarea:docu.data(),
+
+fecha:progresoUsuario[docu.id]||null
+
+});
+
+});
+
+lista.sort((a,b)=>{
+
+if(a.fecha===null && b.fecha===null) return 0;
+
+if(a.fecha===null) return -1;
+
+if(b.fecha===null) return 1;
+
+return a.fecha.seconds-b.fecha.seconds;
+
+});
+
+lista.forEach((item)=>{
+
+listaTareas.innerHTML+=`
+
+<div class="tarea">
+
+<p><strong>Categoría:</strong> ${item.tarea.categoria}</p>
+
+<p><strong>Título:</strong> ${item.tarea.titulo}</p>
+
+<button class="ver" data-id="${item.id}">
+
+Ver contenido
+
+</button>
+
+</div>
+
+`;
+
+});
+
+// BOTONES VER
+
+document.querySelectorAll(".ver").forEach((boton)=>{
+
+boton.addEventListener("click",()=>{
+
+window.location.href=`tarea.html?id=${boton.dataset.id}`;
+
+});
+
+});
+
+// BOTÓN ADMIN
+
+document.querySelector(".admin").addEventListener("click",()=>{
+
+window.location.href="admin.html";
+
+});
+
+// CERRAR SESIÓN
+
+document.getElementById("cerrarSesionBtn").addEventListener("click",async()=>{
+
+try{
+
+await signOut(auth);
+
+window.location.href="index.html";
+
+}catch(error){
+
+console.error(error);
+
+alert("No se pudo cerrar la sesión.");
+
+}
+
+});
+
+}catch(error){
+
+console.error(error);
+
+}
+
+});
+
+  </script>
        
  </body>
 </html> 
