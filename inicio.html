@@ -108,7 +108,7 @@
      
       <div class="botones">
         
-      <button class="admin">
+      <button class="admin" style="display:none;">
         Panel Admin
       </button>
      
@@ -147,6 +147,9 @@
                const usuarioSnap= await getDoc(usuarioRef);
                if (usuarioSnap.exists()) {
                  const datos= usuarioSnap.data();
+                 document.querySelector(".admin").style.display="block";
+               }
+          }
                  
                  document.getElementById("tareasRealizadas").textContent= datos.tareas_realizadas || 0;
                  document.getElementById("diasTrabajados").textContent= datos.dias_trabajados || 0;
