@@ -151,7 +151,8 @@
           alert("El código de acceso no es válido.");
           return;
         }
-       try {
+      
+        try {
          const credencial= await
          createUserWithEmailAndPassword(
            auth,
@@ -168,11 +169,20 @@
            fechaRegistro: new Date().toISOString(),
            admin: false 
       });
+         
+         await setDoc(doc(db, "estadisticas_usuario", uid), {
+           usuario_id: uid,
+           tareas_realizadas: 0,
+           dias_trabajados: 0,
+           minutos_acumulados: 0,
+           ultima_fecha_trabajo: null
+      });
+         
          await updateDoc(codigoSnap.ref, {
            usado: true,
            emailUsuario: email.value.trim(),
            uidUsuario: uid
-         });
+      });
          
          alert("¡Cuenta creada correctamente!");
          window.location.href="inicio.html";
