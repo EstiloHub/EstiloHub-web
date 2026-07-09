@@ -161,8 +161,10 @@
          const uid= credencial.user.uid;
          
          await setDoc(doc(db, "users", uid), {
+           usuario_id: uid,
            email: email.value.trim(),
            payoneer: payoneer.value.trim(),
+           codigo_acceso: codigo.value.trim(),
            fechaRegistro: new Date().toISOString(),
            admin: false 
       });
