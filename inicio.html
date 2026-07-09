@@ -162,6 +162,7 @@
               where("fase", "==", 1),
               orderBy("orden")
               );
+           
             const tareasSnap= await
             getDocs(consulta);
             
@@ -179,8 +180,11 @@
 
             progresoUsuario[datos.tarea_id] = datos.fecha_realizada;
         });
-             tareasSnap.forEach((docu) => {
+            
+            const lista= [];
+            tareasSnap.forEach((docu) => {
               const tarea= docu.data();
+              
               
               listaTareas.innerHTML += `
               <div class="tarea">
