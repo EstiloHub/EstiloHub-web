@@ -152,14 +152,14 @@ listaUsuarios.innerHTML += `
 
 <p><strong>Fecha:</strong> ${usuario.fechaRegistro}</p>
 
-<button
+<button class= "ver" 
+data-id= "${docu.id}"> 
+Ver perfil
+</button>
 
-class="desactivar"
-
+<button class= "desactivar"
 data-id="${docu.id}">
-
 Desactivar
-
 </button>
 
 </div>
