@@ -1,1 +1,178 @@
+<!DOCTYPE html>
+<html lang="es">
 
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Usuarios</title>
+
+<style>
+
+body{
+    margin:0;
+    background:#111;
+    color:white;
+    font-family:Arial,sans-serif;
+}
+
+.container{
+    max-width:900px;
+    margin:auto;
+    padding:40px 20px;
+}
+
+h1{
+    text-align:center;
+    margin-bottom:35px;
+}
+
+.usuario{
+
+    background:#1b1b1b;
+
+    border:1px solid #444;
+
+    border-radius:12px;
+
+    padding:20px;
+
+    margin-bottom:20px;
+
+}
+
+p{
+
+    margin:8px 0;
+
+}
+
+button{
+
+    width:100%;
+
+    padding:14px;
+
+    border:none;
+
+    border-radius:10px;
+
+    cursor:pointer;
+
+    margin-top:15px;
+
+    font-size:16px;
+
+}
+
+.desactivar{
+
+    background:#c62828;
+
+    color:white;
+
+}
+
+.volver{
+
+    background:#555;
+
+    color:white;
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>Usuarios Activos</h1>
+
+<div id="listaUsuarios"></div>
+
+<button
+class="volver"
+onclick="window.location.href='admin.html'">
+
+Volver
+
+</button>
+
+</div>
+  
+  <script type="module">
+
+import { db } from "./firebase.js";
+
+import {
+
+collection,
+
+query,
+
+where,
+
+getDocs
+
+} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+
+const listaUsuarios = document.getElementById("listaUsuarios");
+
+async function cargarUsuarios(){
+
+listaUsuarios.innerHTML="";
+
+const consulta = query(
+
+collection(db,"users"),
+
+where("activo","==",true)
+
+);
+
+const usuarios = await getDocs(consulta);
+
+usuarios.forEach((docu)=>{
+
+const usuario = docu.data();
+
+listaUsuarios.innerHTML += `
+
+<div class="usuario">
+
+<p><strong>Email:</strong> ${usuario.email}</p>
+
+<p><strong>Payoneer:</strong> ${usuario.payoneer}</p>
+
+<p><strong>Código:</strong> ${usuario.codigo}</p>
+
+<p><strong>Fecha:</strong> ${usuario.fechaRegistro}</p>
+
+<button
+
+class="desactivar"
+
+data-id="${docu.id}">
+
+Desactivar
+
+</button>
+
+</div>
+
+`;
+
+});
+
+}
+
+cargarUsuarios();
+
+  </script>
+  </body>
+
+</html>
