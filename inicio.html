@@ -178,13 +178,36 @@
              progresoSnap.forEach((docu) => {
              const datos = docu.data();
 
-            progresoUsuario[datos.tarea_id] = datos.fecha_realizada;
-        });
+             progresoUsuario[datos.tarea_id] = datos.fecha_realizada;
+         });
             
             const lista= [];
             tareasSnap.forEach((docu) => {
               const tarea= docu.data();
-              
+            
+              lista.push({
+                id: docu.id,
+                tarea: tarea,
+                fecha: progresoUsuario[docu.id] || null
+           });
+
+        });
+
+              lista.sort((a, b) => {
+
+            if (a.fecha === null && b.fecha === null) return 0;
+
+            if (a.fecha === null) return -1;
+
+            if (b.fecha === null) return 1;
+
+             return a.fecha.seconds - b.fecha.seconds;
+
+          });
+
+               lista.forEach((item) => {
+
+               const tarea = item.tarea;
               
               listaTareas.innerHTML += `
               <div class="tarea">
