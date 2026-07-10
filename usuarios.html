@@ -91,11 +91,85 @@ margin-bottom:10px;
 
     }
 
+   .modal{
+
+display:none;
+
+position:fixed;
+
+top:0;
+
+left:0;
+
+width:100%;
+
+height:100%;
+
+background:rgba(0,0,0,.7);
+
+}
+
+.modal-contenido{
+
+background:#1b1b1b;
+
+max-width:500px;
+
+margin:120px auto;
+
+padding:25px;
+
+border-radius:12px;
+
+border:1px solid #555;
+
+}
+
+#confirmarDesactivar{
+
+background:#c62828;
+
+color:white;
+
+}
+
+#cancelarDesactivar{
+
+background:#555;
+
+color:white;
+
+} 
+
 </style>
 
 </head>
 
 <body>
+
+<div id="modalDesactivar" style="display:none;" class="modal">
+
+<div class="modal-contenido">
+
+<h2>Confirmar acción</h2>
+
+<p id="textoDesactivar"></p>
+
+<button id="confirmarDesactivar">
+
+Sí, desactivar
+
+</button>
+
+<button id="cancelarDesactivar">
+
+Cancelar
+
+</button>
+
+</div>
+
+    </div>
 
 <div class="container">
 
@@ -181,7 +255,40 @@ Desactivar
 }
 
 cargarUsuarios();
+ let usuarioADesactivar=null;
 
+document.querySelectorAll(".desactivar").forEach((boton)=>{
+
+boton.addEventListener("click",()=>{
+
+usuarioADesactivar=boton.dataset.id;
+
+document.getElementById("textoDesactivar").textContent=
+
+`¿Seguro que deseas desactivar a ${boton.dataset.email}?`;
+
+document.getElementById("modalDesactivar").style.display="block";
+
+});
+
+});
+
+document.getElementById("cancelarDesactivar").addEventListener("click",()=>{
+
+document.getElementById("modalDesactivar").style.display="none";
+
+usuarioADesactivar=null;
+
+});
+
+document.getElementById("confirmarDesactivar").addEventListener("click",async()=>{
+
+if(!usuarioADesactivar)return;
+
+
+
+});
+      
   </script>
   </body>
 
