@@ -286,7 +286,35 @@ document.getElementById("confirmarDesactivar").addEventListener("click",async()=
 
 if(!usuarioADesactivar)return;
 
+try{
 
+const userRef=doc(db,"users",usuarioADesactivar);
+
+const userSnap=await getDoc(userRef);
+
+if(!userSnap.exists()){
+
+alert("No se encontró el usuario.");
+
+return;
+
+}
+
+const usuario=userSnap.data();
+
+console.log(usuario);
+
+alert("Usuario encontrado correctamente.");
+
+}catch(error){
+
+console.error(error);
+
+alert("Error al buscar el usuario.");
+
+}
+
+});
 
 });
       
