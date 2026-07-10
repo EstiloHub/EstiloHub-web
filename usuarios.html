@@ -201,7 +201,6 @@ doc,
 getDoc,
 setDoc,
 updateDoc
-}
 
 } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
@@ -244,7 +243,7 @@ Ver perfil
 
 <button class= "desactivar"
 data-id="${docu.id}"
-data.email="${usuario.email}">
+data-email="${usuario.email}">
 Desactivar
 </button>
 
@@ -256,7 +255,7 @@ Desactivar
 
 }
 
-cargarUsuarios();
+await cargarUsuarios();
  let usuarioADesactivar=null;
 
 document.querySelectorAll(".desactivar").forEach((boton)=>{
@@ -313,8 +312,6 @@ console.error(error);
 alert("Error al buscar el usuario.");
 
 }
-
-});
 
 });
       
