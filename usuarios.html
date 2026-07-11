@@ -147,30 +147,6 @@ color:white;
 
 <body>
 
-<div id="modalDesactivar" style="display:none;" class="modal">
-
-<div class="modal-contenido">
-
-<h2>Confirmar acción</h2>
-
-<p id="textoDesactivar"></p>
-
-<button id="confirmarDesactivar">
-
-Sí, desactivar
-
-</button>
-
-<button id="cancelarDesactivar">
-
-Cancelar
-
-</button>
-
-</div>
-
-    </div>
-
 <div class="container">
 
 <h1>Usuarios Activos</h1>
@@ -230,21 +206,10 @@ listaUsuarios.innerHTML += `
 
 <p><strong>Email:</strong> ${usuario.email}</p>
 
-<p><strong>Payoneer:</strong> ${usuario.payoneer}</p>
-
-<p><strong>Código:</strong> ${usuario.codigo_acceso}</p>
-
-<p><strong>Fecha:</strong> ${usuario.fechaRegistro}</p>
 
 <button class= "ver" 
 data-id= "${docu.id}"> 
 Ver perfil
-</button>
-
-<button class= "desactivar"
-data-id="${docu.id}"
-data-email="${usuario.email}">
-Desactivar
 </button>
 
 </div>
@@ -256,60 +221,7 @@ Desactivar
 }
 
 await cargarUsuarios();
- let usuarioADesactivar=null;
 
-document.querySelectorAll(".desactivar").forEach((boton)=>{
-boton.addEventListener("click",()=>{
-
-usuarioADesactivar=boton.dataset.id;
-
-document.getElementById("textoDesactivar").textContent=
-
-`¿Seguro que deseas desactivar a ${boton.dataset.email}?`;
-
-document.getElementById("modalDesactivar").style.display="block";
-
-});
-
-});
-
-document.getElementById("cancelarDesactivar").addEventListener("click",()=>{
-
-document.getElementById("modalDesactivar").style.display="none";
-
-usuarioADesactivar=null;
-
-});
-
-document.getElementById("confirmarDesactivar").addEventListener("click",async()=>{
-
-if(!usuarioADesactivar)return;
-
-try{
-
-const userRef=doc(db,"users",usuarioADesactivar);
-
-const userSnap=await getDoc(userRef);
-
-if(!userSnap.exists()){
-
-alert("No se encontró el usuario.");
-
-return;
-
-}
-
-const usuario=userSnap.data();
-
-console.log(usuario);
-
-alert("Usuario encontrado correctamente.");
-
-}catch(error){
-
-console.error(error);
-
-alert("Error al buscar el usuario.");
 
 }
 
