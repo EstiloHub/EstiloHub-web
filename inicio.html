@@ -258,7 +258,11 @@ return a.fecha.seconds-b.fecha.seconds;
 });
 
 lista.forEach((item)=>{
-
+function renderizarTareas(){
+listaTareas.innerHTML = "";
+const tareasAMostrar = mostrarTodas ? lista : lista.slice(0,5);
+tareasAMostrar.forEach((item)=>{
+const tarea = item.tarea;
 listaTareas.innerHTML+=`
 
 <div class="tarea">
@@ -276,6 +280,48 @@ Ver contenido
 `;
 
 });
+
+  if(lista.length > 5){
+
+listaTareas.innerHTML += `
+
+<button id="verMas">
+
+${mostrarTodas ? "Mostrar menos" : "Ver más"}
+
+</button>
+
+`;
+
+}
+
+document.querySelectorAll(".ver").forEach((boton)=>{
+
+boton.addEventListener("click",()=>{
+
+window.location.href=`tarea.html?id=${boton.dataset.id}`;
+
+});
+
+});
+
+const verMas=document.getElementById("verMas");
+
+if(verMas){
+
+verMas.addEventListener("click",()=>{
+
+mostrarTodas=!mostrarTodas;
+
+renderizarTareas();
+
+});
+
+}
+
+}
+
+renderizarTareas();
 
 // BOTONES VER
 
