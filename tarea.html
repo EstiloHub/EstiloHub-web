@@ -210,13 +210,10 @@ onAuthStateChanged(auth, async (user) => {
       const progresoSnap = await getDoc(progresoRef);
 
       if (progresoSnap.exists()) {
-
       await updateDoc(progresoRef, {
-
       veces_realizada: increment(1),
-
       fecha_realizada: serverTimestamp(),
-
+      titulo_tarea: tarea.titulo,
       minutos_realizados: increment(
       tarea.tiempo_requerido
     )
@@ -225,17 +222,12 @@ onAuthStateChanged(auth, async (user) => {
      } else {
 
       await setDoc(progresoRef, {
-
         email: user.email,
-
         usuario_id: user.uid,
-
         tarea_id: tareaId,
-
+        titulo_tarea: tarea.titulo,
         fecha_realizada: serverTimestamp(),
-
         veces_realizada: 1,
-
         minutos_realizados:
         tarea.tiempo_requerido
 
