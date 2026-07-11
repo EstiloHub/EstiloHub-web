@@ -163,7 +163,16 @@ Ver perfil
 }
 
 await cargarUsuarios();
-      
+
+document.querySelectorAll(".ver").forEach((boton)=>{
+
+boton.addEventListener("click",()=>{
+
+window.location.href=`perfil_usuario.html?id=${boton.dataset.id}`;
+
+});
+
+}); 
   </script>
   </body>
 
