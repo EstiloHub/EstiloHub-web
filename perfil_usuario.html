@@ -198,6 +198,28 @@ Volver
 
 </div>
 
+<script type="module">
+
+import { db } from "./firebase.js";
+
+import {
+
+doc,
+getDoc,
+collection,
+query,
+where,
+getDocs
+
+} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+
+const parametros = new URLSearchParams(window.location.search);
+
+const uid = parametros.get("id");
+
+document.getElementById("uid").textContent = uid;
+
+</script>
 </body>
 
      </html>
