@@ -1,1 +1,203 @@
+<!DOCTYPE html>
+<html lang="es">
 
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Perfil Usuario</title>
+
+<style>
+
+body{
+margin:0;
+background:#111;
+color:white;
+font-family:Arial,sans-serif;
+}
+
+.container{
+max-width:900px;
+margin:auto;
+padding:40px 20px;
+}
+
+h1{
+text-align:center;
+margin-bottom:30px;
+}
+
+.bloque{
+
+background:#1b1b1b;
+
+border:1px solid #444;
+
+border-radius:12px;
+
+padding:20px;
+
+margin-bottom:25px;
+
+}
+
+.bloque h2{
+
+margin-top:0;
+
+margin-bottom:20px;
+
+}
+
+p{
+
+margin:10px 0;
+
+}
+
+#listaTareas{
+
+margin-top:15px;
+
+}
+
+.tarea{
+
+border:1px solid #333;
+
+padding:12px;
+
+border-radius:10px;
+
+margin-bottom:12px;
+
+background:#151515;
+
+}
+
+button{
+
+width:100%;
+
+padding:15px;
+
+border:none;
+
+border-radius:10px;
+
+font-size:16px;
+
+cursor:pointer;
+
+margin-top:15px;
+
+}
+
+.desactivar{
+
+background:#c62828;
+
+color:white;
+
+}
+
+.volver{
+
+background:#555;
+
+color:white;
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>Perfil Usuario</h1>
+
+<div class="bloque">
+
+<h2>Datos personales</h2>
+
+<p><strong>Email:</strong> <span id="email"></span></p>
+
+<p><strong>UID:</strong> <span id="uid"></span></p>
+
+<p><strong>Payoneer:</strong> <span id="payoneer"></span></p>
+
+<p><strong>Código:</strong> <span id="codigo"></span></p>
+
+<p><strong>Fecha registro:</strong> <span id="registro"></span></p>
+
+<p><strong>Admin:</strong> <span id="admin"></span></p>
+
+<p><strong>Estado:</strong> <span id="estado"></span></p>
+
+</div>
+
+<div class="bloque">
+
+<h2>Rendimiento</h2>
+
+<p><strong>Tareas realizadas:</strong> <span id="tareas"></span></p>
+
+<p><strong>Días trabajados:</strong> <span id="dias"></span></p>
+
+<p><strong>Minutos acumulados:</strong> <span id="minutos"></span></p>
+
+<p><strong>Última fecha:</strong> <span id="ultimaFecha"></span></p>
+
+</div>
+
+<div class="bloque">
+
+<h2>Información</h2>
+
+<p><strong>Fases:</strong> <span id="fases"></span></p>
+
+<p><strong>Página real:</strong> <span id="paginaReal"></span></p>
+
+</div>
+
+<div class="bloque">
+
+<h2>Historial de tareas</h2>
+
+<div id="listaTareas"></div>
+
+</div>
+
+<div class="bloque">
+
+<h2>Pagos</h2>
+
+<p><strong>Total ganado:</strong> <span id="ganado">0 ARS</span></p>
+
+<p><strong>Total pagado:</strong> <span id="pagado">0 ARS</span></p>
+
+</div>
+
+<button class="desactivar">
+
+Desactivar usuario
+
+</button>
+
+<button class="volver"
+
+onclick="window.location.href='usuarios.html'">
+
+Volver
+
+</button>
+
+</div>
+
+</body>
+
+     </html>
