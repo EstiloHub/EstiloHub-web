@@ -300,6 +300,59 @@ document.getElementById("ultimaFecha").textContent = "-";
 }
 
      }
+// =====================
+// HISTORIAL DE TAREAS
+// =====================
+
+const listaTareas = document.getElementById("listaTareas");
+
+const consultaTareas = query(
+collection(db, "progreso_tareas"),
+where("usuario_id", "==", uid)
+);
+
+const tareasSnap = await getDocs(consultaTareas);
+
+listaTareas.innerHTML = "";
+
+tareasSnap.forEach((docu) => {
+
+const tarea = docu.data();
+
+let fecha = "-";
+
+if (tarea.fecha_realizada) {
+
+fecha = tarea.fecha_realizada
+.toDate()
+.toLocaleDateString("es-AR");
+
+}
+
+listaTareas.innerHTML += `
+
+<div class="tarea">
+
+<p><strong>✔️ ${tarea.titulo_tarea}</strong></p>
+
+<p>🔁 Veces realizadas: ${tarea.veces_realizada}</p>
+
+<p>⏱️ Minutos realizados: ${tarea.minutos_realizados}</p>
+
+<p>📅 Última realización: ${fecha}</p>
+
+</div>
+
+`;
+
+});
+
+if (tareasSnap.empty) {
+
+listaTareas.innerHTML =
+"<p>Este usuario todavía no realizó tareas.</p>";
+
+     }
      
 </script>
 </body>
