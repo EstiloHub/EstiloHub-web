@@ -267,8 +267,8 @@ listaTareas.innerHTML+=`
 
 <div class="tarea">
 
-<p><strong>Categoría:</strong> ${item.tarea.categoria}</p>
-<p><strong>Título:</strong> ${item.tarea.titulo}</p>
+<p><strong>Categoría:</strong> ${tarea.categoria}</p>
+<p><strong>Título:</strong> ${tarea.titulo}</p>
 
 <button class="ver" data-id="${item.id}">
 
@@ -317,6 +317,7 @@ renderizarTareas();
 
 });
 
+}
 }
 
 renderizarTareas();
