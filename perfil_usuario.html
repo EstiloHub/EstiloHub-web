@@ -198,7 +198,74 @@ onclick="window.location.href='usuarios.html'">
 
 </div>
 
+<script type="module">
 
+import { db } from "./firebase.js";
+
+import {
+
+doc,
+getDoc,
+collection,
+query,
+where,
+getDocs
+
+} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+
+const parametros = new URLSearchParams(window.location.search);
+
+const uid = parametros.get("id");
+
+if(!uid){
+
+alert("Usuario no encontrado.");
+
+window.location.href="usuarios.html";
+
+}
+
+document.getElementById("uid").textContent=uid;
+
+
+
+// =====================
+
+// USERS
+
+// =====================
+
+const userRef=doc(db,"users",uid);
+
+const userSnap=await getDoc(userRef);
+
+if(!userSnap.exists()){
+
+alert("No existe el usuario.");
+
+window.location.href="usuarios.html";
+
+}
+
+const usuario=userSnap.data();
+
+document.getElementById("email").textContent=usuario.email || "-";
+
+document.getElementById("payoneer").textContent=usuario.payoneer || "-";
+
+document.getElementById("codigo").textContent=usuario.codigo_acceso || "-";
+
+document.getElementById("registro").textContent=usuario.fechaRegistro || "-";
+
+document.getElementById("admin").textContent=usuario.admin ? "Sí" : "No";
+
+document.getElementById("estado").textContent=usuario.activo ? "Activo" : "Inactivo";
+
+document.getElementById("fase").textContent=usuario.fase || "-";
+
+document.getElementById("paginaReal").textContent=usuario.pagina_real ? "Sí" : "No";
+
+</script>
 </body>
 
      </html>
