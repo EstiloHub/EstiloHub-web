@@ -265,6 +265,42 @@ document.getElementById("fase").textContent=usuario.fase || "-";
 
 document.getElementById("paginaReal").textContent=usuario.pagina_real ? "Sí" : "No";
 
+// =====================
+// ESTADÍSTICAS
+// =====================
+
+const estadisticasRef = doc(db, "estadisticas_usuario", uid);
+
+const estadisticasSnap = await getDoc(estadisticasRef);
+
+if (estadisticasSnap.exists()) {
+
+const estadisticas = estadisticasSnap.data();
+
+document.getElementById("tareas").textContent =
+estadisticas.tareas_realizadas || 0;
+
+document.getElementById("dias").textContent =
+estadisticas.dias_trabajados || 0;
+
+document.getElementById("minutos").textContent =
+estadisticas.minutos_acumulados || 0;
+
+if (estadisticas.ultima_fecha_trabajo) {
+
+const fecha = estadisticas.ultima_fecha_trabajo.toDate();
+
+document.getElementById("ultimaFecha").textContent =
+fecha.toLocaleDateString("es-AR");
+
+} else {
+
+document.getElementById("ultimaFecha").textContent = "-";
+
+}
+
+     }
+     
 </script>
 </body>
 
