@@ -31,13 +31,9 @@ margin-bottom:30px;
 .bloque{
 
 background:#1b1b1b;
-
 border:1px solid #444;
-
 border-radius:12px;
-
 padding:20px;
-
 margin-bottom:25px;
 
 }
@@ -45,7 +41,6 @@ margin-bottom:25px;
 .bloque h2{
 
 margin-top:0;
-
 margin-bottom:20px;
 
 }
@@ -65,13 +60,9 @@ margin-top:15px;
 .tarea{
 
 border:1px solid #333;
-
 padding:12px;
-
 border-radius:10px;
-
 margin-bottom:12px;
-
 background:#151515;
 
 }
@@ -79,17 +70,11 @@ background:#151515;
 button{
 
 width:100%;
-
 padding:15px;
-
 border:none;
-
 border-radius:10px;
-
 font-size:16px;
-
 cursor:pointer;
-
 margin-top:15px;
 
 }
@@ -97,7 +82,6 @@ margin-top:15px;
 .desactivar{
 
 background:#c62828;
-
 color:white;
 
 }
@@ -105,7 +89,6 @@ color:white;
 .volver{
 
 background:#555;
-
 color:white;
 
 }
@@ -202,14 +185,17 @@ onclick="window.location.href='usuarios.html'">
 
 import { db } from "./firebase.js";
 
-import {
+import { 
 doc,
 getDoc,
 collection,
 query,
 where,
 getDocs,
-updateDoc
+updateDoc,
+setDoc,
+deleteDoc,
+serverTimestramp
 
 } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
