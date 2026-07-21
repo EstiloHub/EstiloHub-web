@@ -361,35 +361,7 @@ listaTareas.innerHTML =
 // DESACTIVAR USUARIO
 // =====================
 
-document.getElementById("desactivarUsuario").addEventListener("click", async () => {
 
-const confirmar = confirm(
-`¿Seguro que deseas desactivar al usuario ${usuario.email}?`
-);
-
-if (!confirmar) return;
-
-try {
-
-await updateDoc(doc(db, "users", uid), {
-
-activo: false
-
-});
-
-alert("Usuario desactivado correctamente.");
-
-window.location.href = "usuarios.html";
-
-} catch (error) {
-
-console.error(error);
-
-alert("No se pudo desactivar el usuario.");
-
-}
-
-});
      
 </script>
 </body>
