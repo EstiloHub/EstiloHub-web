@@ -284,6 +284,33 @@ document.getElementById("ultimaFecha").textContent = "-";
 }
 
 }
+
+const datosHistorial = {
+
+email: usuario.email,
+usuario_id: usuario.usuario_id,
+payoneer: usuario.payoneer,
+codigo_acceso: usuario.codigo_acceso,
+
+fecha_registro: usuario.fechaRegistro,
+
+admin: usuario.admin,
+
+fase: usuario.fase,
+
+pagina_real: usuario.pagina_real,
+
+tareas_realizadas: estadisticas.tareas_realizadas,
+
+dias_trabajados: estadisticas.dias_trabajados,
+
+minutos_acumulados: estadisticas.minutos_acumulados,
+
+ultima_fecha_trabajo: estadisticas.ultima_fecha_trabajo,
+
+fecha_desactivacion: serverTimestamp()
+
+};
      
 // =====================
 // HISTORIAL DE TAREAS
