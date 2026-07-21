@@ -361,7 +361,55 @@ listaTareas.innerHTML =
 // DESACTIVAR USUARIO
 // =====================
 
+document.getElementById("desactivarUsuario").addEventListener("click", async () => {
 
+const confirmar = confirm(
+`¿Seguro que deseas desactivar al usuario ${usuario.email}?`
+);
+
+if (!confirmar) return;
+
+try {
+
+// Guardar en historial
+
+await setDoc(
+
+doc(db, "historial_usuarios", uid),
+
+datosHistorial
+
+);
+
+// Eliminar usuario activo
+
+await deleteDoc(
+
+doc(db, "users", uid)
+
+);
+
+// Eliminar estadísticas
+
+await deleteDoc(
+
+doc(db, "estadisticas_usuario", uid)
+
+);
+
+alert("Usuario desactivado correctamente.");
+
+window.location.href = "usuarios.html";
+
+} catch (error) {
+
+console.error(error);
+
+alert("No se pudo desactivar el usuario.");
+
+}
+
+});
      
 </script>
 </body>
