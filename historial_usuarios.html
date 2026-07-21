@@ -94,6 +94,65 @@ onclick="window.location.href='usuarios.html'">
 
 </div>
 
+<script type="module">
+
+import { db } from "./firebase.js";
+
+import {
+
+collection,
+getDocs
+
+} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+
+const listaHistorial = document.getElementById("listaHistorial");
+
+async function cargarHistorial(){
+
+listaHistorial.innerHTML = "";
+
+const historialSnap = await getDocs(collection(db,"historial_usuarios"));
+
+historialSnap.forEach((docu)=>{
+
+const usuario = docu.data();
+
+listaHistorial.innerHTML += `
+
+<div class="usuario">
+
+<p><strong>📧 Email:</strong> ${usuario.email}</p>
+
+<p><strong>🔴 Estado:</strong> Desactivado</p>
+
+<button
+class="ver"
+onclick="window.location.href='perfil_usuario.html?id=${usuario.usuario_id}'">
+
+👤 Ver perfil
+
+</button>
+
+<button
+class="reactivar"
+data-id="${docu.id}">
+
+🟢 Reactivar usuario
+
+</button>
+
+</div>
+
+`;
+
+});
+
+}
+
+cargarHistorial();
+
+</script>
+  
 </body>
 
 </html>
