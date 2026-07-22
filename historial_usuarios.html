@@ -101,7 +101,12 @@ import { db } from "./firebase.js";
 import {
 
 collection,
-getDocs
+getDocs,
+doc,
+getDoc,
+setDoc,
+deleteDoc,
+updateDoc
 
 } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
@@ -116,6 +121,44 @@ const historialSnap = await getDocs(collection(db,"historial_usuarios"));
 historialSnap.forEach((docu)=>{
 
 const usuario = docu.data();
+
+const datosUser = {
+
+email: usuario.email,
+
+usuario_id: usuario.usuario_id,
+
+payoneer: usuario.payoneer,
+
+codigo_acceso: usuario.codigo_acceso,
+
+fechaRegistro: usuario.fecha_registro,
+
+admin: usuario.admin,
+
+fase: usuario.fase,
+
+pagina_real: usuario.pagina_real,
+
+activo: true
+
+};
+
+const datosEstadisticas = {
+
+email: usuario.email,
+
+usuario_id: usuario.usuario_id,
+
+tareas_realizadas: usuario.tareas_realizadas,
+
+dias_trabajados: usuario.dias_trabajados,
+
+minutos_acumulados: usuario.minutos_acumulados,
+
+ultima_fecha_trabajo: usuario.ultima_fecha_trabajo
+
+};
 
 listaHistorial.innerHTML += `
 
@@ -136,6 +179,7 @@ onclick="window.location.href='perfil_usuario.html?id=${usuario.usuario_id}'">
 <button
 class="reactivar"
 data-id="${docu.id}">
+data-uid="${usuario.usuario_id}">
 
 🟢 Reactivar usuario
 
@@ -151,6 +195,73 @@ data-id="${docu.id}">
 
 cargarHistorial();
 
+document.addEventListener("click", async (e) => {
+
+if (!e.target.classList.contains("reactivar")) return;
+
+const confirmar = confirm("¿Seguro que deseas reactivar este usuario?");
+
+if (!confirmar) return;
+
+const id = e.target.dataset.id;
+
+try {
+
+const historialRef = doc(db, "historial_usuarios", id);
+
+const historialSnap = await getDoc(historialRef);
+
+if (!historialSnap.exists()) {
+
+alert("No se encontró el usuario.");
+
+return;
+
+}
+
+const usuario = historialSnap.data();
+
+await setDoc(doc(db, "users", usuario.usuario_id), {
+
+email: usuario.email,
+usuario_id: usuario.usuario_id,
+payoneer: usuario.payoneer,
+codigo_acceso: usuario.codigo_acceso,
+fechaRegistro: usuario.fecha_registro,
+admin: usuario.admin,
+fase: usuario.fase,
+pagina_real: usuario.pagina_real,
+activo: true
+
+});
+
+await setDoc(doc(db, "estadisticas_usuario", usuario.usuario_id), {
+
+email: usuario.email,
+usuario_id: usuario.usuario_id,
+tareas_realizadas: usuario.tareas_realizadas,
+dias_trabajados: usuario.dias_trabajados,
+minutos_acumulados: usuario.minutos_acumulados,
+ultima_fecha_trabajo: usuario.ultima_fecha_trabajo
+
+});
+
+await deleteDoc(historialRef);
+
+alert("Usuario reactivado correctamente.");
+
+location.reload();
+
+} catch (error) {
+
+console.error(error);
+
+alert("Error al reactivar el usuario.");
+
+}
+
+});
+  
 </script>
   
 </body>
