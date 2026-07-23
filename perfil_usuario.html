@@ -195,7 +195,7 @@ getDocs,
 updateDoc,
 setDoc,
 deleteDoc,
-serverTimestramp
+serverTimestamp
 
 } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
@@ -257,9 +257,11 @@ const estadisticasRef = doc(db, "estadisticas_usuario", uid);
 
 const estadisticasSnap = await getDoc(estadisticasRef);
 
+lef estadisticas = {} ;
+
 if (estadisticasSnap.exists()) {
 
-const estadisticas = estadisticasSnap.data();
+estadisticas = estadisticasSnap.data();
 
 document.getElementById("tareas").textContent =
 estadisticas.tareas_realizadas || 0;
@@ -336,7 +338,7 @@ listaTareas.innerHTML += `
 
 <div class="tarea">
 
-<p><strong>✔️ ${tarea.titulo_tarea}</strong></p>
+<p><strong>✔️ ${tarea.titulo}</strong></p>
 
 <p>🔁 Veces realizadas: ${tarea.veces_realizada}</p>
 
