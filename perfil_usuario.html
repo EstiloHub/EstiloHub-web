@@ -322,7 +322,49 @@ const tareasSnap = await getDocs(consultaTareas);
 
 listaTareas.innerHTML = "";
 
+for (const docu of tareasSnap.docs) {
 
+const tarea = docu.data();
+
+let fecha = "-";
+
+if (tarea.fecha_realizada) {
+
+fecha = tarea.fecha_realizada
+.toDate()
+.toLocaleDateString("es-AR");
+
+}
+
+let titulo = "Tarea eliminada";
+
+const tareaRef = doc(db, "tareas", tarea.tarea_id);
+
+const tareaSnap = await getDoc(tareaRef);
+
+if (tareaSnap.exists()) {
+
+titulo = tareaSnap.data().titulo;
+
+}
+
+listaTareas.innerHTML += `
+
+<div class="tarea">
+
+<p><strong>✔️ ${titulo}</strong></p>
+
+<p>🔁 Veces realizadas: ${tarea.veces_realizada}</p>
+
+<p>⏱️ Minutos realizados: ${tarea.minutos_realizados}</p>
+
+<p>📅 Última realización: ${fecha}</p>
+
+</div>
+
+`;
+
+}
 
 if (tareasSnap.empty) {
 
