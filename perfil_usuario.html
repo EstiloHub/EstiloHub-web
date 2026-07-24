@@ -257,7 +257,7 @@ const estadisticasRef = doc(db, "estadisticas_usuario", uid);
 
 const estadisticasSnap = await getDoc(estadisticasRef);
 
-lef estadisticas = {} ;
+let estadisticas = {} ;
 
 if (estadisticasSnap.exists()) {
 
