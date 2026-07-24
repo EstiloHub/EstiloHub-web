@@ -210,6 +210,7 @@ onAuthStateChanged(auth, async (user) => {
       const progresoSnap = await getDoc(progresoRef);
 
       if (progresoSnap.exists()) {
+     
       await updateDoc(progresoRef, {
       veces_realizada: increment(1),
       fecha_realizada: serverTimestamp(),
