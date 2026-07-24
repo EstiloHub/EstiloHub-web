@@ -141,205 +141,205 @@ const tareaId = params.get("id");
 
 onAuthStateChanged(auth, async (user) => {
 
-    if (!user) {
+if (!user) {
 
-        window.location.href = "index.html";
+ window.location.href = "index.html";
+ return;
 
-        return;
+}
 
-    }
+if (!tareaId) {
+alert("No se encontró la tarea.");
 
-    if (!tareaId) {
+window.location.href = "inicio.html";
+return;
 
-        alert("No se encontró la tarea.");
+}
 
-        window.location.href = "inicio.html";
+try {
 
-        return;
+const tareaRef = doc(db, "tareas", tareaId);
 
-    }
+const tareaSnap = await getDoc(tareaRef);
 
-    try {
+if (!tareaSnap.exists()) {
 
-        const tareaRef = doc(db, "tareas", tareaId);
+alert("La tarea no existe.");
 
-        const tareaSnap = await getDoc(tareaRef);
+window.location.href = "inicio.html";
+return;
 
-        if (!tareaSnap.exists()) {
+}
 
-            alert("La tarea no existe.");
+const tarea = tareaSnap.data();
 
-            window.location.href = "inicio.html";
+document.getElementById("titulo").textContent =
+tarea.titulo;
 
-            return;
-
-        }
-
-        const tarea = tareaSnap.data();
-
-        document.getElementById("titulo").textContent =
-            tarea.titulo;
-
-        document.getElementById("tiempo").textContent = `${tarea.tiempo_requerido} minutos`;
+document.getElementById("tiempo").textContent = `${tarea.tiempo_requerido} minutos`;
         
-        document.getElementById("contenido").textContent =
-            tarea.descripcion;
+document.getElementById("contenido").textContent =
+tarea.descripcion;
             
-     const completarBtn = document.getElementById("completarBtn");
+const completarBtn = document.getElementById("completarBtn");
 
-      completarBtn.style.display = "none";
+completarBtn.style.display = "none";
 
-      setTimeout(() => {
+setTimeout(() => {
 
-     completarBtn.style.display = "block";
+completarBtn.style.display = "block";
 
-     }, tarea.tiempo_requerido * 60 * 1000);
+}, tarea.tiempo_requerido * 60 * 1000);
         
-        completarBtn.addEventListener("click", async () => {
+completarBtn.addEventListener("click", async () => {
             
-    try {
+try {
                           
-      const progresoId = `${user.uid}_${tareaId}`;
+const progresoId = `${user.uid}_${tareaId}`;
 
-      const progresoRef = doc(
-            db,
-            "progreso_tareas",
-             progresoId
-            );
+const progresoRef = doc(
+ db,
+ "progreso_tareas",
+ progresoId
 
-      const progresoSnap = await getDoc(progresoRef);
+);
 
-      if (progresoSnap.exists()) {
-     
-      await updateDoc(progresoRef, {
-      veces_realizada: increment(1),
-      fecha_realizada: serverTimestamp(),
-      titulo_tarea: tarea.titulo,
-      minutos_realizados: increment(
-      tarea.tiempo_requerido
-    )
-    });
+const progresoSnap = await getDoc(progresoRef);
 
-     } else {
+if (progresoSnap.exists()) {
+    
+await updateDoc(progresoRef, {
+veces_realizada: increment(1),
+fecha_realizada: serverTimestamp(),
+titulo_tarea: tarea.titulo,
+minutos_realizados: increment(
+tarea.tiempo_requerido
 
-      await setDoc(progresoRef, {
-        email: user.email,
-        usuario_id: user.uid,
-        tarea_id: tareaId,
-        titulo_tarea: tarea.titulo,
-        fecha_realizada: serverTimestamp(),
-        veces_realizada: 1,
-        minutos_realizados:
-        tarea.tiempo_requerido
+)
+});
 
-     });
+} else {
 
-     }
+await setDoc(progresoRef, {
+email: user.email,
+usuario_id: user.uid,
+tarea_id: tareaId,
+titulo_tarea: tarea.titulo,
+fecha_realizada: serverTimestamp(),
+veces_realizada: 1,
+minutos_realizados:
+tarea.tiempo_requerido
+
+});
+
+}
         
-    console.log("UID autenticado:", user.uid);
-    const consultaEstadisticas = query(
-    collection(db, "estadisticas_usuario"),
-    where("usuario_id", "==", user.uid)
-   );
+console.log("UID autenticado:", user.uid);
+const consultaEstadisticas = query(
+collection(db, "estadisticas_usuario"),
+where("usuario_id", "==", user.uid) 
 
-    const resultadoEstadisticas = await getDocs(consultaEstadisticas);
+);
 
-   if (resultadoEstadisticas.empty) {
+const resultadoEstadisticas = await getDocs(consultaEstadisticas);
 
-    alert("No se encontró el documento de estadísticas.");
+if (resultadoEstadisticas.empty) {
 
-    return;
+alert("No se encontró el documento de estadísticas.");
+return;
 
-   }
+}
 
-    const estadisticasRef = resultadoEstadisticas.docs[0].ref;
+const estadisticasRef = resultadoEstadisticas.docs[0].ref;
 
-    const estadisticasSnap = resultadoEstadisticas.docs[0];
+const estadisticasSnap = resultadoEstadisticas.docs[0];
 
 
-    if (estadisticasSnap.exists()) {
+if (estadisticasSnap.exists()) {
 
-         const datos =estadisticasSnap.data();
+const datos =estadisticasSnap.data();
 
-         let sumarDia = false;
+let sumarDia = false;
 
-    if (!datos.ultima_fecha_trabajo) {
+if (!datos.ultima_fecha_trabajo) {
 
-         sumarDia = true;
+ sumarDia = true;
 
-            } else {
+} else {
 
-            const ultima =
-            datos.ultima_fecha_trabajo.toDate();
+const ultima =
+datos.ultima_fecha_trabajo.toDate();
 
-            const hoy = new Date();
+const hoy = new Date();
 
-     if (
+if (
 
-          ultima.getFullYear() !== hoy.getFullYear() ||
+ultima.getFullYear() !== hoy.getFullYear() ||
 
-          ultima.getMonth() !== hoy.getMonth() ||
+ultima.getMonth() !== hoy.getMonth() ||
 
-          ultima.getDate() !== hoy.getDate()
+ultima.getDate() !== hoy.getDate()
 
-        ) {
+) {
 
-            sumarDia = true;
+sumarDia = true;
 
-         }
+}
 
-     }
+}
 
-          const actualizar = {
+const actualizar = {
 
-          tareas_realizadas:
-            increment(1),
+tareas_realizadas:
+increment(1),
 
-         minutos_acumulados:
-            increment(
-         tarea.tiempo_requerido
-        ),
+minutos_acumulados:
+increment(
+tarea.tiempo_requerido
+),
 
-          ultima_fecha_trabajo:
-            serverTimestamp()
+ultima_fecha_trabajo:
+serverTimestamp()
 
-     };
+};
 
-        if (sumarDia) {
+if (sumarDia) {
 
-            actualizar.dias_trabajados =
-                increment(1);
+actualizar.dias_trabajados =
+increment(1);
 
-        }
+}
 
-         await updateDoc(
-             estadisticasRef,
-             actualizar
-     );
+await updateDoc(
+estadisticasRef,
+actualizar
 
-     }
-          alert("¡Tarea completada!");
-          completarBtn.disabled= true;
+);
 
-          window.location.href = "inicio.html";
+}
 
-        } catch (error) {
+alert("¡Tarea completada!");
+completarBtn.disabled= true;
 
-         console.error(error);
+window.location.href = "inicio.html";
 
-         alert("Error al completar la tarea.");
+} catch (error) {
 
-    }
+console.error(error);
 
-     });
+alert("Error al completar la tarea.");
 
-     } catch (error) {
+}
 
-         console.error(error);
+});
+
+} catch (error) {
+
+console.error(error);
  
-         alert("Error al cargar la tarea.");
+alert("Error al cargar la tarea.");
 
-    }
+}
 
 });
 
