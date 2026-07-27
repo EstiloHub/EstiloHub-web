@@ -213,25 +213,38 @@ window.location.href="usuarios.html";
 
 document.getElementById("uid").textContent=uid;
 
-
-
 // =====================
-// USERS
+// BUSCAR USUARIO ACTIVO O EN HISTORIAL
 // =====================
 
-const userRef=doc(db,"users",uid);
+let usuario;
 
-const userSnap=await getDoc(userRef);
+const userRef = doc(db, "users", uid);
+const userSnap = await getDoc(userRef);
 
-if(!userSnap.exists()){
+if (userSnap.exists()) {
+
+usuario = userSnap.data();
+
+} else {
+
+const historialRef = doc(db, "historial_usuarios", uid);
+const historialSnap = await getDoc(historialRef);
+
+if (historialSnap.exists()) {
+
+usuario = historialSnap.data();
+
+} else {
 
 alert("No existe el usuario.");
 
-window.location.href="usuarios.html";
+window.location.href = "usuarios.html";
 
 }
 
-const usuario=userSnap.data();
+}
+
 
 document.getElementById("email").textContent=usuario.email || "-";
 
@@ -249,6 +262,14 @@ document.getElementById("fase").textContent=usuario.fase || "-";
 
 document.getElementById("paginaReal").textContent=usuario.pagina_real ? "Sí" : "No";
 
+const usuarioActivo = userSnap.exists();
+
+if (!usuarioActivo) {
+
+document.getElementById("desactivarUsuario").style.display = "none";
+
+}    
+     
 // =====================
 // ESTADÍSTICAS
 // =====================
