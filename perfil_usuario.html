@@ -171,9 +171,7 @@ color:white;
 
 </button>
 
-<button class="volver"
-
-onclick="window.location.href='usuarios.html'">
+<button class="volver" id="volverBtn">
 
 ⬅️ Volver
 
@@ -202,6 +200,8 @@ serverTimestamp
 const parametros = new URLSearchParams(window.location.search);
 
 const uid = parametros.get("id");
+
+const origen = parametros.get("origen") || "usuarios";
 
 if(!uid){
 
@@ -491,8 +491,23 @@ alert("No se pudo desactivar el usuario.");
 }
 
 });
+
+document.getElementById("volverBtn").addEventListener("click", () => {
+
+if (origen === "historial") {
+
+window.location.href = "historial.html";
+
+} else {
+
+window.location.href = "usuarios.html";
+
+}
+
+});
      
 </script>
+     
 </body>
 
-     </html>
+</html>
