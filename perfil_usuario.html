@@ -245,14 +245,13 @@ window.location.href = "usuarios.html";
 
 }
 
-
+const usuarioActivo = userSnap.exists();
+     
 document.getElementById("email").textContent=usuario.email || "-";
 
 document.getElementById("payoneer").textContent=usuario.payoneer || "-";
 
 document.getElementById("codigo").textContent=usuario.codigo_acceso || "-";
-
-document.getElementById("registro").textContent=usuario.fechaRegistro || "-";
 
 document.getElementById("admin").textContent=usuario.admin ? "Sí" : "No";
 
@@ -261,8 +260,6 @@ document.getElementById("estado").textContent = usuarioActivo ? "Activo" : "Inac
 document.getElementById("fase").textContent=usuario.fase || "-";
 
 document.getElementById("paginaReal").textContent=usuario.pagina_real ? "Sí" : "No";
-
-const usuarioActivo = userSnap.exists();
 
 if (!usuarioActivo) {
 
