@@ -300,15 +300,37 @@ document.getElementById("registro").textContent = "-";
 // ESTADÍSTICAS
 // =====================
 
+if (usuarioActivo) {
+
 const estadisticasRef = doc(db, "estadisticas_usuario", uid);
 
 const estadisticasSnap = await getDoc(estadisticasRef);
 
-let estadisticas = {} ;
-
 if (estadisticasSnap.exists()) {
 
 estadisticas = estadisticasSnap.data();
+
+}
+
+} else {
+
+// Si viene del historial, las estadísticas ya están guardadas ahí
+
+estadisticas = {
+
+tareas_realizadas: usuario.tareas_realizadas || 0,
+
+dias_trabajados: usuario.dias_trabajados || 0,
+
+minutos_acumulados: usuario.minutos_acumulados || 0,
+
+ultima_fecha_trabajo: usuario.ultima_fecha_trabajo || null
+
+};
+
+}
+
+// Mostrar estadísticas
 
 document.getElementById("tareas").textContent =
 estadisticas.tareas_realizadas || 0;
@@ -331,28 +353,6 @@ fecha.toLocaleDateString("es-AR");
 document.getElementById("ultimaFecha").textContent = "-";
 
 }
-
-}
-
-const datosHistorial = {
-
-email: usuario.email,
-usuario_id: usuario.usuario_id,
-payoneer: usuario.payoneer,
-codigo_acceso: usuario.codigo_acceso,
-fecha_registro: usuario.fechaRegistro,
-admin: usuario.admin,
-activo: usuario.activo,
-fase: usuario.fase || "-",
-pagina_real: usuario.pagina_real || false,
-     
-tareas_realizadas: estadisticas.tareas_realizadas || 0,
-dias_trabajados: estadisticas.dias_trabajados || 0,
-minutos_acumulados: estadisticas.minutos_acumulados || 0,
-ultima_fecha_trabajo: estadisticas.ultima_fecha_trabajo,
-fecha_desactivacion: serverTimestamp()
-
-};
      
 // =====================
 // HISTORIAL DE TAREAS
