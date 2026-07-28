@@ -84,9 +84,7 @@ color:white;
 
 <div id="listaHistorial"></div>
 
-<button
-class="volver"
-onclick="window.location.href='usuarios.html'">
+<button class="volver" onclick="window.location.href='admin.html'">
 
 ⬅️ Volver
 
@@ -168,11 +166,11 @@ listaHistorial.innerHTML += `
 
 <p><strong>🔴 Estado:</strong> Desactivado</p>
 
-<button
-class="ver"
-onclick="window.location.href='perfil_usuario.html?id=${usuario.usuario_id}'">
+<button class="ver" onclick="window.location.href='perfil_usuario.html?id=${usuario.usuario_id}&origen=historial'">
 
 👤 Ver perfil
+
+</button>
 
 <button class="reactivar" data-id="${docu.id}">
 
