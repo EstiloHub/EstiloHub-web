@@ -118,6 +118,10 @@ updateDoc
 
 const listaUsuarios = document.getElementById("listaUsuarios");
 
+const buscarUsuario = document.getElementById("buscarUsuario");
+
+let textoBusqueda = "";
+
 async function cargarUsuarios(){
 
 listaUsuarios.innerHTML="";
@@ -136,6 +140,20 @@ usuarios.forEach((docu)=>{
 
 const usuario = docu.data();
 
+const email = (usuario.email || "").toLowerCase();
+
+if (!email.includes(textoBusqueda)) return;
+
+document.querySelectorAll(".ver").forEach((boton)=>{
+
+boton.addEventListener("click",()=>{
+
+window.location.href=`perfil_usuario.html?id=${boton.dataset.id}`;
+
+});
+
+});
+    
 listaUsuarios.innerHTML += `
 
 <div class="usuario">
@@ -156,17 +174,7 @@ data-id= "${docu.id}">
 
 }
 
-await cargarUsuarios();
-
-document.querySelectorAll(".ver").forEach((boton)=>{
-
-boton.addEventListener("click",()=>{
-
-window.location.href=`perfil_usuario.html?id=${boton.dataset.id}`;
-
-});
-
-}); 
+await cargarUsuarios(); 
     
 buscarUsuario.addEventListener("input", (e) => {
 
