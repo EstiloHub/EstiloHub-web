@@ -167,7 +167,17 @@ window.location.href=`perfil_usuario.html?id=${boton.dataset.id}`;
 });
 
 }); 
-  </script>
-  </body>
+    
+buscarUsuario.addEventListener("input", (e) => {
+
+textoBusqueda = e.target.value.toLowerCase();
+
+cargarUsuarios();
+
+});
+    
+</script>
+
+</body>
 
 </html>
