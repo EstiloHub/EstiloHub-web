@@ -143,16 +143,6 @@ const usuario = docu.data();
 const email = (usuario.email || "").toLowerCase();
 
 if (!email.includes(textoBusqueda)) return;
-
-document.querySelectorAll(".ver").forEach((boton)=>{
-
-boton.addEventListener("click",()=>{
-
-window.location.href=`perfil_usuario.html?id=${boton.dataset.id}`;
-
-});
-
-});
     
 listaUsuarios.innerHTML += `
 
@@ -161,9 +151,11 @@ listaUsuarios.innerHTML += `
 <p><strong>📧 Email:</strong> ${usuario.email}</p>
 <p><strong>🆔 UID:</strong> ${usuario.usuario_id}</p>
 
-<button class= "ver" 
-data-id= "${docu.id}"> 
+<button class="ver"
+onclick="window.location.href='perfil_usuario.html?id=${docu.id}&origen=usuarios'">
+
 👤 Ver perfil
+
 </button>
 
 </div>
