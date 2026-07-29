@@ -122,7 +122,13 @@ const buscarUsuario = document.getElementById("buscarUsuario");
 
 let textoBusqueda = "";
 
+let cargandoUsuarios = false;
+
 async function cargarUsuarios(){
+
+if (cargandoUsuarios) return;
+
+cargandoUsuarios = true;
 
 listaUsuarios.innerHTML="";
 
@@ -131,6 +137,8 @@ const consulta = query(
 collection(db,"users"),
 
 where("activo","==",true)
+
+cargandoUsuarios = false;
 
 );
 
