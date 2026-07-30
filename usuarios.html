@@ -136,8 +136,6 @@ where("activo","==",true)
 
 const usuarios = await getDocs(consulta);
 
-alert("Usuarios encontrados: " + usuarios.size);
-
 usuarios.forEach((docu)=>{
 
 const usuario = docu.data();
@@ -170,11 +168,19 @@ onclick="window.location.href='perfil_usuario.html?id=${docu.id}&origen=usuarios
 
 await cargarUsuarios(); 
     
+let temporizadorBusqueda;
+
 buscarUsuario.addEventListener("input", (e) => {
+
+clearTimeout(temporizadorBusqueda);
 
 textoBusqueda = e.target.value.toLowerCase();
 
+temporizadorBusqueda = setTimeout(() => {
+
 cargarUsuarios();
+
+}, 250);
 
 });
     
