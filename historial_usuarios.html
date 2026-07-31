@@ -196,14 +196,44 @@ lista.sort((a, b) =>
 );
 
 }
+  
+// =====================
+// BUSCADOR
+// =====================
+
+lista = lista.filter((docu)=>{
 
 const usuario = docu.data();
 
-lista.forEach((docu) => {
-
 const email = (usuario.email || "").toLowerCase();
 
-if (!email.includes(textoBusqueda)) return;  
+return email.includes(textoBusqueda);
+
+});
+
+// =====================
+// PAGINACIÓN
+// =====================
+
+const inicio = (paginaActual - 1) * usuariosPorPagina;
+
+const fin = inicio + usuariosPorPagina;
+
+const totalPaginas = Math.max(1,
+Math.ceil(lista.length / usuariosPorPagina));
+
+lista = lista.slice(inicio, fin);
+
+document.getElementById("paginaHistorial").textContent =
+"Página " + paginaActual;
+
+// =====================
+// MOSTRAR USUARIOS
+// =====================
+
+lista.forEach((docu)=>{
+
+const usuario = docu.data();
 
 const datosUser = {
 
@@ -270,7 +300,6 @@ listaHistorial.innerHTML += `
 });
 
 }
-
 
 cargarHistorial();
 
@@ -388,17 +417,29 @@ document.getElementById("siguienteHistorial")
 const historialSnap =
 await getDocs(collection(db,"historial_usuarios"));
 
-const totalPaginas =
-Math.ceil(historialSnap.size / usuariosPorPagina);
+let lista = historialSnap.docs;
 
-if (paginaActual < totalPaginas) {
+lista = lista.filter((docu)=>{
+
+const usuario = docu.data();
+
+return (usuario.email || "")
+.toLowerCase()
+.includes(textoBusqueda);
+
+});
+
+const totalPaginas =
+Math.max(1, Math.ceil(lista.length / usuariosPorPagina));
+
+if (paginaActual < totalPaginas){
 
 paginaActual++;
 
 cargarHistorial();
 
 }
-
+  
 });
   
 </script>
