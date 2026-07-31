@@ -100,6 +100,22 @@ style="width:100%;padding:10px;margin:15px 0;font-size:16px;">
     
 <div id="listaUsuarios"></div>
 
+<div id="paginacionUsuarios" style="margin-top:20px;text-align:center;">
+
+<button id="anteriorUsuarios">
+⬅️ Anterior
+</button>
+
+<span id="paginaUsuarios">
+Página 1
+</span>
+
+<button id="siguienteUsuarios">
+Siguiente ➡️
+</button>
+
+</div>
+
 <button
 class="volver"
 onclick="window.location.href='admin.html'">
@@ -133,9 +149,15 @@ const buscarUsuario = document.getElementById("buscarUsuario");
 
 let textoBusqueda = "";
 
+let ordenActual = "reciente";
+
+let paginaActual = 1;
+
+const usuariosPorPagina = 10;
+
 async function cargarUsuarios(){
 
-listaUsuarios.innerHTML="";
+listaUsuarios.innerHTML = "";
 
 const consulta = query(
 
@@ -147,22 +169,102 @@ where("activo","==",true)
 
 const usuarios = await getDocs(consulta);
 
-usuarios.forEach((docu)=>{
+let lista = usuarios.docs;
+
+// =====================
+// ORDEN
+// =====================
+
+if (ordenActual === "az"){
+
+lista.sort((a,b)=>
+
+(a.data().email || "")
+.localeCompare(b.data().email || "")
+
+);
+
+}
+
+if (ordenActual === "za"){
+
+lista.sort((a,b)=>
+
+(b.data().email || "")
+.localeCompare(a.data().email || "")
+
+);
+
+}
+
+if (ordenActual === "reciente"){
+
+lista.sort((a,b)=>
+
+(b.data().fechaRegistro?.seconds || 0) -
+
+(a.data().fechaRegistro?.seconds || 0)
+
+);
+
+}
+
+if (ordenActual === "antiguo"){
+
+lista.sort((a,b)=>
+
+(a.data().fechaRegistro?.seconds || 0) -
+
+(b.data().fechaRegistro?.seconds || 0)
+
+);
+
+}
+
+// =====================
+// BUSCADOR
+// =====================
+
+lista = lista.filter((docu)=>{
 
 const usuario = docu.data();
 
 const email = (usuario.email || "").toLowerCase();
 
-if (!email.includes(textoBusqueda)) return;
-    
+return email.includes(textoBusqueda);
+
+});
+
+// =====================
+// PAGINACIÓN
+// =====================
+
+const inicio = (paginaActual - 1) * usuariosPorPagina;
+
+const fin = inicio + usuariosPorPagina;
+
+const totalPaginas = Math.max(1,
+Math.ceil(lista.length / usuariosPorPagina));
+
+lista = lista.slice(inicio, fin);
+
+document.getElementById("paginaUsuarios").textContent =
+"Página " + paginaActual;
+
+lista.forEach((docu)=>{
+
+const usuario = docu.data();
+
 listaUsuarios.innerHTML += `
 
 <div class="usuario">
 
 <p><strong>📧 Email:</strong> ${usuario.email}</p>
+
 <p><strong>🆔 UID:</strong> ${usuario.usuario_id}</p>
 
-<button class="ver"
+<button
+class="ver"
 onclick="window.location.href='perfil_usuario.html?id=${docu.id}&origen=usuarios'">
 
 👤 Ver perfil
@@ -176,7 +278,7 @@ onclick="window.location.href='perfil_usuario.html?id=${docu.id}&origen=usuarios
 });
 
 }
-
+    
 await cargarUsuarios(); 
     
 let temporizadorBusqueda;
@@ -194,6 +296,65 @@ temporizadorBusqueda = setTimeout(() => {
 cargarUsuarios();
 
 }, 250);
+
+});
+
+const ordenUsuarios = document.getElementById("ordenUsuarios");
+
+ordenUsuarios.addEventListener("change", (e) => {
+
+ordenActual = e.target.value;
+
+paginaActual = 1;
+
+cargarUsuarios();
+
+});
+
+document.getElementById("anteriorUsuarios").addEventListener("click", () => {
+
+if (paginaActual > 1){
+
+paginaActual--;
+
+cargarUsuarios();
+
+}
+
+});
+
+document.getElementById("siguienteUsuarios").addEventListener("click", async () => {
+
+const consulta = query(
+
+collection(db,"users"),
+
+where("activo","==",true)
+
+);
+
+const usuarios = await getDocs(consulta);
+
+let lista = usuarios.docs;
+
+// Aplicar filtro para calcular las páginas correctamente
+lista = lista.filter((docu)=>{
+
+const usuario = docu.data();
+
+return (usuario.email || "").toLowerCase().includes(textoBusqueda);
+
+});
+
+const totalPaginas = Math.max(1, Math.ceil(lista.length / usuariosPorPagina));
+
+if (paginaActual < totalPaginas){
+
+paginaActual++;
+
+cargarUsuarios();
+
+}
 
 });
     
