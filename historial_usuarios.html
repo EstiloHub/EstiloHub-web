@@ -101,6 +101,16 @@ style="width:100%;padding:10px;margin:15px 0;font-size:16px;">
   
 <div id="listaHistorial"></div>
 
+<div id="paginacionHistorial" style="margin-top:20px;text-align:center;">
+
+<button id="anteriorHistorial">⬅️ Anterior</button>
+
+<span id="paginaHistorial">Página 1</span>
+
+<button id="siguienteHistorial">Siguiente ➡️</button>
+
+</div>
+
 <button class="volver" onclick="window.location.href='admin.html'">
 
 ⬅️ Volver
@@ -132,6 +142,18 @@ const buscarHistorial = document.getElementById("buscarHistorial");
 let textoBusqueda = "";
 
 let ordenActual = "reciente";
+
+let paginaActual = 1;
+
+const usuariosPorPagina = 10;
+
+const inicio = (paginaActual - 1) * usuariosPorPagina;
+
+const fin = inicio + usuariosPorPagina;
+
+lista = lista.slice(inicio, fin);
+
+document.getElementById("paginaHistorial").textContent = "Página " + paginaActual;
   
 async function cargarHistorial(){
 
@@ -249,6 +271,7 @@ listaHistorial.innerHTML += `
 
 }
 
+
 cargarHistorial();
 
 document.addEventListener("click", async (e) => {
@@ -326,6 +349,8 @@ clearTimeout(temporizadorBusqueda);
 
 textoBusqueda = e.target.value.toLowerCase();
 
+paginaActual = 1;
+
 temporizadorBusqueda = setTimeout(() => {
 
 cargarHistorial();
@@ -341,6 +366,38 @@ ordenUsuarios.addEventListener("change", (e) => {
 ordenActual = e.target.value;
 
 cargarHistorial();
+
+});
+
+document.getElementById("anteriorHistorial")
+.addEventListener("click", () => {
+
+if (paginaActual > 1) {
+
+paginaActual--;
+
+cargarHistorial();
+
+}
+
+});
+
+document.getElementById("siguienteHistorial")
+.addEventListener("click", async () => {
+
+const historialSnap =
+await getDocs(collection(db,"historial_usuarios"));
+
+const totalPaginas =
+Math.ceil(historialSnap.size / usuariosPorPagina);
+
+if (paginaActual < totalPaginas) {
+
+paginaActual++;
+
+cargarHistorial();
+
+}
 
 });
   
