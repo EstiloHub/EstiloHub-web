@@ -187,6 +187,8 @@ clearTimeout(temporizadorBusqueda);
 
 textoBusqueda = e.target.value.toLowerCase();
 
+paginaActual = 1;
+
 temporizadorBusqueda = setTimeout(() => {
 
 cargarUsuarios();
