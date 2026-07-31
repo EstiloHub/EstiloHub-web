@@ -81,11 +81,22 @@ margin-bottom:10px;
 
 <h1>Usuarios Activos</h1>
 
-<input
-type="text"
-id="buscarUsuario"
-placeholder="🔍 Buscar por email..."
+<input type="text" id="buscarUsuario" placeholder="🔍 Buscar por email..."
 style="width:100%;padding:10px;margin:15px 0;font-size:16px;">
+
+<label for="ordenUsuarios"><strong>Ordenar:</strong></label>
+
+<select id="ordenUsuarios">
+
+<option value="reciente">Más recientes</option>
+
+<option value="antiguo">Más antiguos</option>
+
+<option value="az">Email A → Z</option>
+
+<option value="za">Email Z → A</option>
+
+</select>
     
 <div id="listaUsuarios"></div>
 
