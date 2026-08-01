@@ -1,1 +1,295 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Gestión de Códigos</title>
+
+<style>
+
+body{
+    margin:0;
+    background:#111;
+    color:white;
+    font-family:Arial,sans-serif;
+}
+
+.container{
+    max-width:900px;
+    margin:auto;
+    padding:40px 20px;
+}
+
+h1{
+    text-align:center;
+    margin-bottom:30px;
+}
+
+.resumen{
+    display:flex;
+    gap:15px;
+    margin-bottom:25px;
+}
+
+.contador{
+    flex:1;
+    background:#1b1b1b;
+    border:1px solid #444;
+    border-radius:12px;
+    padding:18px;
+    text-align:center;
+}
+
+.generador{
+    background:#1b1b1b;
+    border:1px solid #444;
+    border-radius:12px;
+    padding:20px;
+    margin-bottom:25px;
+}
+
+input,
+select{
+    box-sizing:border-box;
+    width:100%;
+    padding:12px;
+    margin-top:10px;
+    border-radius:8px;
+    border:1px solid #555;
+    font-size:16px;
+}
+
+button{
+    width:100%;
+    padding:14px;
+    border:none;
+    border-radius:10px;
+    cursor:pointer;
+    margin-top:15px;
+    font-size:16px;
+}
+
+.generar{
+    background:#4CAF50;
+    color:white;
+}
+
+.buscar{
+    margin-bottom:20px;
+}
+
+.codigo{
+    background:#1b1b1b;
+    border:1px solid #444;
+    border-radius:12px;
+    padding:20px;
+    margin-bottom:20px;
+}
+
+.copiar{
+    background:#2196F3;
+    color:white;
+}
+
+.liberar{
+    background:#e67e22;
+    color:white;
+}
+
+.volver{
+    background:#555;
+    color:white;
+    margin-top:25px;
+}
+
+@media(max-width:600px){
+
+.resumen{
+    flex-direction:column;
+}
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>🎟️ Gestión de Códigos</h1>
+
+<div class="resumen">
+
+<div class="contador">
+
+<strong>🟢 Disponibles</strong>
+
+<p id="contadorDisponibles">0</p>
+
+</div>
+
+<div class="contador">
+
+<strong>🔴 Usados</strong>
+
+<p id="contadorUsados">0</p>
+
+</div>
+
+</div>
+
+<div class="generador">
+
+<h2>🪄 Generar códigos</h2>
+
+<label for="cantidadCodigos">
+
+¿Cuántos códigos deseas generar?
+
+</label>
+
+<input
+type="number"
+id="cantidadCodigos"
+min="1"
+max="100"
+value="10"
+>
+
+<button
+class="generar"
+id="generarCodigos">
+
+🪄 Generar códigos
+
+</button>
+
+</div>
+
+<input
+type="text"
+id="buscarCodigo"
+class="buscar"
+placeholder="🔍 Buscar por código o email..."
+>
+
+<select id="filtroCodigos">
+
+<option value="disponibles">🟢 Disponibles</option>
+
+<option value="usados">🔴 Usados</option>
+
+</select>
+
+<div id="listaCodigos"></div>
+
+<button
+class="volver"
+onclick="window.location.href='admin.html'">
+
+⬅️ Volver
+
+</button>
+
+</div>
+
+<script type="module">
+
+import { db } from "./firebase.js";
+
+import {
+    collection,
+    getDocs,
+    doc,
+    setDoc,
+    serverTimestamp
+} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+
+const cantidadCodigos = document.getElementById("cantidadCodigos");
+
+const generarCodigos = document.getElementById("generarCodigos");
+
+const listaCodigos = document.getElementById("listaCodigos");
+
+const contadorDisponibles =
+document.getElementById("contadorDisponibles");
+
+const contadorUsados =
+document.getElementById("contadorUsados");
+
+const buscarCodigo =
+document.getElementById("buscarCodigo");
+
+const filtroCodigos =
+document.getElementById("filtroCodigos");
+
+
+// =====================
+// GENERAR CÓDIGO
+// =====================
+
+function generarCodigo(){
+
+const caracteres =
+"ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+let codigo = "EH-";
+
+for(let i = 0; i < 6; i++){
+
+codigo += caracteres.charAt(
+Math.floor(Math.random() * caracteres.length)
+);
+
+}
+
+return codigo;
+
+}
+
+
+// =====================
+// CARGAR CÓDIGOS
+// =====================
+
+async function cargarCodigos(){
+
+listaCodigos.innerHTML = "";
+
+const snapshot =
+await getDocs(collection(db,"codigos"));
+
+let disponibles = 0;
+
+let usados = 0;
+
+snapshot.forEach((docu)=>{
+
+const codigo = docu.data();
+
+if(codigo.estado === "disponible"){
+
+disponibles++;
+
+}
+
+if(codigo.estado === "usado"){
+
+usados++;
+
+}
+
+});
+
+contadorDisponibles.textContent = disponibles;
+
+contadorUsados.textContent = usados;
+
+}
+
 
