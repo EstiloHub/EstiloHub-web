@@ -292,4 +292,365 @@ contadorUsados.textContent = usados;
 
 }
 
+// =====================
+// GENERAR LOTE
+// =====================
 
+generarCodigos.addEventListener("click", async () => {
+
+const cantidad = Number(cantidadCodigos.value);
+
+if (!cantidad || cantidad < 1 || cantidad > 100){
+
+alert("La cantidad debe estar entre 1 y 100.");
+
+return;
+
+}
+
+generarCodigos.disabled = true;
+
+generarCodigos.textContent = "⏳ Generando...";
+
+try {
+
+const snapshot =
+await getDocs(collection(db,"codigos"));
+
+const existentes = new Set();
+
+snapshot.forEach((docu)=>{
+
+const datos = docu.data();
+
+if(datos.codigo){
+
+existentes.add(datos.codigo);
+
+}
+
+});
+
+let generados = 0;
+
+while(generados < cantidad){
+
+const codigo = generarCodigo();
+
+if(existentes.has(codigo)){
+
+continue;
+
+}
+
+await setDoc(
+doc(db,"codigos",codigo),
+{
+
+codigo: codigo,
+
+estado: "disponible",
+
+fecha_creacion: serverTimestamp(),
+
+email: null,
+
+usuario_id: null,
+
+fecha_uso: null,
+
+liberado: false,
+
+fecha_liberacion: null
+
+}
+);
+
+existentes.add(codigo);
+
+generados++;
+
+}
+
+alert(
+"✅ Se generaron " + generados + " códigos correctamente."
+);
+
+await cargarCodigos();
+
+} catch(error){
+
+console.error(error);
+
+alert("❌ Ocurrió un error al generar los códigos.");
+
+} finally {
+
+generarCodigos.disabled = false;
+
+generarCodigos.textContent =
+"🪄 Generar códigos";
+
+}
+
+});
+
+// =====================
+// CARGA INICIAL
+// =====================
+
+await cargarCodigos();
+
+// =====================
+// MOSTRAR CÓDIGOS
+// =====================
+
+async function mostrarCodigos(){
+
+listaCodigos.innerHTML = "";
+
+const snapshot =
+await getDocs(collection(db,"codigos"));
+
+let lista = snapshot.docs;
+
+const texto =
+buscarCodigo.value.toLowerCase().trim();
+
+const filtro =
+filtroCodigos.value;
+
+lista = lista.filter((docu)=>{
+
+const codigo = docu.data();
+
+const codigoTexto =
+(codigo.codigo || "").toLowerCase();
+
+const emailTexto =
+(codigo.email || "").toLowerCase();
+
+const coincideBusqueda =
+codigoTexto.includes(texto) ||
+emailTexto.includes(texto);
+
+const coincideFiltro =
+codigo.estado === (
+filtro === "disponibles"
+? "disponible"
+: "usado"
+);
+
+return coincideBusqueda && coincideFiltro;
+
+});
+
+lista.forEach((docu)=>{
+
+const codigo = docu.data();
+
+let html = `
+
+<div class="codigo">
+
+<p>
+<strong>🎟️ Código:</strong>
+${codigo.codigo}
+</p>
+
+`;
+
+if(codigo.estado === "disponible"){
+
+html += `
+
+<p>
+<strong>🟢 Estado:</strong>
+Disponible
+</p>
+
+<button
+class="copiar"
+data-codigo="${codigo.codigo}">
+
+📋 Copiar código
+
+</button>
+
+`;
+
+}else{
+
+html += `
+
+<p>
+<strong>🔴 Estado:</strong>
+Usado
+</p>
+
+<p>
+<strong>📧 Usuario:</strong>
+${codigo.email || "Sin información"}
+</p>
+
+<p>
+<strong>📅 Fecha de uso:</strong>
+${codigo.fecha_uso
+? new Date(
+codigo.fecha_uso.seconds * 1000
+).toLocaleString("es-AR")
+: "Sin información"}
+</p>
+
+<button
+class="copiar"
+data-codigo="${codigo.codigo}">
+
+📋 Copiar código
+
+</button>
+
+<button
+class="liberar"
+data-id="${docu.id}">
+
+🔓 Liberar código
+
+</button>
+
+`;
+
+}
+
+html += `
+
+</div>
+
+`;
+
+listaCodigos.innerHTML += html;
+
+});
+
+}
+
+
+// =====================
+// BUSCADOR
+// =====================
+
+buscarCodigo.addEventListener("input", () => {
+
+mostrarCodigos();
+
+});
+
+
+// =====================
+// FILTRO
+// =====================
+
+filtroCodigos.addEventListener("change", () => {
+
+mostrarCodigos();
+
+});
+
+
+// =====================
+// CARGA INICIAL
+// =====================
+
+await mostrarCodigos();
+
+// =====================
+// COPIAR CÓDIGO
+// =====================
+
+document.addEventListener("click", async (e) => {
+
+if(!e.target.classList.contains("copiar")) return;
+
+const codigo = e.target.dataset.codigo;
+
+try {
+
+await navigator.clipboard.writeText(codigo);
+
+alert("📋 Código copiado");
+
+} catch(error) {
+
+console.error(error);
+
+alert("❌ No se pudo copiar el código.");
+
+}
+
+});
+
+
+// =====================
+// LIBERAR CÓDIGO
+// =====================
+
+document.addEventListener("click", async (e) => {
+
+if(!e.target.classList.contains("liberar")) return;
+
+const id = e.target.dataset.id;
+
+const confirmar = confirm(
+"⚠️ ¿Seguro que deseas liberar este código?\n\n" +
+"El código volverá a estar disponible para un nuevo registro.\n\n" +
+"📚 El historial del usuario que lo utilizó no será eliminado."
+);
+
+if(!confirmar) return;
+
+try {
+
+await setDoc(
+
+doc(db,"codigos",id),
+
+{
+
+estado: "disponible",
+
+liberado: true,
+
+fecha_liberacion: serverTimestamp()
+
+},
+
+{ merge: true }
+
+);
+
+alert("🔓 Código liberado correctamente.");
+
+await cargarCodigos();
+
+await mostrarCodigos();
+
+} catch(error) {
+
+console.error(error);
+
+alert("❌ No se pudo liberar el código.");
+
+}
+
+});
+
+
+// =====================
+// FINAL
+// =====================
+
+</script>
+
+</body>
+
+</html>
