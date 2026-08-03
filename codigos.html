@@ -108,7 +108,8 @@ button{
 @media(max-width:600px){
 
 .resumen{
-    flex-direction:column;
+flex-direction:column;
+
 }
 
 }
@@ -171,6 +172,33 @@ id="generarCodigos">
 
 </div>
 
+<div class="generador">
+
+<h2>✨ Crear código personalizado</h2>
+
+<label for="codigoPersonalizado">
+
+Escribe el código que deseas crear:
+
+</label>
+
+<input
+type="text"
+id="codigoPersonalizado"
+placeholder="Ej: EH-ADMIN1"
+maxlength="9"
+>
+
+<button
+class="generar"
+id="crearCodigoPersonalizado">
+
+✨ Crear código
+
+</button>
+
+</div>
+    
 <input
 type="text"
 id="buscarCodigo"
@@ -244,6 +272,7 @@ for(let i = 0; i < 6; i++){
 
 codigo += caracteres.charAt(
 Math.floor(Math.random() * caracteres.length)
+
 );
 
 }
