@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UFT-8">
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Registro</title>
 
@@ -19,7 +19,7 @@ font-family:Arial, sans-serif;
 max-width:500px;
 margin:auto;
 padding:60px 20px;
-text-aling:center;
+text-align:center;
   
 }
       
@@ -105,28 +105,31 @@ where,
 getDocs,
 doc,
 setDoc,
-updateDoc
+updateDoc,
+serverTimestamp
 
 } from
 "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
     
 async function buscarCodigo(codigoIngresado) {
-console.log("Buscando documento:", codigoIngresado);
-const q= query(
-collection(db, "codigos_acceso"),
+
+console.log("Buscando código:", codigoIngresado);
+
+const q = query(
+collection(db, "codigos"),
 where("codigo", "==", codigoIngresado)
-          
+    
 );
-        
-const resultado= await getDocs(q);
-        
-if (resultado.empty){
+
+const resultado = await getDocs(q);
+
+if (resultado.empty) {
 return null;
-        
-} 
+    
+}
 
 return resultado.docs[0];
-      
+
 }
 
 const botonCrear= document.getElementById("crearCuentaBtn");
@@ -186,18 +189,25 @@ return;
         
 }
         
-const data= codigoSnap.data();
+const codigoSnap = await
+buscarCodigo(codigo.value.trim());
 
-if (!data.activo) {
-alert("El código de acceso no es válido.");
+if (!codigoSnap) {
+
+alert("❌ El código de acceso no es válido.");
+
 return;
-        
+
 }
-        
-if (data.usado) {
-alert("El código de acceso no es válido.");
+
+const data = codigoSnap.data();
+
+if (data.estado !== "disponible") {
+
+alert("❌ El código de acceso no es válido.");
+
 return;
-        
+
 }
       
 try {
@@ -228,25 +238,41 @@ email: email.value.trim(),
 usuario_id: uid,
 tareas_realizadas: 0,
 dias_trabajados: 0,
-           minutos_acumulados: 0,
-           ultima_fecha_trabajo: null
-      });
+minutos_acumulados: 0,
+ultima_fecha_trabajo: null
+      
+});
          
-         await updateDoc(codigoSnap.ref, {
-           usado: true,
-           emailUsuario: email.value.trim(),
-           uidUsuario: uid
-      });
-         
-         alert("¡Cuenta creada correctamente!");
-         window.location.href="inicio.html";
+await updateDoc(codigoSnap.ref, {
 
-       }
-        catch(error){
-          console.error(error);
-          alert("Error al crear la cuenta:" + error.message);
-        }
-      });
-    </script>
-  </body>
+estado: "usado",
+
+email: email.value.trim(),
+
+usuario_id: uid,
+
+fecha_uso: serverTimestamp(),
+
+liberado: false,
+
+fecha_liberacion: null
+
+});
+         
+alert("¡Cuenta creada correctamente!");
+window.location.href="inicio.html";
+
+       
+}
+        
+catch(error){
+console.error(error);
+alert("Error al crear la cuenta:" + error.message);
+        
+}
+      
+});
+  
+</script>
+</body>
 </html>
