@@ -1,106 +1,135 @@
 <!DOCTYPE html>
 <html lang="es">
-  <head>
-    <meta charset="UFT-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Iniciar Sesión</title>
+<head>
+<meta charset="UFT-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Iniciar Sesión</title>
             
-    <style>
+<style>
 
-      body{
-        margin:0;
-        background:#111;
-        color:white;
-        font-family:Arial, sans-serif;
-      }
-      .container{
-        max-width:500px;
-        margin:auto;
-        padding:60px 20px;
-        text-align:center;
-      }
-      h1{
-        margin-bottom:40px;
-      }
-      input{
-        width:100%;
-        padding:15px;
-        margin-bottom:20px;
-        border:none;
-        border-radius:10px;
-        box-sizing:border-box;
-      }
-      button{
-        width:100%;
-        padding:15px;
-        margin-top:10px;
-        border:none;
-        border-radius:10px;
-        cursor:pointer;
-        font-size:16px;
-      }
-      .login{
-        background:#2196F3;
-        color:white;
-      }
-      .volver{
-        background:#555;
-        color:white;
-      }
-      </style>
-  </head>
-  <body>
-    <div class="container">
-      <h1>Iniciar Sesión</h1>
-      <input id= "email" type= "email" placeholder= "Correo electrónico:">
-      <input id= "password" type= "password" placeholder= "Contraseña:">
+body{
+  margin:0;
+  background:#111;
+  color:white;
+  font-family:Arial, sans-serif;
+      
+}
+      
+.container{
+    max-width:500px;
+    margin:auto;
+    padding:60px 20px;
+    text-align:center;
+      
+}
+      
+h1{
+  margin-bottom:40px;
+      
+}
+      
+input{
+  width:100%;
+  padding:15px;
+  margin-bottom:20px;
+  border:none;
+  border-radius:10px;
+  box-sizing:border-box;
+      
+}
+      
+button{
+  width:100%;
+  padding:15px;
+  margin-top:10px;
+  border:none;
+  border-radius:10px;
+  cursor:pointer;
+  font-size:16px;
+      
+}
     
-      <button id= "iniciarSesionBtn" class= "login">
-        Iniciar sesión
-      </button>
-      <button class= "volver"
-        onclick="window.location.href='index.html'">
-        Volver atrás
-      </button>
+.login{
+   background:#2196F3;
+   color:white;
       
-      <script type="module">
-      import { auth } from "./firebase.js";
+}
       
-      import {
-    signInWithEmailAndPassword
-    } from
-    "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+.volver{
+   background:#555;
+   color:white;
       
-      const email= document.getElementById("email");
-      const password= document.getElementById("password");
-        console.log(document.body.innerHTML);
-      const botonIngresar= document.getElementById("iniciarSesionBtn");
-        console.log(botonIngresar);
+}
+      
+</style>
+</head>
+<body>
+    
+<div class="container">
+      
+<h1>Iniciar Sesión</h1>
+<input id= "email" type= "email" placeholder= "Correo electrónico:">
+<input id= "password" type= "password" placeholder= "Contraseña:">
+    
+<button id= "iniciarSesionBtn" class= "login">
+Iniciar sesión
+</button>
+      
+<button class= "volver"
+onclick="window.location.href='index.html'">
+Volver atrás
+</button>
+      
+      
+<script type="module">
+      
+import { auth } from "./firebase.js";
+      
+import {
+   signInWithEmailAndPassword
+} from
+"https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+      
+const email= document.getElementById("email");
+const password= document.getElementById("password");
+console.log(document.body.innerHTML);
+const botonIngresar= document.getElementById("iniciarSesionBtn");
+console.log(botonIngresar);
 
-      botonIngresar.addEventListener("click", async () => {
-        if (email.value.trim() === "") {
-          alert("Ingrese su correo electrónico.");
-          return;
-        }
-          if (password.value.trim() === "") {
-            alert("Ingrese su contraseña."); 
-              return;
-          }
-            try {
-              await signInWithEmailAndPassword(
-                auth,
-                email.value.trim(),
-                password.value
-                );
-                    window.location.href= "inicio.html";
-            } catch (error) {
-              console.error(error);
-            alert("Correo o contraseña incorrectos.");
-          }
-      });
+botonIngresar.addEventListener("click", async () => {
+  
+if (email.value.trim() === "") {
+alert("Ingrese su correo electrónico.");
+return;
         
-    </script>       
-  </body>
+}
+          
+if (password.value.trim() === "") {
+alert("Ingrese su contraseña."); 
+return;
+          
+}
+            
+try {
+              
+await signInWithEmailAndPassword(
+    auth,
+    email.value.trim(),
+    password.value
+                
+);
+                    
+window.location.href= "inicio.html";
+   } catch (error) {
+   console.error(error);
+   alert("Correo o contraseña incorrectos.");
+          
+}
+      
+});
+        
+</script>       
+</body>
 </html>
 
       
