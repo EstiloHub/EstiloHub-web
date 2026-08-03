@@ -228,25 +228,31 @@ email: email.value.trim(),
 usuario_id: uid,
 tareas_realizadas: 0,
 dias_trabajados: 0,
-           minutos_acumulados: 0,
-           ultima_fecha_trabajo: null
-      });
+minutos_acumulados: 0,
+ultima_fecha_trabajo: null
+      
+});
          
-         await updateDoc(codigoSnap.ref, {
-           usado: true,
-           emailUsuario: email.value.trim(),
-           uidUsuario: uid
-      });
+await updateDoc(codigoSnap.ref, {
+usado: true,
+emailUsuario: email.value.trim(),
+uidUsuario: uid
+      
+});
          
-         alert("¡Cuenta creada correctamente!");
-         window.location.href="inicio.html";
+alert("¡Cuenta creada correctamente!");
+window.location.href="inicio.html";
 
-       }
-        catch(error){
-          console.error(error);
-          alert("Error al crear la cuenta:" + error.message);
-        }
-      });
-    </script>
-  </body>
+}
+
+catch(error){
+console.error(error);
+alert("Error al crear la cuenta:" + error.message);
+        
+}
+      
+});
+    
+</script>
+</body>
 </html>
