@@ -673,10 +673,102 @@ alert("❌ No se pudo liberar el código.");
 
 });
 
+// =====================
+// CREAR CÓDIGO PERSONALIZADO
+// =====================
 
-// =====================
-// FINAL
-// =====================
+const codigoPersonalizado =
+document.getElementById("codigoPersonalizado");
+
+const crearCodigoPersonalizado =
+document.getElementById("crearCodigoPersonalizado");
+
+crearCodigoPersonalizado.addEventListener("click", async () => {
+
+const codigo = codigoPersonalizado.value
+    .trim()
+    .toUpperCase();
+
+if (codigo === "") {
+
+alert("❌ Escribe un código.");
+
+return;
+
+}
+
+if (!codigo.startsWith("EH-")) {
+
+alert("❌ El código no es válido.");
+
+return;
+
+}
+
+if (codigo.length < 6 || codigo.length > 9) {
+
+alert("❌ El código no es válido.");
+
+return;
+
+}
+
+try {
+
+const codigoRef = doc(db, "codigos", codigo);
+
+const existente = await getDocs(
+    query(
+        collection(db, "codigos"),
+        where("codigo", "==", codigo)
+    )
+);
+
+if (!existente.empty) {
+
+alert("❌ Ese código ya existe.");
+
+return;
+
+}
+
+await setDoc(codigoRef, {
+
+codigo: codigo,
+
+estado: "disponible",
+
+tipo: "personalizado",
+
+fecha_creacion: serverTimestamp(),
+
+email: null,
+
+usuario_id: null,
+
+fecha_uso: null,
+
+liberado: false,
+
+fecha_liberacion: null
+
+});
+
+codigoPersonalizado.value = "";
+
+alert("✅ Código personalizado creado correctamente.");
+
+await cargarCodigos();
+
+await mostrarCodigos();
+
+} catch(error) {
+
+alert("❌ No se pudo crear el código.");
+
+}
+
+});
 
 </script>
 
