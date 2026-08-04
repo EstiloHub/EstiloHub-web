@@ -393,6 +393,7 @@ liberado: false,
 fecha_liberacion: null
 
 }
+    
 );
 
 existentes.add(codigo);
@@ -403,13 +404,12 @@ generados++;
 
 alert(
 "✅ Se generaron " + generados + " códigos correctamente."
+
 );
 
 await cargarCodigos();
 
 } catch(error){
-
-console.error(error);
 
 alert("❌ Ocurrió un error al generar los códigos.");
 
@@ -610,8 +610,6 @@ alert("📋 Código copiado");
 
 } catch(error) {
 
-console.error(error);
-
 alert("❌ No se pudo copiar el código.");
 
 }
@@ -664,8 +662,6 @@ await cargarCodigos();
 await mostrarCodigos();
 
 } catch(error) {
-
-console.error(error);
 
 alert("❌ No se pudo liberar el código.");
 
