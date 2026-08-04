@@ -1,8 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
-
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -29,7 +27,6 @@ h1{
 }
 
 .usuario{
-
     background:#1b1b1b;
     border:1px solid #444;
     border-radius:12px;
@@ -39,13 +36,11 @@ h1{
 }
 
 p{
-
     margin:8px 0;
 
 }
 
 button{
-
     width:100%;
     padding:14px;
     border:none;
@@ -57,22 +52,19 @@ button{
 }
 
 .volver{
-
     background:#555;
     color:white;
 
 } 
 
 .ver{
-
-background:#2196F3;
-color:white;
-margin-bottom:10px;
+  background:#2196F3;
+  color:white;
+  margin-bottom:10px;
 
 }
 
 </style>
-
 </head>
 
 <body>
@@ -131,15 +123,14 @@ Volver
 import { db } from "./firebase.js";
 
 import {
-
-collection,
-query,
-where,
-getDocs,
-doc,
-getDoc,
-setDoc,
-updateDoc
+  collection,
+  query,
+  where,
+  getDocs,
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc
 
 } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
@@ -359,7 +350,5 @@ cargarUsuarios();
 });
     
 </script>
-
 </body>
-
 </html>
