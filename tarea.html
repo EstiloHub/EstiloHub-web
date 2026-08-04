@@ -29,7 +29,6 @@ h1{
 }
 
 .tarjeta{
-
     background:#1b1b1b;
     border:1px solid #444;
     border-radius:12px;
@@ -38,23 +37,21 @@ h1{
 }
 
 p{
-
     line-height:1.7;
     font-size:17px;
 }
-    #contenido{
+    
+#contenido{
     white-space: pre-line;
 
 }
 
 .info{
-
     margin-bottom:20px;
 
 }
 
 button{
-
     width:100%;
     padding:15px;
     border:none;
@@ -66,7 +63,6 @@ button{
 }
 
 .completar{
-
     background:#4CAF50;
     color:white;
     width:280px;
@@ -76,7 +72,6 @@ button{
 }
 
 .volver{
-
     background:#555;
     color:white;
 
@@ -105,9 +100,7 @@ Cargando...
 <p id="contenido"></p>
 
 <button id="completarBtn" class="completar" style="display:none;">
-
 Completar tarea
-
 </button>
 
 </div>
@@ -120,7 +113,9 @@ import { auth, db } from "./firebase.js";
 
 import {
   onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+
+} from 
+"https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 
 import {
   doc,
@@ -133,7 +128,9 @@ import {
   updateDoc,
   increment,
   serverTimestamp
-} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+
+} from 
+"https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
 const params = new URLSearchParams(window.location.search);
 
@@ -198,9 +195,9 @@ try {
 const progresoId = `${user.uid}_${tareaId}`;
 
 const progresoRef = doc(
- db,
- "progreso_tareas",
- progresoId
+   db,
+   "progreso_tareas",
+   progresoId
 
 );
 
@@ -234,7 +231,6 @@ tarea.tiempo_requerido
 
 }
         
-console.log("UID autenticado:", user.uid);
 const consultaEstadisticas = query(
 collection(db, "estadisticas_usuario"),
 where("usuario_id", "==", user.uid) 
@@ -325,8 +321,6 @@ window.location.href = "inicio.html";
 
 } catch (error) {
 
-console.error(error);
-
 alert("Error al completar la tarea.");
 
 }
@@ -334,8 +328,6 @@ alert("Error al completar la tarea.");
 });
 
 } catch (error) {
-
-console.error(error);
  
 alert("Error al cargar la tarea.");
 
@@ -344,7 +336,5 @@ alert("Error al cargar la tarea.");
 });
 
 </script>
-
 </body>
-
 </html>
