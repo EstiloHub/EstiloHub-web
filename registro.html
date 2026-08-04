@@ -62,7 +62,6 @@ color:white;
 }
       
 </style>
-  
 </head>
   
 <body>
@@ -133,7 +132,6 @@ return resultado.docs[0];
 }
 
 const botonCrear= document.getElementById("crearCuentaBtn");
-console.log(botonCrear);
 const email= document.getElementById("email");
 const password= document.getElementById("password");
 const confirmPassword= document.getElementById("confirmPassword");
@@ -141,40 +139,44 @@ const payoneer= document.getElementById("payoneer");
 const codigo= document.getElementById("codigo");
       
 botonCrear.addEventListener("click", async () => {
-console.log("Botón presionado");
-console.log("Código escrito:", codigo.value.trim());
       
 if(email.value.trim() === "") {
+
 alert("Ingrese un correo electrónico.");
 return;
         
 }
         
 if(password.value.trim() === "") {
+
 alert("Ingrese una contraseña.");
 return;
         
 }
         
 if (confirmPassword.value.trim() === "") {
+
 alert("Confirme la contraseña.");
 return;
         
 }
         
 if(password.value !== confirmPassword.value) {
+
 alert("Las contraseñas no coinciden.");
 return;
         
 }
         
 if(payoneer.value.trim() === "") {
+
 alert("ingrese su correo de payoneer.");
 return;
       
 }
       
 if(codigo.value.trim() === "") {
+
 alert("Ingrese el código de acceso.");
 return;
       
@@ -184,6 +186,7 @@ const codigoSnap= await
 buscarCodigo(codigo.value.trim());
         
 if (!codigoSnap) {
+
 alert("El código de acceso no es válido.");
 return;
         
@@ -195,7 +198,6 @@ buscarCodigo(codigo.value.trim());
 if (!codigoSnap) {
 
 alert("❌ El código de acceso no es válido.");
-
 return;
 
 }
@@ -205,7 +207,6 @@ const data = codigoSnap.data();
 if (data.estado !== "disponible") {
 
 alert("❌ El código de acceso no es válido.");
-
 return;
 
 }
@@ -246,15 +247,10 @@ ultima_fecha_trabajo: null
 await updateDoc(codigoSnap.ref, {
 
 estado: "usado",
-
 email: email.value.trim(),
-
 usuario_id: uid,
-
 fecha_uso: serverTimestamp(),
-
 liberado: false,
-
 fecha_liberacion: null
 
 });
@@ -266,7 +262,7 @@ window.location.href="inicio.html";
 }
         
 catch(error){
-console.error(error);
+
 alert("Error al crear la cuenta:" + error.message);
         
 }
