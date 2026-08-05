@@ -407,6 +407,8 @@ document.getElementById("activa");
 const crearTareaBtn =
 document.getElementById("crearTareaBtn");
 
+let tareaEditandoId = null;
+
 crearTareaBtn.addEventListener("click", async () => {
 
 if (categoria.value.trim() === "") {
@@ -610,6 +612,74 @@ alert("No se pudieron cargar las tareas.");
 }
 
 mostrarTareas();
+
+// =====================
+// EDITAR TAREA
+// =====================
+
+document.addEventListener("click", async (event) => {
+
+const boton =
+event.target.closest(".editarTarea");
+
+if (!boton) return;
+
+const id = boton.dataset.id;
+
+try {
+
+const tareaSnap =
+await getDoc(
+doc(db, "tareas", id)
+);
+
+if (!tareaSnap.exists()) {
+
+alert("No se encontró la tarea.");
+
+return;
+
+}
+
+const tarea =
+tareaSnap.data();
+
+categoria.value =
+tarea.categoria || "";
+
+titulo.value =
+tarea.titulo || "";
+
+descripcion.value =
+tarea.descripcion || "";
+
+tiempoRequerido.value =
+tarea.tiempo_requerido || "";
+
+fase.value =
+String(tarea.fase || 1);
+
+orden.value =
+tarea.orden || "";
+
+repetible.value =
+String(tarea.repetible);
+
+activa.value =
+String(tarea.activa);
+
+tareaEditandoId = id;
+
+crearTareaBtn.textContent =
+"💾 Guardar cambios";
+
+} catch (error) {
+
+alert("No se pudo cargar la tarea.");
+
+}
+
+});
 
 // =====================
 // ELIMINAR TAREA
