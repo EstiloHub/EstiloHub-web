@@ -448,9 +448,7 @@ return;
 
 try {
 
-await addDoc(
-collection(db, "tareas"),
-{
+const datosTarea = {
 
 categoria:
 categoria.value.trim(),
@@ -474,15 +472,38 @@ repetible:
 repetible.value === "true",
 
 activa:
-activa.value === "true",
+activa.value === "true"
 
+};
+
+if (tareaEditandoId) {
+
+await updateDoc(
+doc(db, "tareas", tareaEditandoId),
+datosTarea
+);
+
+alert("💾 Cambios guardados correctamente.");
+
+tareaEditandoId = null;
+
+crearTareaBtn.textContent =
+"🛠️ Crear tarea";
+
+} else {
+
+await addDoc(
+collection(db, "tareas"),
+{
+...datosTarea,
 fecha_creacion:
 serverTimestamp()
-
 }
 );
 
 alert("🛠️ Tarea creada correctamente.");
+
+}
 
 categoria.value = "";
 titulo.value = "";
@@ -495,7 +516,7 @@ activa.value = "true";
 
 } catch (error) {
 
-alert("No se pudo crear la tarea.");
+alert("No se pudo guardar la tarea.");
 
 }
 
@@ -611,8 +632,6 @@ alert("No se pudieron cargar las tareas.");
 
 }
 
-mostrarTareas();
-
 // =====================
 // EDITAR TAREA
 // =====================
@@ -708,6 +727,8 @@ doc(db, "tareas", id)
 
 await mostrarTareas();
 
+await actualizarResumen();
+
 } catch (error) {
 
 alert("No se pudo eliminar la tarea.");
@@ -743,13 +764,261 @@ activa: !estadoActual
 
 await mostrarTareas();
 
+await actualizarResumen();
+
 } catch (error) {
 
 alert("No se pudo cambiar el estado de la tarea.");
 
 }
 
-});    
+});   
+
+// =====================
+// FILTROS Y BÚSQUEDA
+// =====================
+
+const buscarTarea =
+document.getElementById("buscarTarea");
+
+const filtroFase =
+document.getElementById("filtroFase");
+
+const filtroEstado =
+document.getElementById("filtroEstado");
+
+async function mostrarTareasFiltradas() {
+
+try {
+
+const tareasSnap =
+await getDocs(
+collection(db, "tareas")
+);
+
+const texto =
+buscarTarea.value.trim().toLowerCase();
+
+const faseSeleccionada =
+Number(filtroFase.value);
+
+const estadoSeleccionado =
+filtroEstado.value;
+
+let tareas = [];
+
+tareasSnap.forEach((docu) => {
+
+tareas.push({
+
+id: docu.id,
+...docu.data()
+
+});
+
+});
+
+tareas = tareas.filter((tarea) => {
+
+const coincideTexto =
+(tarea.titulo || "")
+.toLowerCase()
+.includes(texto)
+
+||
+
+(tarea.categoria || "")
+.toLowerCase()
+.includes(texto);
+
+const coincideFase =
+Number(tarea.fase) === faseSeleccionada;
+
+const coincideEstado =
+estadoSeleccionado === "activas"
+? tarea.activa === true
+: tarea.activa === false;
+
+return (
+coincideTexto &&
+coincideFase &&
+coincideEstado
+);
+
+});
+
+tareas.sort((a,b) => {
+
+return (a.orden || 0) -
+       (b.orden || 0);
+
+});
+
+listaTareas.innerHTML = "";
+
+if (tareas.length === 0) {
+
+listaTareas.innerHTML =
+"<p>No se encontraron tareas.</p>";
+
+return;
+
+}
+
+tareas.forEach((tarea) => {
+
+listaTareas.innerHTML += `
+
+<div class="tarea">
+
+<p>
+<strong>📂 Categoría:</strong>
+${tarea.categoria || "-"}
+</p>
+
+<p>
+<strong>📌 Título:</strong>
+${tarea.titulo || "-"}
+</p>
+
+<p>
+<strong>📝 Descripción:</strong>
+${tarea.descripcion || "-"}
+</p>
+
+<p>
+<strong>⏱️ Tiempo requerido:</strong>
+${tarea.tiempo_requerido || 0} minutos
+</p>
+
+<p>
+<strong>🎯 Fase:</strong>
+${tarea.fase || "-"}
+</p>
+
+<p>
+<strong>🔢 Orden:</strong>
+${tarea.orden || "-"}
+</p>
+
+<p>
+<strong>🔄 Permitir repetir:</strong>
+${tarea.repetible ? "Sí" : "No"}
+</p>
+
+<p>
+<strong>🟢 Estado:</strong>
+${tarea.activa ? "Activa" : "Inactiva"}
+</p>
+
+<button
+class="editarTarea"
+data-id="${tarea.id}"
+>
+✏️ Editar
+</button>
+
+<button
+class="cambiarEstado"
+data-id="${tarea.id}"
+data-activa="${tarea.activa}"
+>
+${tarea.activa
+? "🔴 Desactivar"
+: "🟢 Activar"}
+</button>
+
+<button
+class="eliminarTarea"
+data-id="${tarea.id}"
+>
+🗑️ Eliminar
+</button>
+
+</div>
+
+`;
+
+});
+
+} catch (error) {
+
+alert("No se pudieron cargar las tareas.");
+
+}
+
+}
+
+buscarTarea.addEventListener(
+"input",
+mostrarTareasFiltradas
+);
+
+filtroFase.addEventListener(
+"change",
+mostrarTareasFiltradas
+);
+
+filtroEstado.addEventListener(
+"change",
+mostrarTareasFiltradas
+);
+
+mostrarTareasFiltradas();
+
+// =====================
+// RESUMEN DE TAREAS
+// =====================
+
+async function actualizarResumen() {
+
+try {
+
+const tareasSnap =
+await getDocs(
+collection(db, "tareas")
+);
+
+let total = 0;
+let activas = 0;
+let inactivas = 0;
+
+tareasSnap.forEach((docu) => {
+
+const tarea = docu.data();
+
+total++;
+
+if (tarea.activa === true) {
+
+activas++;
+
+} else {
+
+inactivas++;
+
+}
+
+});
+
+document.getElementById("totalTareas")
+.textContent = total;
+
+document.getElementById("tareasActivas")
+.textContent = activas;
+
+document.getElementById("tareasInactivas")
+.textContent = inactivas;
+
+} catch (error) {
+
+alert("No se pudo actualizar el resumen.");
+
+}
+
+}
+
+actualizarResumen();
     
 </script>
 </body>
