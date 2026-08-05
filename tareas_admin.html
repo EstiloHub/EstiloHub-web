@@ -137,7 +137,22 @@ button{
     margin-bottom:15px;
     background:#151515;
 }
-  
+
+.editarTarea{
+    background:#2196F3;
+    color:white;
+}
+
+.cambiarEstado{
+    background:#555;
+    color:white;
+}
+
+.eliminarTarea{
+    background:#c62828;
+    color:white;
+}
+    
 </style>
 
 </head>
@@ -358,6 +373,8 @@ import {
     collection,
     addDoc,
     getDocs,
+    doc,
+    deleteDoc,
     serverTimestamp
 } from
 "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
@@ -555,6 +572,28 @@ ${tarea.repetible ? "Sí" : "No"}</p>
 <p><strong>🟢 Estado:</strong>
 ${tarea.activa ? "Activa" : "Inactiva"}</p>
 
+<button
+class="editarTarea"
+data-id="${tarea.id}"
+>
+✏️ Editar
+</button>
+
+<button
+class="cambiarEstado"
+data-id="${tarea.id}"
+data-activa="${tarea.activa}"
+>
+${tarea.activa ? "🔴 Desactivar" : "🟢 Activar"}
+</button>
+
+<button
+class="eliminarTarea"
+data-id="${tarea.id}"
+>
+🗑️ Eliminar
+</button>
+    
 </div>
 
 `;
@@ -570,7 +609,42 @@ alert("No se pudieron cargar las tareas.");
 }
 
 mostrarTareas();
-  
+
+// =====================
+// ELIMINAR TAREA
+// =====================
+
+document.addEventListener("click", async (event) => {
+
+const boton =
+event.target.closest(".eliminarTarea");
+
+if (!boton) return;
+
+const id = boton.dataset.id;
+
+const confirmar = confirm(
+"¿Seguro que deseas eliminar esta tarea?"
+);
+
+if (!confirmar) return;
+
+try {
+
+await deleteDoc(
+doc(db, "tareas", id)
+);
+
+await mostrarTareas();
+
+} catch (error) {
+
+alert("No se pudo eliminar la tarea.");
+
+}
+
+});
+    
 </script>
 </body>
 </html>
