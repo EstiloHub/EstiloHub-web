@@ -514,6 +514,10 @@ orden.value = "";
 repetible.value = "true";
 activa.value = "true";
 
+await actualizarResumen();
+
+await mostrarTareasFiltradas();
+    
 } catch (error) {
 
 alert("No se pudo guardar la tarea.");
@@ -725,9 +729,9 @@ await deleteDoc(
 doc(db, "tareas", id)
 );
 
-await mostrarTareas();
-
 await actualizarResumen();
+
+await mostrarTareasFiltradas();
 
 } catch (error) {
 
@@ -760,11 +764,12 @@ doc(db, "tareas", id),
 {
 activa: !estadoActual
 }
+
 );
 
-await mostrarTareas();
-
 await actualizarResumen();
+
+await mostrarTareasFiltradas();
 
 } catch (error) {
 
