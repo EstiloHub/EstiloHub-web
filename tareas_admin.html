@@ -1,1 +1,576 @@
+<!DOCTYPE html>
+<html lang="es">
 
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Gestión de tareas</title>
+
+<style>
+
+body{
+    margin:0;
+    background:#111;
+    color:white;
+    font-family:Arial, sans-serif;
+}
+
+.container{
+    max-width:900px;
+    margin:auto;
+    padding:40px 20px;
+}
+
+h1{
+    text-align:center;
+    margin-bottom:15px;
+}
+
+.subtitulo{
+    text-align:center;
+    color:#d0d0d0;
+    margin-bottom:35px;
+}
+
+/* =====================
+   RESUMEN
+===================== */
+
+.resumen{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:15px;
+    margin-bottom:30px;
+}
+
+.resumen div{
+    background:#1b1b1b;
+    border:1px solid #444;
+    border-radius:12px;
+    padding:18px;
+    text-align:center;
+}
+
+.resumen strong{
+    display:block;
+    font-size:25px;
+    margin-bottom:8px;
+}
+
+/* =====================
+   FILTROS
+===================== */
+
+.filtros{
+    background:#1b1b1b;
+    border:1px solid #444;
+    border-radius:12px;
+    padding:20px;
+    margin-bottom:30px;
+}
+
+.filtros h2{
+    margin-top:0;
+}
+
+input,
+select{
+    width:100%;
+    padding:13px;
+    margin-top:8px;
+    margin-bottom:18px;
+    border:none;
+    border-radius:10px;
+    box-sizing:border-box;
+    font-size:16px;
+}
+
+textarea{
+    width:100%;
+    padding:13px;
+    margin-top:8px;
+    margin-bottom:18px;
+    border:none;
+    border-radius:10px;
+    box-sizing:border-box;
+    font-size:16px;
+    font-family:Arial, sans-serif;
+    resize:vertical;
+}
+
+label{
+    display:block;
+    margin-top:10px;
+}
+
+/* =====================
+   BOTONES
+===================== */
+
+button{
+    width:100%;
+    padding:14px;
+    border:none;
+    border-radius:10px;
+    cursor:pointer;
+    font-size:16px;
+    margin-top:10px;
+}
+
+.crear{
+    background:#2196F3;
+    color:white;
+}
+
+.volver{
+    background:#555;
+    color:white;
+    margin-top:35px;
+}
+
+.tarea{
+    border:1px solid #333;
+    padding:15px;
+    border-radius:10px;
+    margin-bottom:15px;
+    background:#151515;
+}
+  
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>📝 Gestión de tareas</h1>
+
+<p class="subtitulo">
+Crea y administra las tareas disponibles para los usuarios.
+</p>
+
+<!-- =====================
+     RESUMEN
+===================== -->
+
+<div class="resumen">
+
+<div>
+<strong id="totalTareas">0</strong>
+📝 Total
+</div>
+
+<div>
+<strong id="tareasActivas">0</strong>
+🟢 Activas
+</div>
+
+<div>
+<strong id="tareasInactivas">0</strong>
+🔴 Inactivas
+</div>
+
+</div>
+
+<!-- =====================
+     FILTROS
+===================== -->
+
+<div class="filtros">
+
+<h2>🔎 Filtros</h2>
+
+<label>
+Buscar tarea
+</label>
+
+<input
+id="buscarTarea"
+type="text"
+placeholder="Buscar por título o categoría"
+>
+
+<label>
+Fase
+</label>
+
+<select id="filtroFase">
+
+<option value="1">Fase 1</option>
+<option value="2">Fase 2</option>
+
+</select>
+
+<label>
+Estado
+</label>
+
+<select id="filtroEstado">
+
+<option value="activas">🟢 Activas</option>
+<option value="inactivas">🔴 Inactivas</option>
+
+</select>
+
+</div>
+
+<!-- =====================
+     CREAR TAREA
+===================== -->
+
+<div class="filtros">
+
+<h2>🛠️ Crear tarea</h2>
+
+<label>
+📂 Categoría
+</label>
+
+<input
+id="categoria"
+type="text"
+placeholder="Categoría"
+>
+
+<label>
+📌 Título
+</label>
+
+<input
+id="titulo"
+type="text"
+placeholder="Título"
+>
+
+<label>
+📝 Descripción
+</label>
+
+<textarea
+id="descripcion"
+placeholder="Descripción de la tarea"
+rows="6"
+></textarea>
+
+<label>
+⏱️ Tiempo requerido
+</label>
+
+<input
+id="tiempoRequerido"
+type="number"
+min="1"
+placeholder="Minutos"
+>
+
+<label>
+🎯 Fase
+</label>
+
+<select id="fase">
+
+<option value="1">Fase 1</option>
+<option value="2">Fase 2</option>
+
+</select>
+
+<label>
+🔢 Orden
+</label>
+
+<input
+id="orden"
+type="number"
+min="1"
+placeholder="Orden de aparición"
+>
+
+<label>
+🔄 Permitir repetir
+</label>
+
+<select id="repetible">
+
+<option value="true">Sí</option>
+<option value="false">No</option>
+
+</select>
+
+<label>
+🟢 Activa
+</label>
+
+<select id="activa">
+
+<option value="true">Sí</option>
+<option value="false">No</option>
+
+</select>
+
+<button
+id="crearTareaBtn"
+class="crear"
+>
+🛠️ Crear tarea
+</button>
+
+</div>
+
+<!-- =====================
+     LISTA DE TAREAS
+===================== -->
+
+<div class="filtros">
+
+<h2>📋 Tareas creadas</h2>
+
+<div id="listaTareas">
+
+<p>No hay tareas creadas todavía.</p>
+
+</div>
+
+</div>
+  
+<!-- =====================
+     VOLVER
+===================== -->
+
+<button
+class="volver"
+onclick="window.location.href='admin.html'"
+>
+⬅️ Volver
+</button>
+
+</div>
+
+</div>
+
+<script type="module">
+
+import { db } from "./firebase.js";
+
+import {
+    collection,
+    addDoc,
+    getDocs,
+    serverTimestamp
+} from
+"https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+
+const categoria =
+document.getElementById("categoria");
+
+const titulo =
+document.getElementById("titulo");
+
+const descripcion =
+document.getElementById("descripcion");
+
+const tiempoRequerido =
+document.getElementById("tiempoRequerido");
+
+const fase =
+document.getElementById("fase");
+
+const orden =
+document.getElementById("orden");
+
+const repetible =
+document.getElementById("repetible");
+
+const activa =
+document.getElementById("activa");
+
+const crearTareaBtn =
+document.getElementById("crearTareaBtn");
+
+crearTareaBtn.addEventListener("click", async () => {
+
+if (categoria.value.trim() === "") {
+
+alert("Ingrese la categoría de la tarea.");
+return;
+
+}
+
+if (titulo.value.trim() === "") {
+
+alert("Ingrese el título de la tarea.");
+return;
+
+}
+
+if (descripcion.value.trim() === "") {
+
+alert("Ingrese la descripción de la tarea.");
+return;
+
+}
+
+if (tiempoRequerido.value === "") {
+
+alert("Ingrese el tiempo requerido.");
+return;
+
+}
+
+if (orden.value === "") {
+
+alert("Ingrese el orden de la tarea.");
+return;
+
+}
+
+try {
+
+await addDoc(
+collection(db, "tareas"),
+{
+
+categoria:
+categoria.value.trim(),
+
+titulo:
+titulo.value.trim(),
+
+descripcion:
+descripcion.value.trim(),
+
+tiempo_requerido:
+Number(tiempoRequerido.value),
+
+fase:
+Number(fase.value),
+
+orden:
+Number(orden.value),
+
+repetible:
+repetible.value === "true",
+
+activa:
+activa.value === "true",
+
+fecha_creacion:
+serverTimestamp()
+
+}
+);
+
+alert("🛠️ Tarea creada correctamente.");
+
+categoria.value = "";
+titulo.value = "";
+descripcion.value = "";
+tiempoRequerido.value = "";
+fase.value = "1";
+orden.value = "";
+repetible.value = "true";
+activa.value = "true";
+
+} catch (error) {
+
+alert("No se pudo crear la tarea.");
+
+}
+
+});
+
+// =====================
+// LISTA DE TAREAS
+// =====================
+
+const listaTareas =
+document.getElementById("listaTareas");
+
+async function mostrarTareas() {
+
+try {
+
+const tareasSnap =
+await getDocs(collection(db, "tareas"));
+
+listaTareas.innerHTML = "";
+
+if (tareasSnap.empty) {
+
+listaTareas.innerHTML =
+"<p>No hay tareas creadas todavía.</p>";
+
+return;
+
+}
+
+const tareas = [];
+
+tareasSnap.forEach((docu) => {
+
+tareas.push({
+
+id: docu.id,
+...docu.data()
+
+});
+
+});
+
+tareas.sort((a, b) => {
+
+return (a.orden || 0) - (b.orden || 0);
+
+});
+
+tareas.forEach((tarea) => {
+
+listaTareas.innerHTML += `
+
+<div class="tarea">
+
+<p><strong>📂 Categoría:</strong>
+${tarea.categoria || "-"}</p>
+
+<p><strong>📌 Título:</strong>
+${tarea.titulo || "-"}</p>
+
+<p><strong>📝 Descripción:</strong>
+${tarea.descripcion || "-"}</p>
+
+<p><strong>⏱️ Tiempo requerido:</strong>
+${tarea.tiempo_requerido || 0} minutos</p>
+
+<p><strong>🎯 Fase:</strong>
+${tarea.fase || "-"}</p>
+
+<p><strong>🔢 Orden:</strong>
+${tarea.orden || "-"}</p>
+
+<p><strong>🔄 Permitir repetir:</strong>
+${tarea.repetible ? "Sí" : "No"}</p>
+
+<p><strong>🟢 Estado:</strong>
+${tarea.activa ? "Activa" : "Inactiva"}</p>
+
+</div>
+
+`;
+
+});
+
+} catch (error) {
+
+alert("No se pudieron cargar las tareas.");
+
+}
+
+}
+
+mostrarTareas();
+  
+</script>
+</body>
+</html>
