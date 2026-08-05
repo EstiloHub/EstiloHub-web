@@ -367,12 +367,13 @@ onclick="window.location.href='admin.html'"
 
 <script type="module">
 
-import { db } from "./firebase.js";
+import { auth, db, doc, getDoc } from "./firebase.js";
 
 import {
     collection,
     addDoc,
     getDocs,
+    getDoc,
     doc,
     deleteDoc,
     updateDoc,
@@ -380,6 +381,34 @@ import {
 } from
 "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
+import {
+    onAuthStateChanged
+} from
+"https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+
+onAuthStateChanged(auth, async (user) => {
+
+if (!user) {
+
+window.location.href = "index.html";
+return;
+
+}
+
+const usuarioRef =
+doc(db, "users", user.uid);
+
+const usuarioSnap =
+await getDoc(usuarioRef);
+
+if (!usuarioSnap.exists() ||
+    usuarioSnap.data().admin !== true) {
+
+window.location.href = "inicio.html";
+return;
+
+}
+    
 const categoria =
 document.getElementById("categoria");
 
@@ -1024,6 +1053,8 @@ alert("No se pudo actualizar el resumen.");
 }
 
 actualizarResumen();
+
+});
     
 </script>
 </body>
