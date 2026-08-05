@@ -375,6 +375,7 @@ import {
     getDocs,
     doc,
     deleteDoc,
+    updateDoc,
     serverTimestamp
 } from
 "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
@@ -644,6 +645,41 @@ alert("No se pudo eliminar la tarea.");
 }
 
 });
+
+// =====================
+// ACTIVAR / DESACTIVAR
+// =====================
+
+document.addEventListener("click", async (event) => {
+
+const boton =
+event.target.closest(".cambiarEstado");
+
+if (!boton) return;
+
+const id = boton.dataset.id;
+
+const estadoActual =
+boton.dataset.activa === "true";
+
+try {
+
+await updateDoc(
+doc(db, "tareas", id),
+{
+activa: !estadoActual
+}
+);
+
+await mostrarTareas();
+
+} catch (error) {
+
+alert("No se pudo cambiar el estado de la tarea.");
+
+}
+
+});    
     
 </script>
 </body>
