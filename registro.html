@@ -8,11 +8,10 @@
 <style>
 
 body{
-margin:0;
-background:#111;
-color:white;
-font-family:Arial, sans-serif;
-
+    margin:0;
+    background:#FFFFFF;
+    color:#222222;
+    font-family:Arial, sans-serif;
 }
 
 .container{
@@ -112,8 +111,6 @@ serverTimestamp
     
 async function buscarCodigo(codigoIngresado) {
 
-console.log("Buscando código:", codigoIngresado);
-
 const q = query(
 collection(db, "codigos"),
 where("codigo", "==", codigoIngresado)
@@ -191,17 +188,7 @@ alert("El código de acceso no es válido.");
 return;
         
 }
-        
-const codigoSnap = await
-buscarCodigo(codigo.value.trim());
-
-if (!codigoSnap) {
-
-alert("❌ El código de acceso no es válido.");
-return;
-
-}
-
+  
 const data = codigoSnap.data();
 
 if (data.estado !== "disponible") {
