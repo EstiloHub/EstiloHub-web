@@ -9,10 +9,11 @@
 <style>
 
 body{
-    margin:0;
-    background:#111;
-    color:white;
-    font-family:Arial, sans-serif;
+  margin:0;
+  background:#FFFFFF;
+  color:#222222;
+  font-family:Arial, sans-serif;
+
 }
 
 .container{
@@ -84,6 +85,61 @@ onclick="window.location.href='inicio.html'">
 ⬅️ Volver
 
 </button>
+    
 </div>
+
+<script type="module">
+
+import { auth, db } from "./firebase.js";
+
+import {
+    onAuthStateChanged
+} from
+"https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+
+import {
+    doc,
+    getDoc
+} from
+"https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+
+
+onAuthStateChanged(auth, async (user) => {
+
+if (!user) {
+
+window.location.href = "index.html";
+return;
+
+}
+
+try {
+
+const usuarioRef =
+doc(db, "users", user.uid);
+
+const usuarioSnap =
+await getDoc(usuarioRef);
+
+if (
+!usuarioSnap.exists() ||
+usuarioSnap.data().admin !== true
+
+) {
+
+window.location.href = "inicio.html";
+return;
+
+}
+
+} catch (error) {
+
+window.location.href = "inicio.html";
+
+}
+
+});
+
+</script>
 </body>
 </html>
