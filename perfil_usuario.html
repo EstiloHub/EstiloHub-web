@@ -255,7 +255,8 @@ usuario = historialSnap.data();
 alert("No existe el usuario.");
 
 window.location.href = "usuarios.html";
-
+return;
+  
 }
 
 }
@@ -496,7 +497,8 @@ doc(db, "estadisticas_usuario", uid)
 alert("Usuario desactivado correctamente.");
 
 window.location.href = "usuarios.html";
-
+return;
+  
 } catch (error) {
 
 alert("No se pudo desactivar el usuario.");
@@ -514,7 +516,8 @@ window.location.href = "historial_usuarios.html";
 } else {
 
 window.location.href = "usuarios.html";
-
+return;
+  
 }
 
 });
