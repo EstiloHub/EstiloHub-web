@@ -435,20 +435,15 @@ listaTareas.innerHTML =
 
 const datosHistorial = {
 
-email: usuario.email,
-usuario_id: uid,
-payoneer: usuario.payoneer || "",
-codigo_acceso: usuario.codigo_acceso || "",
-fecha_registro: usuario.fecha_registro ||
-usuario.fechaRegistro || null,
-admin: usuario.admin || false,
-fase: usuario.fase || "-",
-pagina_real: usuario.pagina_real || false,
+...usuario,
 
-tareas_realizadas: estadisticas.tareas_realizadas || 0,
-dias_trabajados: estadisticas.dias_trabajados || 0,
-minutos_acumulados: estadisticas.minutos_acumulados || 0,
-ultima_fecha_trabajo: estadisticas.ultima_fecha_trabajo || null,
+usuario_id: uid,
+
+estadisticas: {
+
+...estadisticas
+
+},
 
 fecha_desactivacion: serverTimestamp()
 
@@ -516,7 +511,6 @@ window.location.href = "historial_usuarios.html";
 } else {
 
 window.location.href = "usuarios.html";
-return;
   
 }
 
