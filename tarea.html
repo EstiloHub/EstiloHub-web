@@ -279,6 +279,43 @@ completarBtn.style.display = "block";
 }, 1000);
         
 completarBtn.addEventListener("click", async () => {
+
+if (tareaCompletada) return;
+
+if (tiempoCorriendo) {
+
+tiempoAcumulado += Date.now() - inicioTramo;
+
+inicioTramo = null;
+
+tiempoCorriendo = false;
+
+}
+
+await setDoc(sesionRef, {
+
+usuario_id: user.uid,
+tarea_id: tareaId,
+email: user.email,
+tiempo_acumulado: tiempoAcumulado,
+actualizado: serverTimestamp()
+
+}, { merge: true });
+
+const tiempoRequerido =
+tarea.tiempo_requerido * 60 * 1000;
+
+if (tiempoAcumulado < tiempoRequerido) {
+
+alert("Todavía no cumpliste el tiempo requerido.");
+
+return;
+
+}
+
+tareaCompletada = true;
+
+clearInterval(revisarTiempo);
             
 try {
                           
@@ -303,6 +340,7 @@ minutos_realizados: increment(
 tarea.tiempo_requerido
 
 )
+  
 });
 
 } else {
@@ -320,6 +358,17 @@ tarea.tiempo_requerido
 });
 
 }
+
+await setDoc(sesionRef, {
+
+usuario_id: user.uid,
+tarea_id: tareaId,
+email: user.email,
+tiempo_acumulado: tiempoAcumulado,
+completada: true,
+fecha_completada: serverTimestamp()
+
+}, { merge: true });
         
 const consultaEstadisticas = query(
 collection(db, "estadisticas_usuario"),
