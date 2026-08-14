@@ -266,10 +266,18 @@ tiempoActual += Date.now() - inicioTramo;
 
 }
 
-const tiempoRequerido =
-tarea.tiempo_requerido * 60 * 1000;
-
 if (tiempoActual >= tiempoRequerido) {
+
+tiempoAcumulado = tiempoRequerido;
+
+if (tiempoCorriendo) {
+
+tiempoAcumulado = tiempoRequerido;
+
+inicioTramo = null;
+tiempoCorriendo = false;
+
+}
 
 completarBtn.style.display = "block";
 
@@ -280,6 +288,8 @@ completarBtn.style.display = "block";
 completarBtn.addEventListener("click", async () => {
 
 if (tareaCompletada) return;
+
+completarBtn.disabled = true;
 
 if (tiempoCorriendo) {
 
@@ -458,6 +468,8 @@ window.location.href = "inicio.html";
 } catch (error) {
 
 alert("Error al completar la tarea.");
+
+completarBtn.disabled = false;
 
 }
 
