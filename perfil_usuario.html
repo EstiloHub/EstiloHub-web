@@ -286,18 +286,7 @@ let estadisticas = {};
 
 if (usuario.fechaRegistro) {
 
-const fecha = usuario.fechaRegistro.toDate
-? usuario.fechaRegistro.toDate()
-: new Date(usuario.fechaRegistro);
-
-document.getElementById("registro").textContent =
-fecha.toLocaleDateString("es-AR");
-
-} else if (usuario.fecha_registro) {
-
-const fecha = usuario.fecha_registro.toDate
-? usuario.fecha_registro.toDate()
-: new Date(usuario.fecha_registro);
+const fecha = usuario.fechaRegistro.toDate();
 
 document.getElementById("registro").textContent =
 fecha.toLocaleDateString("es-AR");
