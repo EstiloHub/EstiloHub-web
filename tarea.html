@@ -228,7 +228,6 @@ inicioTramo = null;
 tiempoCorriendo = false;
 
 await setDoc(sesionRef, {
-
 usuario_id: user.uid,
 tarea_id: tareaId,
 email: user.email,
@@ -293,7 +292,6 @@ tiempoCorriendo = false;
 }
 
 await setDoc(sesionRef, {
-
 usuario_id: user.uid,
 tarea_id: tareaId,
 email: user.email,
@@ -312,10 +310,6 @@ alert("Todavía no cumpliste el tiempo requerido.");
 return;
 
 }
-
-tareaCompletada = true;
-
-clearInterval(revisarTiempo);
             
 try {
                           
@@ -358,17 +352,6 @@ tarea.tiempo_requerido
 });
 
 }
-
-await setDoc(sesionRef, {
-
-usuario_id: user.uid,
-tarea_id: tareaId,
-email: user.email,
-tiempo_acumulado: tiempoAcumulado,
-completada: true,
-fecha_completada: serverTimestamp()
-
-}, { merge: true });
         
 const consultaEstadisticas = query(
 collection(db, "estadisticas_usuario"),
@@ -453,6 +436,20 @@ actualizar
 
 }
 
+await setDoc(sesionRef, {
+usuario_id: user.uid,
+tarea_id: tareaId,
+email: user.email,
+tiempo_acumulado: tiempoAcumulado,
+completada: true,
+fecha_completada: serverTimestamp()
+
+}, { merge: true });
+
+tareaCompletada = true;
+
+clearInterval(revisarTiempo);
+  
 alert("¡Tarea completada!");
 completarBtn.disabled= true;
 
