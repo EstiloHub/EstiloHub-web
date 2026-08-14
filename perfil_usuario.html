@@ -328,17 +328,7 @@ estadisticas = estadisticasSnap.data();
 
 // Si viene del historial, las estadísticas ya están guardadas ahí
 
-estadisticas = {
-
-tareas_realizadas: usuario.tareas_realizadas || 0,
-
-dias_trabajados: usuario.dias_trabajados || 0,
-
-minutos_acumulados: usuario.minutos_acumulados || 0,
-
-ultima_fecha_trabajo: usuario.ultima_fecha_trabajo || null
-
-};
+estadisticas = usuario.estadisticas || {};
 
 }
 
