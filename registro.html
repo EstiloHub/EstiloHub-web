@@ -211,34 +211,35 @@ password.value
 const uid= credencial.user.uid;
          
 await setDoc(doc(db, "users", uid), {
-usuario_id: uid,
-email: email.value.trim(),
-payoneer: payoneer.value.trim(),
-codigo_acceso: codigo.value.trim(),
-fechaRegistro: new Date().toISOString(),
-admin: false, 
-activo: true
-      
+    usuario_id: uid,
+    email: email.value.trim(),
+    payoneer: payoneer.value.trim(),
+    codigo_acceso: codigo.value.trim(),
+    fechaRegistro: new Date().toISOString(),
+    admin: false,
+    activo: true,
+    fase: "Fase 1",
+    pagina_real: false
+    
 });
          
 await setDoc(doc(db, "estadisticas_usuario", uid), {
-email: email.value.trim(),
-usuario_id: uid,
-tareas_realizadas: 0,
-dias_trabajados: 0,
-minutos_acumulados: 0,
-ultima_fecha_trabajo: null
+    email: email.value.trim(),
+    usuario_id: uid,
+    tareas_realizadas: 0,
+    dias_trabajados: 0,
+    minutos_acumulados: 0,
+    ultima_fecha_trabajo: null
       
 });
          
 await updateDoc(codigoSnap.ref, {
-
-estado: "usado",
-email: email.value.trim(),
-usuario_id: uid,
-fecha_uso: serverTimestamp(),
-liberado: false,
-fecha_liberacion: null
+    estado: "usado",
+    email: email.value.trim(),
+    usuario_id: uid,
+    fecha_uso: serverTimestamp(),
+    liberado: false,
+    fecha_liberacion: null
 
 });
          
