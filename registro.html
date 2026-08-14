@@ -215,7 +215,7 @@ await setDoc(doc(db, "users", uid), {
     email: email.value.trim(),
     payoneer: payoneer.value.trim(),
     codigo_acceso: codigo.value.trim(),
-    fechaRegistro: new Date().toISOString(),
+    fechaRegistro: serverTimestamp(),
     admin: false,
     activo: true,
     fase: "Fase 1",
