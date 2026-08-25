@@ -31,8 +31,7 @@ module.exports = async function handler(req, res) { if (req.method !== "POST") {
     if (!codigoLimpio) { return res.status(400).json({ ok: false, error: "Ingrese el código de acceso."
       });
     }
-    if (password.length < 6) { return res.status(400).json({ ok: false, error: "La contraseña debe tener al 
-        menos 6 caracteres."
+    if (password.length < 6) { return res.status(400).json({ ok: false, error: "La contraseña debe tener al menos 6 caracteres."
       });
     }
     // ========================================== CREAR USUARIO EN FIREBASE AUTH 
