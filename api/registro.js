@@ -39,8 +39,7 @@ module.exports = async function handler(req, res) { if (req.method !== "POST") {
     let usuario; try { usuario = await auth.createUser({ email: emailLimpio, password: password
       });
     } catch (error) {
-      if (error.code === "auth/email-already-exists") { return res.status(409).json({ ok: false, error: "Ese 
-          correo electrónico ya está registrado."
+      if (error.code === "auth/email-already-exists") { return res.status(409).json({ ok: false, error: "Ese correo electrónico ya está registrado."
         });
       }
       throw error;
