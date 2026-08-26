@@ -181,7 +181,7 @@ module.exports = async function handler(req, res) {
       throw error;
     }
 
-  } catch (error) 
+  } catch (error) {
 
     return res.status(500).json({
       ok: false,
