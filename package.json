@@ -5,21 +5,24 @@
   "main": "firebase.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
-  },
+},
   "repository": {
     "type": "git",
     "url": "git+https://github.com/EstiloHub/EstiloHub-web.git"
-  },
+},
   "keywords": [],
   "type": "commonjs",
   "bugs": {
     "url": "https://github.com/EstiloHub/EstiloHub-web/issues"
-  },
+},
   "homepage": "https://github.com/EstiloHub/EstiloHub-web#readme",
   "dependencies": {
     "firebase-admin": "^14.3.0"
-  },
+},
   "engines": {
   "node": "22.x"
+},
+  "overrides": {
+    "jose": "4.15.9"
 }
 }
