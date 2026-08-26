@@ -18,5 +18,10 @@
   "homepage": "https://github.com/EstiloHub/EstiloHub-web#readme",
   "dependencies": {
     "firebase-admin": "^14.3.0"
+  },
+  "engines": {
+  "node": "22.x"
   }
+  
+}
 }
