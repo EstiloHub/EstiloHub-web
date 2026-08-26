@@ -161,7 +161,7 @@ module.exports = async function handler(req, res) {
       try {
         await auth.deleteUser(uid);
       } catch (deleteError) {
-        console.error("No se pudo eliminar el usuario incompleto.");
+      
       }
 
       if (error.message === "CODIGO_NO_VALIDO") {
@@ -181,8 +181,7 @@ module.exports = async function handler(req, res) {
       throw error;
     }
 
-  } catch (error) {
-    console.error("Error en registro:", error);
+  } catch (error) 
 
     return res.status(500).json({
       ok: false,
