@@ -7,256 +7,287 @@
 
 <style>
 
-body{
-    margin:0;
-    background:#FFFFFF;
-    color:#222222;
-    font-family:Arial, sans-serif;
+body {
+    margin: 0;
+    background: #FFFFFF;
+    color: #222222;
+    font-family: Arial, sans-serif;
 }
 
-.container{
-max-width:500px;
-margin:auto;
-padding:60px 20px;
-text-align:center;
-  
+.container {
+    max-width: 500px;
+    margin: auto;
+    padding: 60px 20px;
+    text-align: center;
 }
-      
-h1{
-margin-bottom:40px;
-    
+
+h1 {
+    margin-bottom: 40px;
 }
-    
-input{
-width:100%;
-padding:12px;
-margin-bottom:20px;
-border:none;
-border-radius:10px;
-box-sizing:border-box;
-      
+
+.campo {
+    position: relative;
+    width: 100%;
+    margin-bottom: 20px;
 }
-      
-button{
-width:100%;
-padding:15px;
-margin-top:10px;
-border:none;
-border-radius:10px;
-cursor:pointer;
-font-size:16px;
-      
+
+input {
+    width: 100%;
+    padding: 12px 48px 12px 12px;
+    border: none;
+    border-radius: 10px;
+    box-sizing: border-box;
 }
-      
-.crear{
-background:#2196F3;
-color:white;
-      
+
+.mostrar {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: auto;
+    margin: 0;
+    padding: 5px;
+    background: transparent;
+    color: #222222;
+    border: none;
+    cursor: pointer;
+    font-size: 18px;
 }
-      
-.volver{
-background:#4CAF50;
-color:white;
-      
+
+button {
+    width: 100%;
+    padding: 15px;
+    margin-top: 10px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 16px;
 }
-      
+
+.crear {
+    background: #2196F3;
+    color: white;
+}
+
+.volver {
+    background: #4CAF50;
+    color: white;
+}
+
+#mensaje {
+    margin-top: 20px;
+    font-size: 15px;
+}
+
 </style>
 </head>
-  
+
 <body>
-    
+
 <div class="container">
 
 <h1>Registro</h1>
 
-<input id="email" type="email" placeholder="Correo electrónico:">
-<input id="password" type="password" placeholder="Contraseña:">
-<input id="confirmPassword" type="password" placeholder="Confirmar contraseña:">
-<input id="payoneer" type="email" placeholder="Correo asociado a Payoneer:">
-<input id="codigo" type="password" placeholder="Código de acceso:">
-      
-<button id="crearCuentaBtn" class="crear">
-Crear cuenta
-</button>
-      
-<button class="volver"
-onclick="window.location.href='index.html'">
-Volver atrás 
-</button>
-    
+<input
+    id="email"
+    type="email"
+    placeholder="Correo electrónico"
+    autocomplete="email"
+>
+
+<div class="campo">
+    <input
+        id="password"
+        type="password"
+        placeholder="Contraseña"
+        autocomplete="new-password"
+    >
+    <button
+        type="button"
+        class="mostrar"
+        data-target="password"
+        aria-label="Mostrar contraseña"
+    >👁</button>
 </div>
-    
-<script type="module">
 
-import { auth, db } from "./firebase.js";
-      
-import {
-createUserWithEmailAndPassword
+<div class="campo">
+    <input
+        id="confirmPassword"
+        type="password"
+        placeholder="Confirmar contraseña"
+        autocomplete="new-password"
+    >
+    <button
+        type="button"
+        class="mostrar"
+        data-target="confirmPassword"
+        aria-label="Mostrar confirmación de contraseña"
+    >👁</button>
+</div>
 
-} from
-"https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
-        
-import {
-collection,
-query,
-where,
-getDocs,
-doc,
-setDoc,
-updateDoc,
-serverTimestamp
+<input
+    id="payoneer"
+    type="email"
+    placeholder="Correo asociado a Payoneer"
+    autocomplete="email"
+>
 
-} from
-"https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
-    
-async function buscarCodigo(codigoIngresado) {
+<div class="campo">
+    <input
+        id="codigo"
+        type="password"
+        placeholder="Código de acceso"
+        autocomplete="off"
+    >
+    <button
+        type="button"
+        class="mostrar"
+        data-target="codigo"
+        aria-label="Mostrar código de acceso"
+    >👁</button>
+</div>
 
-const q = query(
-collection(db, "codigos"),
-where("codigo", "==", codigoIngresado)
-    
-);
+<button id="crearCuentaBtn" class="crear" type="button">
+    Crear cuenta
+</button>
 
-const resultado = await getDocs(q);
+<button
+    class="volver"
+    type="button"
+    onclick="window.location.href='index.html'"
+>
+    Volver atrás
+</button>
 
-if (resultado.empty) {
-return null;
-    
-}
+<div id="mensaje"></div>
 
-return resultado.docs[0];
+</div>
 
-}
+<script>
 
-const botonCrear= document.getElementById("crearCuentaBtn");
-const email= document.getElementById("email");
-const password= document.getElementById("password");
-const confirmPassword= document.getElementById("confirmPassword");
-const payoneer= document.getElementById("payoneer");
-const codigo= document.getElementById("codigo");
-      
+const botonCrear = document.getElementById("crearCuentaBtn");
+const email = document.getElementById("email");
+const password = document.getElementById("password");
+const confirmPassword = document.getElementById("confirmPassword");
+const payoneer = document.getElementById("payoneer");
+const codigo = document.getElementById("codigo");
+const mensaje = document.getElementById("mensaje");
+
+document.querySelectorAll(".mostrar").forEach((boton) => {
+
+    boton.addEventListener("click", () => {
+
+        const campo = document.getElementById(boton.dataset.target);
+
+        if (campo.type === "password") {
+            campo.type = "text";
+            boton.textContent = "🙈";
+        } else {
+            campo.type = "password";
+            boton.textContent = "👁";
+        }
+
+    });
+
+});
+
 botonCrear.addEventListener("click", async () => {
-      
-if(email.value.trim() === "") {
 
-alert("Ingrese un correo electrónico.");
-return;
-        
-}
-        
-if(password.value.trim() === "") {
+    mensaje.textContent = "";
+    botonCrear.disabled = true;
+    botonCrear.textContent = "Creando cuenta...";
 
-alert("Ingrese una contraseña.");
-return;
-        
-}
-        
-if (confirmPassword.value.trim() === "") {
+    const emailLimpio = email.value.trim();
+    const payoneerLimpio = payoneer.value.trim();
+    const codigoLimpio = codigo.value.trim().toUpperCase();
 
-alert("Confirme la contraseña.");
-return;
-        
-}
-        
-if(password.value !== confirmPassword.value) {
+    if (emailLimpio === "") {
+        alert("Ingrese un correo electrónico.");
+        botonCrear.disabled = false;
+        botonCrear.textContent = "Crear cuenta";
+        return;
+    }
 
-alert("Las contraseñas no coinciden.");
-return;
-        
-}
-        
-if(payoneer.value.trim() === "") {
+    if (password.value === "") {
+        alert("Ingrese una contraseña.");
+        botonCrear.disabled = false;
+        botonCrear.textContent = "Crear cuenta";
+        return;
+    }
 
-alert("ingrese su correo de payoneer.");
-return;
-      
-}
-      
-if(codigo.value.trim() === "") {
+    if (confirmPassword.value === "") {
+        alert("Confirme la contraseña.");
+        botonCrear.disabled = false;
+        botonCrear.textContent = "Crear cuenta";
+        return;
+    }
 
-alert("Ingrese el código de acceso.");
-return;
-      
-}
-      
-const codigoSnap= await
-buscarCodigo(codigo.value.trim());
-        
-if (!codigoSnap) {
+    if (password.value !== confirmPassword.value) {
+        alert("Las contraseñas no coinciden.");
+        botonCrear.disabled = false;
+        botonCrear.textContent = "Crear cuenta";
+        return;
+    }
 
-alert("El código de acceso no es válido.");
-return;
-        
-}
-  
-const data = codigoSnap.data();
+    if (password.value.length < 6) {
+        alert("La contraseña debe tener al menos 6 caracteres.");
+        botonCrear.disabled = false;
+        botonCrear.textContent = "Crear cuenta";
+        return;
+    }
 
-if (data.estado !== "disponible") {
+    if (payoneerLimpio === "") {
+        alert("Ingrese su correo de Payoneer.");
+        botonCrear.disabled = false;
+        botonCrear.textContent = "Crear cuenta";
+        return;
+    }
 
-alert("❌ El código de acceso no es válido.");
-return;
+    if (codigoLimpio === "") {
+        alert("Ingrese el código de acceso.");
+        botonCrear.disabled = false;
+        botonCrear.textContent = "Crear cuenta";
+        return;
+    }
 
-}
-      
-try {
-  
-const credencial= await
-createUserWithEmailAndPassword(
-auth,
-email.value.trim(),
-password.value
-           
-);
-         
-const uid= credencial.user.uid;
-         
-await setDoc(doc(db, "users", uid), {
-    usuario_id: uid,
-    email: email.value.trim(),
-    payoneer: payoneer.value.trim(),
-    codigo_acceso: codigo.value.trim(),
-    fechaRegistro: serverTimestamp(),
-    admin: false,
-    activo: true,
-    fase: "Fase 1",
-    pagina_real: false
-    
-});
-         
-await setDoc(doc(db, "estadisticas_usuario", uid), {
-    email: email.value.trim(),
-    usuario_id: uid,
-    tareas_realizadas: 0,
-    dias_trabajados: 0,
-    minutos_acumulados: 0,
-    ultima_fecha_trabajo: null
-      
-});
-         
-await updateDoc(codigoSnap.ref, {
-    estado: "usado",
-    email: email.value.trim(),
-    usuario_id: uid,
-    fecha_uso: serverTimestamp(),
-    liberado: false,
-    fecha_liberacion: null
+    try {
+
+        const respuesta = await fetch("/api/registro", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                email: emailLimpio,
+                password: password.value,
+                payoneer: payoneerLimpio,
+                codigo: codigoLimpio
+            })
+        });
+
+        const resultado = await respuesta.json();
+
+        if (!respuesta.ok || !resultado.ok) {
+            alert(resultado.error || "No se pudo crear la cuenta.");
+            botonCrear.disabled = false;
+            botonCrear.textContent = "Crear cuenta";
+            return;
+        }
+
+        alert("¡Cuenta creada correctamente!");
+        window.location.href = "inicio.html";
+
+    } catch (error) {
+
+        alert("No se pudo conectar con el servidor. Inténtelo nuevamente.");
+
+        botonCrear.disabled = false;
+        botonCrear.textContent = "Crear cuenta";
+    }
 
 });
-         
-alert("¡Cuenta creada correctamente!");
-window.location.href="inicio.html";
 
-       
-}
-        
-catch(error){
-
-alert("Error al crear la cuenta:" + error.message);
-        
-}
-      
-});
-  
 </script>
+
 </body>
-</html>
+    </html>
