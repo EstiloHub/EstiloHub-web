@@ -16,8 +16,11 @@ return initializeApp({
       projectId: process.env.FIREBASE_PROJECT_ID,
       clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
       privateKey: privateKey
+      
 })
+  
 });
+  
 }
 
 module.exports = async function handler(req, res) {
@@ -25,7 +28,9 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({
       ok: false,
       error: "Método no permitido."
+      
 });
+    
 }
 
   try {
@@ -49,44 +54,55 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({
         ok: false,
         error: "Ingrese un correo electrónico."
+
 });
+
 }
 
     if (!password) {
       return res.status(400).json({
         ok: false,
         error: "Ingrese una contraseña."
+
 });
+      
 }
 
     if (!payoneerLimpio) {
       return res.status(400).json({
         ok: false,
         error: "Ingrese su correo de Payoneer."
+
 });
+      
 }
 
     if (!codigoLimpio) {
       return res.status(400).json({
         ok: false,
         error: "Ingrese el código de acceso."
+
 });
+      
 }
 
     if (password.length < 6) {
       return res.status(400).json({
         ok: false,
         error: "La contraseña debe tener al menos 6 caracteres."
+
 });
+      
 }
 
-    // Crear usuario en Firebase Authentication
+// Crear usuario en Firebase Authentication
     let usuario;
 
     try {
       usuario = await auth.createUser({
         email: emailLimpio,
         password: password
+
 });
     
     } catch (error) {
@@ -94,7 +110,9 @@ module.exports = async function handler(req, res) {
         return res.status(409).json({
           ok: false,
           error: "Ese correo electrónico ya está registrado."
+
 });
+
 }
 
       throw error;
@@ -102,8 +120,9 @@ module.exports = async function handler(req, res) {
 
     const uid = usuario.uid;
 
-    try {
-      // Validar y reservar el código
+  try {
+      
+// Validar y reservar el código
       
 const codigosQuery = db
    .collection("codigos")
@@ -114,7 +133,8 @@ await db.runTransaction(async (transaction) => {
 
   if (resultado.empty) {
     throw new Error("CODIGO_NO_VALIDO");
-  }
+
+}
 
   const codigoSnap = resultado.docs[0];
   const codigoRef = codigoSnap.ref;
@@ -122,7 +142,8 @@ await db.runTransaction(async (transaction) => {
 
   if (data.estado !== "disponible") {
     throw new Error("CODIGO_NO_DISPONIBLE");
-  }
+
+}
 
   transaction.update(codigoRef, {
     estado: "usado",
@@ -131,11 +152,14 @@ await db.runTransaction(async (transaction) => {
     fecha_uso: FieldValue.serverTimestamp(),
     liberado: false,
     fecha_liberacion: null
-});
+
 });
 
-      // Crear documento del usuario
-      await db.collection("users").doc(uid).set({
+});
+
+// Crear documento del usuario
+      
+   await db.collection("users").doc(uid).set({
         usuario_id: uid,
         email: emailLimpio,
         payoneer: payoneerLimpio,
@@ -145,45 +169,51 @@ await db.runTransaction(async (transaction) => {
         activo: true,
         fase: "Fase 1",
         pagina_real: false
+
 });
 
-      // Crear estadísticas iniciales
-      await db.collection("estadisticas_usuario").doc(uid).set({
+// Crear estadísticas iniciales
+    
+    await db.collection("estadisticas_usuario").doc(uid).set({
         email: emailLimpio,
         usuario_id: uid,
         tareas_realizadas: 0,
         dias_trabajados: 0,
         minutos_acumulados: 0,
         ultima_fecha_trabajo: null
+
 });
 
       return res.status(200).json({
         ok: true
+
 });
 
     } catch (error) {
-      // Si algo falla después de crear Auth,
-      // eliminamos el usuario para no dejar una cuenta incompleta.
-      try {
-        await auth.deleteUser(uid);
+  // Si algo falla después de crear Auth,
+ // eliminamos el usuario para no dejar una cuenta incompleta.
+      
+  try {
+    await auth.deleteUser(uid);
      } catch (deleteError) {
+      
 }
 
-      if (error.message === "CODIGO_NO_VALIDO") {
-        return res.status(400).json({
-          ok: false,
-          error: "El código de acceso no es válido."
+  if (
+  error.message === "CODIGO_NO_VALIDO" ||
+  error.message === "CODIGO_NO_DISPONIBLE"
+
+) {
+  
+   return res.status(400).json({
+    ok: false,
+    error: "El código de acceso no es válido."
+  
 });
+
 }
 
-      if (error.message === "CODIGO_NO_DISPONIBLE") {
-        return res.status(400).json({
-          ok: false,
-          error: "El código de acceso ya no está disponible."
-});
-}
-
-      throw error;
+  throw error;
 }
 
   } catch (error) {
@@ -192,5 +222,7 @@ await db.runTransaction(async (transaction) => {
       ok: false,
       error: "No se pudo crear la cuenta."
 });
+
 }
+
 };
