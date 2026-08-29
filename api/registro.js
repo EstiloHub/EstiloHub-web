@@ -54,7 +54,7 @@ module.exports = async function handler(req, res) {
 
     const emailLimpio = String(email || "").trim();
     const payoneerLimpio = String(payoneer || "").trim();
-    const codigoLimpio = String(codigo || "").trim().toUpperCase();
+    const codigoLimpio = String(codigo || "").trim();
 
     if (!emailLimpio) {
       return res.status(400).json({
