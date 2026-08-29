@@ -106,34 +106,30 @@ module.exports = async function handler(req, res) {
 // VALIDAR EL CÓDIGO ANTES DE CREAR LA CUENTA
 // ==========================================
 
-    const codigosQuery = db
-      .collection("codigos_acceso")
-      .where("codigo", "==", codigoLimpio);
-    const resultadoCodigo = await codigosQuery.get();
+    const todosLosCodigos = await db
+  .collection("codigos_acceso")
+  .get();
 
-if (resultadoCodigo.empty) {
-  const pruebaColeccion = await db.collection("codigos_acceso").limit(1).get();
+let codigoEncontrado = null;
 
+for (const documento of todosLosCodigos.docs) {
+  const datos = documento.data();
+
+  if (String(datos.codigo || "").trim() === codigoLimpio) {
+    codigoEncontrado = documento;
+    break;
+  }
+}
+
+if (!codigoEncontrado) {
   return res.status(400).json({
     ok: false,
-    error: pruebaColeccion.empty
-      ? "PRUEBA: colección vacía"
-      : "PRUEBA: colección encontrada"
+    error: "PRUEBA: código no encontrado"
   });
 }
 
-    if (resultadoCodigo.empty) {
-      return res.status(400).json({
-        ok: false,
-        error: "PRUEBA 1"
-        
-});
-      
-}
-
-    const codigoSnap = resultadoCodigo.docs[0];
-    const codigoData = codigoSnap.data();
-
+const codigoSnap = codigoEncontrado;
+const codigoData = codigoSnap.data();
     if (codigoData.estado !== "disponible") {
       return res.status(400).json({
         ok: false,
