@@ -8,7 +8,11 @@ function getFirebaseAdmin() {
 }
 
 const privateKey = process.env.FIREBASE_PRIVATE_KEY
-    ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n")
+    ? process.env.FIREBASE_PRIVATE_KEY
+        .replace(/^"|"$/g, "")
+        .replace(/\\n/g, "\n")
+        .replace(/\\r/g, "")
+        .trim()
     : undefined;
 
 return initializeApp({
