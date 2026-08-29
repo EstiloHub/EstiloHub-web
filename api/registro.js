@@ -122,9 +122,12 @@ for (const documento of todosLosCodigos.docs) {
 }
 
 if (!codigoEncontrado) {
+  const primerDocumento = todosLosCodigos.docs[0];
+  const primerCodigo = String(primerDocumento.data().codigo || "").trim();
+
   return res.status(400).json({
     ok: false,
-    error: "PRUEBA: código no encontrado"
+    error: `PRUEBA: ingresado=${codigoLimpio.length}, almacenado=${primerCodigo.length}`
   });
 }
 
