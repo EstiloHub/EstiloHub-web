@@ -115,7 +115,7 @@ module.exports = async function handler(req, res) {
     if (resultadoCodigo.empty) {
       return res.status(400).json({
         ok: false,
-        error: "El código de acceso no es válido."
+        error: "PRUEBA 1"
         
 });
       
@@ -127,7 +127,7 @@ module.exports = async function handler(req, res) {
     if (codigoData.estado !== "disponible") {
       return res.status(400).json({
         ok: false,
-        error: "El código de acceso no es válido."
+        error: "PRUEBA 2"
         
 });
       
