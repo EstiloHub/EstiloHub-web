@@ -109,8 +109,18 @@ module.exports = async function handler(req, res) {
     const codigosQuery = db
       .collection("codigos_acceso")
       .where("codigo", "==", codigoLimpio);
-
     const resultadoCodigo = await codigosQuery.get();
+
+if (resultadoCodigo.empty) {
+  const pruebaColeccion = await db.collection("codigos_acceso").limit(1).get();
+
+  return res.status(400).json({
+    ok: false,
+    error: pruebaColeccion.empty
+      ? "PRUEBA: colección vacía"
+      : "PRUEBA: colección encontrada"
+  });
+}
 
     if (resultadoCodigo.empty) {
       return res.status(400).json({
