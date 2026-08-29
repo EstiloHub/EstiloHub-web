@@ -122,32 +122,14 @@ for (const documento of todosLosCodigos.docs) {
 }
 
 if (!codigoEncontrado) {
-if (!codigoEncontrado) {
-  let coincidenciaMayusculas = false;
-  let coincidenciaNormalizada = false;
-
-  for (const documento of todosLosCodigos.docs) {
-    const valor = String(documento.data().codigo || "").trim();
-
-    if (valor.toLowerCase() === codigoLimpio.toLowerCase()) {
-      coincidenciaMayusculas = true;
-    }
-
-    if (
-      valor.normalize("NFKC") ===
-      codigoLimpio.normalize("NFKC")
-    ) {
-      coincidenciaNormalizada = true;
-    }
-  }
-
   return res.status(400).json({
     ok: false,
-    error:
-      `PRUEBA: exacta=no, mayúsculas=${coincidenciaMayusculas ? "sí" : "no"}, ` +
-      `normalizada=${coincidenciaNormalizada ? "sí" : "no"}`
+    error: "El código de acceso no es válido."
   });
 }
+
+  const codigoSnap = codigoEncontrado;
+const codigoData = codigoSnap.data();
 
 // ==========================================
 // CREAR USUARIO EN FIREBASE AUTHENTICATION
