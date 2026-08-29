@@ -122,24 +122,31 @@ for (const documento of todosLosCodigos.docs) {
 }
 
 if (!codigoEncontrado) {
-  const primerDocumento = todosLosCodigos.docs[0];
-  const primerCodigo = String(primerDocumento.data().codigo || "").trim();
+if (!codigoEncontrado) {
+  let coincidenciaMayusculas = false;
+  let coincidenciaNormalizada = false;
+
+  for (const documento of todosLosCodigos.docs) {
+    const valor = String(documento.data().codigo || "").trim();
+
+    if (valor.toLowerCase() === codigoLimpio.toLowerCase()) {
+      coincidenciaMayusculas = true;
+    }
+
+    if (
+      valor.normalize("NFKC") ===
+      codigoLimpio.normalize("NFKC")
+    ) {
+      coincidenciaNormalizada = true;
+    }
+  }
 
   return res.status(400).json({
     ok: false,
-    error: `PRUEBA: ingresado=${codigoLimpio.length}, almacenado=${primerCodigo.length}`
+    error:
+      `PRUEBA: exacta=no, mayúsculas=${coincidenciaMayusculas ? "sí" : "no"}, ` +
+      `normalizada=${coincidenciaNormalizada ? "sí" : "no"}`
   });
-}
-
-const codigoSnap = codigoEncontrado;
-const codigoData = codigoSnap.data();
-    if (codigoData.estado !== "disponible") {
-      return res.status(400).json({
-        ok: false,
-        error: "PRUEBA 2"
-        
-});
-      
 }
 
 // ==========================================
