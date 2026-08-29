@@ -220,9 +220,10 @@ await db.runTransaction(async (transaction) => {
 
     return res.status(500).json({
       ok: false,
-      error: "No se pudo crear la cuenta."
-});
+      error: error.message || "Error interno del servidor."
+    });
 
-}
+  }
+
 
 };
