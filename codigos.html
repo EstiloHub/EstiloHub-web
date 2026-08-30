@@ -226,6 +226,7 @@ onclick="window.location.href='admin.html'">
 
 </div>
 
+
 <script type="module">
 
 import { auth, db } from "./firebase.js";
@@ -252,7 +253,6 @@ if (!user) {
 window.location.href = "index.html";
 return;
 
-    
 }
 
 const usuarioRef = doc(db, "users", user.uid);
@@ -262,19 +262,21 @@ const usuarioSnap = await getDoc(usuarioRef);
 if (
   !usuarioSnap.exists() ||
   usuarioSnap.data().admin !== true
-    
 ) {
 
 window.location.href = "inicio.html";
 return;
 
 }
-  
-const cantidadCodigos = document.getElementById("cantidadCodigos");
 
-const generarCodigos = document.getElementById("generarCodigos");
+const cantidadCodigos =
+document.getElementById("cantidadCodigos");
 
-const listaCodigos = document.getElementById("listaCodigos");
+const generarCodigos =
+document.getElementById("generarCodigos");
+
+const listaCodigos =
+document.getElementById("listaCodigos");
 
 const contadorDisponibles =
 document.getElementById("contadorDisponibles");
@@ -304,7 +306,6 @@ for(let i = 0; i < 6; i++){
 
 codigo += caracteres.charAt(
 Math.floor(Math.random() * caracteres.length)
-
 );
 
 }
@@ -323,7 +324,7 @@ async function cargarCodigos(){
 listaCodigos.innerHTML = "";
 
 const snapshot =
-await getDocs(collection(db,"codigos"));
+await getDocs(collection(db,"codigos_acceso"));
 
 let disponibles = 0;
 
@@ -353,6 +354,7 @@ contadorUsados.textContent = usados;
 
 }
 
+
 // =====================
 // GENERAR LOTE
 // =====================
@@ -376,7 +378,7 @@ generarCodigos.textContent = "⏳ Generando...";
 try {
 
 const snapshot =
-await getDocs(collection(db,"codigos"));
+await getDocs(collection(db,"codigos_acceso"));
 
 const existentes = new Set();
 
@@ -405,7 +407,7 @@ continue;
 }
 
 await setDoc(
-doc(db,"codigos",codigo),
+doc(db,"codigos_acceso",codigo),
 {
 
 codigo: codigo,
@@ -425,7 +427,7 @@ liberado: false,
 fecha_liberacion: null
 
 }
-    
+
 );
 
 existentes.add(codigo);
@@ -436,7 +438,6 @@ generados++;
 
 alert(
 "✅ Se generaron " + generados + " códigos correctamente."
-
 );
 
 await cargarCodigos();
@@ -456,11 +457,13 @@ generarCodigos.textContent =
 
 });
 
+
 // =====================
 // CARGA INICIAL
 // =====================
 
 await cargarCodigos();
+
 
 // =====================
 // MOSTRAR CÓDIGOS
@@ -471,7 +474,7 @@ async function mostrarCodigos(){
 listaCodigos.innerHTML = "";
 
 const snapshot =
-await getDocs(collection(db,"codigos"));
+await getDocs(collection(db,"codigos_acceso"));
 
 let lista = snapshot.docs;
 
@@ -561,6 +564,7 @@ ${codigo.fecha_uso
 codigo.fecha_uso.seconds * 1000
 ).toLocaleString("es-AR")
 : "Sin información"}
+
 </p>
 
 <button
@@ -624,6 +628,7 @@ mostrarCodigos();
 
 await mostrarCodigos();
 
+
 // =====================
 // COPIAR CÓDIGO
 // =====================
@@ -671,7 +676,7 @@ try {
 
 await setDoc(
 
-doc(db,"codigos",id),
+doc(db,"codigos_acceso",id),
 
 {
 
@@ -700,6 +705,7 @@ alert("❌ No se pudo liberar el código.");
 }
 
 });
+
 
 // =====================
 // CREAR CÓDIGO PERSONALIZADO
@@ -743,11 +749,12 @@ return;
 
 try {
 
-const codigoRef = doc(db, "codigos", codigo);
+const codigoRef =
+doc(db, "codigos_acceso", codigo);
 
 const existente = await getDocs(
     query(
-        collection(db, "codigos"),
+        collection(db, "codigos_acceso"),
         where("codigo", "==", codigo)
     )
 );
@@ -799,7 +806,5 @@ alert("❌ No se pudo crear el código.");
 });
 
 });
-  
-</script>
-</body>
-</html>
+
+  </script>
