@@ -106,31 +106,29 @@ module.exports = async function handler(req, res) {
 // VALIDAR EL CÓDIGO ANTES DE CREAR LA CUENTA
 // ==========================================
 
-    const todosLosCodigos = await db
+const codigosQuery = db
   .collection("codigos_acceso")
-  .get();
+  .where("codigo", "==", codigoLimpio);
 
-let codigoEncontrado = null;
+const resultadoCodigo = await codigosQuery.get();
 
-for (const documento of todosLosCodigos.docs) {
-  const datos = documento.data();
-
-  if (String(datos.codigo || "").trim() === codigoLimpio) {
-    codigoEncontrado = documento;
-    break;
-  }
-}
-
-if (!codigoEncontrado) {
+if (resultadoCodigo.empty) {
   return res.status(400).json({
     ok: false,
     error: "El código de acceso no es válido."
   });
 }
 
-  const codigoSnap = codigoEncontrado;
+const codigoSnap = resultadoCodigo.docs[0];
 const codigoData = codigoSnap.data();
 
+if (codigoData.estado !== "disponible") {
+  return res.status(400).json({
+    ok: false,
+    error: "El código de acceso no es válido."
+  });
+}
+    
 // ==========================================
 // CREAR USUARIO EN FIREBASE AUTHENTICATION
 // ==========================================
