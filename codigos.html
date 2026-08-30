@@ -750,6 +750,522 @@ return;
 try {
 
 const codigoRef =
+<script type="module">
+
+import { auth, db } from "./firebase.js";
+
+import {
+    collection,
+    getDocs,
+    getDoc,
+    doc,
+    setDoc,
+    serverTimestamp,
+    query,
+    where
+} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+
+import {
+    onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+
+onAuthStateChanged(auth, async (user) => {
+
+if (!user) {
+
+window.location.href = "index.html";
+return;
+
+}
+
+const usuarioRef = doc(db, "users", user.uid);
+
+const usuarioSnap = await getDoc(usuarioRef);
+
+if (
+    !usuarioSnap.exists() ||
+    usuarioSnap.data().admin !== true
+) {
+
+window.location.href = "inicio.html";
+return;
+
+}
+
+const cantidadCodigos =
+document.getElementById("cantidadCodigos");
+
+const generarCodigos =
+document.getElementById("generarCodigos");
+
+const listaCodigos =
+document.getElementById("listaCodigos");
+
+const contadorDisponibles =
+document.getElementById("contadorDisponibles");
+
+const contadorUsados =
+document.getElementById("contadorUsados");
+
+const buscarCodigo =
+document.getElementById("buscarCodigo");
+
+const filtroCodigos =
+document.getElementById("filtroCodigos");
+
+
+// =====================
+// GENERAR CÓDIGO
+// =====================
+
+function generarCodigo(){
+
+const caracteres =
+"ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+let codigo = "EH-";
+
+for(let i = 0; i < 6; i++){
+
+codigo += caracteres.charAt(
+Math.floor(Math.random() * caracteres.length)
+);
+
+}
+
+return codigo;
+
+}
+
+
+// =====================
+// ACTUALIZAR CONTADORES
+// =====================
+
+async function cargarCodigos(){
+
+const snapshot =
+await getDocs(collection(db,"codigos_acceso"));
+
+let disponibles = 0;
+let usados = 0;
+
+snapshot.forEach((docu)=>{
+
+const codigo = docu.data();
+
+if(codigo.estado === "disponible"){
+disponibles++;
+}
+
+if(codigo.estado === "usado"){
+usados++;
+}
+
+});
+
+contadorDisponibles.textContent = disponibles;
+contadorUsados.textContent = usados;
+
+}
+
+
+// =====================
+// MOSTRAR CÓDIGOS
+// =====================
+
+async function mostrarCodigos(){
+
+const snapshot =
+await getDocs(collection(db,"codigos_acceso"));
+
+let lista = snapshot.docs;
+
+const texto =
+buscarCodigo.value.toLowerCase().trim();
+
+const filtro =
+filtroCodigos.value;
+
+lista = lista.filter((docu)=>{
+
+const codigo = docu.data();
+
+const codigoTexto =
+(codigo.codigo || "").toLowerCase();
+
+const emailTexto =
+(codigo.email || "").toLowerCase();
+
+const coincideBusqueda =
+codigoTexto.includes(texto) ||
+emailTexto.includes(texto);
+
+const coincideFiltro =
+codigo.estado === (
+    filtro === "disponibles"
+    ? "disponible"
+    : "usado"
+);
+
+return coincideBusqueda && coincideFiltro;
+
+});
+
+listaCodigos.innerHTML = "";
+
+lista.forEach((docu)=>{
+
+const codigo = docu.data();
+
+let html = `
+
+<div class="codigo">
+
+<p>
+<strong>🎟️ Código:</strong>
+${codigo.codigo}
+</p>
+
+`;
+
+if(codigo.estado === "disponible"){
+
+html += `
+
+<p>
+<strong>🟢 Estado:</strong>
+Disponible
+</p>
+
+<button
+class="copiar"
+data-codigo="${codigo.codigo}">
+
+📋 Copiar código
+
+</button>
+
+`;
+
+}else{
+
+html += `
+
+<p>
+<strong>🔴 Estado:</strong>
+Usado
+</p>
+
+<p>
+<strong>📧 Usuario:</strong>
+${codigo.email || "Sin información"}
+</p>
+
+<p>
+<strong>📅 Fecha de uso:</strong>
+${
+codigo.fecha_uso
+? new Date(
+    codigo.fecha_uso.seconds * 1000
+).toLocaleString("es-AR")
+: "Sin información"
+}
+
+</p>
+
+<button
+class="copiar"
+data-codigo="${codigo.codigo}">
+
+📋 Copiar código
+
+</button>
+
+<button
+class="liberar"
+data-id="${docu.id}">
+
+🔓 Liberar código
+
+</button>
+
+`;
+
+}
+
+html += `
+
+</div>
+
+`;
+
+listaCodigos.innerHTML += html;
+
+});
+
+}
+
+
+// =====================
+// ACTUALIZAR TODO
+// =====================
+
+async function actualizarVista(){
+
+await cargarCodigos();
+await mostrarCodigos();
+
+}
+
+
+// =====================
+// GENERAR LOTE
+// =====================
+
+generarCodigos.addEventListener("click", async () => {
+
+const cantidad = Number(cantidadCodigos.value);
+
+if (!cantidad || cantidad < 1 || cantidad > 100){
+
+alert("La cantidad debe estar entre 1 y 100.");
+
+return;
+
+}
+
+generarCodigos.disabled = true;
+generarCodigos.textContent = "⏳ Generando...";
+
+try {
+
+const snapshot =
+await getDocs(collection(db,"codigos_acceso"));
+
+const existentes = new Set();
+
+snapshot.forEach((docu)=>{
+
+const datos = docu.data();
+
+if(datos.codigo){
+
+existentes.add(datos.codigo);
+
+}
+
+});
+
+let generados = 0;
+
+while(generados < cantidad){
+
+const codigo = generarCodigo();
+
+if(existentes.has(codigo)){
+
+continue;
+
+}
+
+await setDoc(
+doc(db,"codigos_acceso",codigo),
+{
+
+codigo: codigo,
+
+estado: "disponible",
+
+fecha_creacion: serverTimestamp(),
+
+email: null,
+
+usuario_id: null,
+
+fecha_uso: null,
+
+liberado: false,
+
+fecha_liberacion: null
+
+}
+);
+
+existentes.add(codigo);
+
+generados++;
+
+}
+
+alert(
+"✅ Se generaron " +
+generados +
+" códigos correctamente."
+);
+
+await actualizarVista();
+
+} catch(error){
+
+alert(
+"❌ Ocurrió un error al generar los códigos."
+);
+
+} finally {
+
+generarCodigos.disabled = false;
+
+generarCodigos.textContent =
+"🪄 Generar códigos";
+
+}
+
+});
+
+
+// =====================
+// BUSCADOR
+// =====================
+
+buscarCodigo.addEventListener("input", () => {
+
+mostrarCodigos();
+
+});
+
+
+// =====================
+// FILTRO
+// =====================
+
+filtroCodigos.addEventListener("change", () => {
+
+mostrarCodigos();
+
+});
+
+
+// =====================
+// COPIAR CÓDIGO
+// =====================
+
+document.addEventListener("click", async (e) => {
+
+if(!e.target.classList.contains("copiar")) return;
+
+const codigo = e.target.dataset.codigo;
+
+try {
+
+await navigator.clipboard.writeText(codigo);
+
+alert("📋 Código copiado");
+
+} catch(error) {
+
+alert("❌ No se pudo copiar el código.");
+
+}
+
+});
+
+
+// =====================
+// LIBERAR CÓDIGO
+// =====================
+
+document.addEventListener("click", async (e) => {
+
+if(!e.target.classList.contains("liberar")) return;
+
+const id = e.target.dataset.id;
+
+const confirmar = confirm(
+"⚠️ ¿Seguro que deseas liberar este código?\n\n" +
+"El código volverá a estar disponible para un nuevo registro.\n\n" +
+"📚 El historial del usuario que lo utilizó no será eliminado."
+);
+
+if(!confirmar) return;
+
+try {
+
+await setDoc(
+
+doc(db,"codigos_acceso",id),
+
+{
+
+estado: "disponible",
+
+liberado: true,
+
+fecha_liberacion: serverTimestamp()
+
+},
+
+{ merge: true }
+
+);
+
+alert("🔓 Código liberado correctamente.");
+
+await actualizarVista();
+
+} catch(error) {
+
+alert("❌ No se pudo liberar el código.");
+
+}
+
+});
+
+
+// =====================
+// CREAR CÓDIGO PERSONALIZADO
+// =====================
+
+const codigoPersonalizado =
+document.getElementById("codigoPersonalizado");
+
+const crearCodigoPersonalizado =
+document.getElementById("crearCodigoPersonalizado");
+
+crearCodigoPersonalizado.addEventListener("click", async () => {
+
+const codigo =
+codigoPersonalizado.value.trim();
+
+if (codigo === "") {
+
+alert("❌ Escribe un código.");
+
+return;
+
+}
+
+if (codigo.length > 30) {
+
+alert("❌ El código no puede tener más de 30 caracteres.");
+
+return;
+
+}
+
+if (!/^[A-Za-z0-9_-]+$/.test(codigo)) {
+
+alert(
+"❌ El código solo puede contener letras, números, guiones y guiones bajos."
+);
+
+return;
+
+}
+
+try {
+
+const codigoRef =
 doc(db, "codigos_acceso", codigo);
 
 const existente = await getDocs(
@@ -791,11 +1307,11 @@ fecha_liberacion: null
 
 codigoPersonalizado.value = "";
 
-alert("✅ Código personalizado creado correctamente.");
+alert(
+"✅ Código personalizado creado correctamente."
+);
 
-await cargarCodigos();
-
-await mostrarCodigos();
+await actualizarVista();
 
 } catch(error) {
 
@@ -805,6 +1321,13 @@ alert("❌ No se pudo crear el código.");
 
 });
 
+
+// =====================
+// CARGA INICIAL
+// =====================
+
+await actualizarVista();
+
 });
 
-  </script>
+</script>
