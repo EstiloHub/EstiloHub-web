@@ -516,30 +516,36 @@ collection(db, "codigos_acceso")
 );
 
 let disponibles = 0;
+
 let usados = 0;
+
 
 snapshot.forEach((docu)=>{
 
 const codigo =
 docu.data();
 
-if(
-codigo.estado === "disponible"
-){
+const estado =
+String(codigo.estado || "")
+.trim()
+.toLowerCase();
+
+
+if(estado === "disponible"){
 
 disponibles++;
 
 }
 
-if(
-codigo.estado === "usado"
-){
+
+if(estado === "usado"){
 
 usados++;
 
 }
 
 });
+
 
 contadorDisponibles.textContent =
 disponibles;
@@ -548,7 +554,6 @@ contadorUsados.textContent =
 usados;
 
 }
-
 
 // ==================================================
 // MOSTRAR CÓDIGOS
@@ -587,15 +592,17 @@ const coincideBusqueda =
 codigoTexto.includes(texto) ||
 emailTexto.includes(texto);
 
+const estado =
+    String(codigo.estado || "")
+        .trim()
+        .toLowerCase();
+
 const coincideFiltro =
-(
-filtro === "disponibles" &&
-codigo.estado === "disponible"
-) ||
-(
-filtro === "usados" &&
-codigo.estado === "usado"
-);
+    (filtro === "disponibles" &&
+    estado === "disponible") ||
+    (filtro === "usados" &&
+    estado === "usado");
+)
 
 return (
 coincideBusqueda &&
