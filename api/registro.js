@@ -6,9 +6,9 @@ function getFirebaseAdmin() {
 
   if (getApps().length) {
     return getApps()[0];
-}
+  }
 
-const privateKey = process.env.FIREBASE_PRIVATE_KEY
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY
     ? process.env.FIREBASE_PRIVATE_KEY
         .replace(/^"|"$/g, "")
         .replace(/\\n/g, "\n")
@@ -16,13 +16,13 @@ const privateKey = process.env.FIREBASE_PRIVATE_KEY
         .trim()
     : undefined;
 
-return initializeApp({
+  return initializeApp({
     credential: cert({
       projectId: process.env.FIREBASE_PROJECT_ID,
       clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
       privateKey: privateKey
-})
-});
+    })
+  });
 
 }
 
@@ -34,20 +34,20 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({
       ok: false,
       error: "Método no permitido."
-});
+    });
 
-}
-
-
- try {
-
-  getFirebaseAdmin();
-
-  const auth = getAuth();
-  const db = getFirestore();
+  }
 
 
-  const {
+  try {
+
+    getFirebaseAdmin();
+
+    const auth = getAuth();
+    const db = getFirestore();
+
+
+    const {
       email,
       password,
       payoneer,
@@ -65,325 +65,350 @@ module.exports = async function handler(req, res) {
       String(codigo || "").trim();
 
 
-// ==========================================
-// VALIDACIONES
-// ==========================================
+    // ==========================================
+    // VALIDACIONES
+    // ==========================================
 
-  if (!emailLimpio) {
+    if (!emailLimpio) {
 
-  return res.status(400).json({
+      return res.status(400).json({
         ok: false,
         error: "Ingrese un correo electrónico."
-});
+      });
 
-}
+    }
 
 
- if (!password) {
+    if (!password) {
 
- return res.status(400).json({
+      return res.status(400).json({
         ok: false,
         error: "Ingrese una contraseña."
-});
+      });
 
-}
+    }
 
 
- if (!payoneerLimpio) {
+    if (!payoneerLimpio) {
 
- return res.status(400).json({
+      return res.status(400).json({
         ok: false,
         error: "Ingrese su correo de Payoneer."
-});
+      });
 
-}
+    }
 
 
-  if (!codigoLimpio) {
+    if (!codigoLimpio) {
 
-  return res.status(400).json({
+      return res.status(400).json({
         ok: false,
         error: "Ingrese el código de acceso."
-});
+      });
 
-}
+    }
 
 
-  if (password.length < 6) {
+    if (password.length < 6) {
 
-  return res.status(400).json({
+      return res.status(400).json({
         ok: false,
         error: "La contraseña debe tener al menos 6 caracteres."
-});
+      });
 
-}
-
-
-// ==========================================
-// VALIDAR CÓDIGO
-// ==========================================
-
-const codigoRef =
-db.collection("codigos_acceso").doc(codigoLimpio);
-
-const codigoSnap =
-await codigoRef.get();
+    }
 
 
-  if (!codigoSnap.exists) {
+    // ==========================================
+    // BUSCAR CÓDIGO
+    // ==========================================
 
-  return res.status(400).json({
+    let codigoRef =
+      db.collection("codigos_acceso").doc(codigoLimpio);
+
+    let codigoSnap =
+      await codigoRef.get();
+
+
+    // ==========================================
+    // COMPATIBILIDAD CON CÓDIGOS ANTIGUOS
+    // ==========================================
+
+    if (!codigoSnap.exists) {
+
+      const resultadoCodigo =
+        await db
+          .collection("codigos_acceso")
+          .where("codigo", "==", codigoLimpio)
+          .limit(1)
+          .get();
+
+
+      if (!resultadoCodigo.empty) {
+
+        const documentoCodigo =
+          resultadoCodigo.docs[0];
+
+        codigoRef =
+          documentoCodigo.ref;
+
+        codigoSnap =
+          documentoCodigo;
+
+      }
+
+    }
+
+
+    if (!codigoSnap.exists) {
+
+      return res.status(400).json({
         ok: false,
         error: "El código de acceso no es válido."
-});
+      });
 
-}
-
-
-const codigoData =
-codigoSnap.data();
+    }
 
 
-const estado =
+    const codigoData =
+      codigoSnap.data();
+
+
+    const estado =
       String(codigoData.estado || "")
         .trim()
         .toLowerCase();
 
 
-  if (estado !== "disponible") {
+    if (estado !== "disponible") {
 
-  return res.status(400).json({
+      return res.status(400).json({
         ok: false,
         error: "El código de acceso no es válido."
-});
+      });
 
-}
-
-
-// ==========================================
-// CREAR USUARIO EN FIREBASE AUTHENTICATION
-// ==========================================
-
-let usuario;
+    }
 
 
-try {
+    // ==========================================
+    // CREAR USUARIO EN FIREBASE AUTHENTICATION
+    // ==========================================
 
-  usuario = await auth.createUser({
-      email: emailLimpio,
-      password: password
-});
+    let usuario;
 
-} catch (error) {
 
-    if (error.code === "auth/email-already-exists") {
+    try {
 
-    return res.status(409).json({
+      usuario = await auth.createUser({
+        email: emailLimpio,
+        password: password
+      });
+
+
+    } catch (error) {
+
+      if (error.code === "auth/email-already-exists") {
+
+        return res.status(409).json({
           ok: false,
           error: "Ese correo electrónico ya está registrado."
-});
+        });
 
-}
+      }
 
-  throw error;
+      throw error;
 
-}
+    }
 
 
-const uid =
-  usuario.uid;
+    const uid =
+      usuario.uid;
 
 
-try {
+    try {
 
+      // ==========================================
+      // RESERVAR EL CÓDIGO
+      // ==========================================
 
-// ==========================================
-// RESERVAR EL CÓDIGO
-// ==========================================
+      await db.runTransaction(
+        async (transaction) => {
 
-await db.runTransaction(
-async (transaction) => {
+          const codigoActual =
+            await transaction.get(codigoRef);
 
-const codigoActual =
-await transaction.get(codigoRef);
 
+          if (!codigoActual.exists) {
 
-  if (!codigoActual.exists) {
+            throw new Error(
+              "CODIGO_NO_VALIDO"
+            );
 
-    throw new Error(
-    "CODIGO_NO_VALIDO"
-);
+          }
 
-}
 
+          const dataActual =
+            codigoActual.data();
 
-const dataActual =
-codigoActual.data();
 
+          const estadoActual =
+            String(dataActual.estado || "")
+              .trim()
+              .toLowerCase();
 
-const estadoActual =
-      String(dataActual.estado || "")
-         .trim()
-         .toLowerCase();
 
+          if (estadoActual !== "disponible") {
 
-  if (
-    estadoActual !== "disponible"
-  ) {
+            throw new Error(
+              "CODIGO_NO_VALIDO"
+            );
 
-  throw new Error(
-     "CODIGO_NO_VALIDO"
-            
-);
+          }
 
-}
 
+          transaction.update(
+            codigoRef,
+            {
 
-  transaction.update(
-      codigoRef,
-{
+              estado: "usado",
 
-    estado: "usado",
+              email:
+                emailLimpio,
 
-    email:
-    emailLimpio,
+              usuario_id:
+                uid,
 
-    usuario_id:
-    uid,
+              fecha_uso:
+                FieldValue.serverTimestamp(),
 
-    fecha_uso:
-    FieldValue.serverTimestamp(),
+              liberado:
+                false,
 
-    liberado:
-    false,
+              fecha_liberacion:
+                null
 
-    fecha_liberacion:
-    null
+            }
+          );
 
-}
-);
+        }
+      );
 
-}
-);
 
+      // ==========================================
+      // CREAR DOCUMENTO DEL USUARIO
+      // ==========================================
 
-// ==========================================
-// CREAR DOCUMENTO DEL USUARIO
-// ==========================================
+      await db
+        .collection("users")
+        .doc(uid)
+        .set({
 
-await db
-    .collection("users")
-    .doc(uid)
-    .set({
+          usuario_id:
+            uid,
 
-    usuario_id:
-        uid,
+          email:
+            emailLimpio,
 
-    email:
-        emailLimpio,
+          payoneer:
+            payoneerLimpio,
 
-    payoneer:
-        payoneerLimpio,
+          codigo_acceso:
+            codigoLimpio,
 
-    codigo_acceso:
-        codigoLimpio,
+          fechaRegistro:
+            FieldValue.serverTimestamp(),
 
-    fechaRegistro:
-        FieldValue.serverTimestamp(),
+          admin:
+            false,
 
-    admin:
-       false,
+          activo:
+            true,
 
-    activo:
-       true,
+          fase:
+            "Fase 1",
 
-    fase:
-       "Fase 1",
+          pagina_real:
+            false
 
-    pagina_real:
-        false
+        });
 
-});
 
+      // ==========================================
+      // CREAR ESTADÍSTICAS INICIALES
+      // ==========================================
 
-// ==========================================
-// CREAR ESTADÍSTICAS INICIALES
-// ==========================================
+      await db
+        .collection("estadisticas_usuario")
+        .doc(uid)
+        .set({
 
-await db
-   .collection("estadisticas_usuario")
-   .doc(uid)
-   .set({
+          email:
+            emailLimpio,
 
-    email:
-      emailLimpio,
+          usuario_id:
+            uid,
 
-    usuario_id:
-      uid,
+          tareas_realizadas:
+            0,
 
-    tareas_realizadas:
-          0,
+          dias_trabajados:
+            0,
 
-    dias_trabajados:
-          0,
+          minutos_acumulados:
+            0,
 
-    minutos_acumulados:
-          0,
+          ultima_fecha_trabajo:
+            null
 
-    ultima_fecha_trabajo:
-          null
+        });
 
-});
 
+      return res.status(200).json({
+        ok: true
+      });
 
-return res.status(200).json({
-      ok: true
-});
 
+    } catch (error) {
 
-} catch (error) {
+      // ==========================================
+      // ELIMINAR CUENTA SI FALLÓ EL PROCESO
+      // ==========================================
 
+      try {
 
-// ==========================================
-// ELIMINAR CUENTA SI FALLÓ EL PROCESO
-// ==========================================
+        await auth.deleteUser(uid);
 
-try {
+      } catch (deleteError) {
+      }
 
-await auth.deleteUser(uid);
 
-} catch (deleteError) {
-      
-}
+      if (
+        error.message ===
+        "CODIGO_NO_VALIDO"
+      ) {
 
+        return res.status(400).json({
+          ok: false,
+          error:
+            "El código de acceso no es válido."
+        });
 
-if (
-   error.message ===
-  "CODIGO_NO_VALIDO"
-) {
+      }
 
-return res.status(400).json({
-      ok: false,
-      error:
-      "El código de acceso no es válido."
-});
 
-}
+      throw error;
 
+    }
 
-throw error;
 
-}
+  } catch (error) {
 
-
-} catch (error) {
-
-return res.status(500).json({
+    return res.status(500).json({
       ok: false,
       error:
         "No se pudo crear la cuenta."
-});
+    });
 
-}
+  }
 
 };
