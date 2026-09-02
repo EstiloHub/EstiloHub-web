@@ -472,181 +472,120 @@ usados;
 // MOSTRAR CÓDIGOS
 // ==================================================
 
+
 async function mostrarCodigos(){
 
-const snapshot =
-await getDocs(
-collection(db, "codigos_acceso")
+const snapshot = await getDocs(
+  collection(db, "codigos_acceso")
 );
 
-let lista =
-snapshot.docs;
+const texto = buscarCodigo.value
+   .toLowerCase()
+   .trim();
 
+const filtro = filtroCodigos.value;
 
-const texto =
-buscarCodigo.value
-.toLowerCase()
-.trim();
+const lista = snapshot.docs.filter((docu) => {
 
-
-const filtro =
-filtroCodigos.value;
-
-
-lista =
-lista.filter((docu)=>{
-
-const codigo =
-docu.data();
-
+const codigo = docu.data();
 
 const codigoTexto =
-(codigo.codigo || "")
-.toLowerCase();
-
+    (codigo.codigo || "").toLowerCase();
 
 const emailTexto =
-(codigo.email || "")
-.toLowerCase();
-
+    (codigo.email || "").toLowerCase();
 
 const coincideBusqueda =
-codigoTexto.includes(texto) ||
-emailTexto.includes(texto);
-
+    codigoTexto.includes(texto) ||
+    emailTexto.includes(texto);
 
 const coincideFiltro =
-codigo.estado === (
+    (filtro === "disponibles" &&
+    codigo.estado === "disponible") ||
+    (filtro === "usados" &&
+    codigo.estado === "usado");
 
-filtro === "disponibles"
-? "disponible"
-: "usado"
-
-);
-
-
-return
-coincideBusqueda &&
-coincideFiltro;
+return coincideBusqueda && coincideFiltro;
 
 });
 
-
 listaCodigos.innerHTML = "";
 
+lista.forEach((docu) => {
 
-lista.forEach((docu)=>{
-
-const codigo =
-docu.data();
-
+const codigo = docu.data();
 
 let html = `
-
 <div class="codigo">
 
 <p>
-
 <strong>🎟️ Código:</strong>
-
-${codigo.codigo}
-
+${codigo.codigo || "Sin código"}
 </p>
-
 `;
-
 
 if(codigo.estado === "disponible"){
 
 html += `
-
 <p>
-
 <strong>🟢 Estado:</strong>
-
 Disponible
-
 </p>
 
 <button
 class="copiar"
 data-codigo="${codigo.codigo}"
 >
-
 📋 Copiar código
-
 </button>
-
 `;
 
-}else{
+} else {
 
 html += `
-
 <p>
-
 <strong>🔴 Estado:</strong>
-
 Usado
-
 </p>
 
 <p>
-
 <strong>📧 Usuario:</strong>
-
 ${codigo.email || "Sin información"}
-
 </p>
 
 <p>
-
 <strong>📅 Fecha de uso:</strong>
-
 ${
-codigo.fecha_uso
-
-? new Date(
-codigo.fecha_uso.seconds * 1000
-).toLocaleString("es-AR")
-
-: "Sin información"
+    codigo.fecha_uso
+        ? new Date(
+        codigo.fecha_uso.seconds * 1000
+        ).toLocaleString("es-AR")
+        : "Sin información"
 }
-
 </p>
 
 <button
 class="copiar"
 data-codigo="${codigo.codigo}"
 >
-
 📋 Copiar código
-
 </button>
 
 <button
 class="liberar"
 data-id="${docu.id}"
 >
-
 🔓 Liberar código
-
 </button>
-
 `;
 
 }
 
-
 html += `
-
 </div>
-
 `;
 
-
-listaCodigos.innerHTML +=
-html;
+listaCodigos.innerHTML += html;
 
 });
 
