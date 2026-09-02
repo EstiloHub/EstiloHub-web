@@ -3,11 +3,12 @@ const { getAuth } = require("firebase-admin/auth");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 
 function getFirebaseAdmin() {
+
   if (getApps().length) {
     return getApps()[0];
-  }
+}
 
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY
+const privateKey = process.env.FIREBASE_PRIVATE_KEY
     ? process.env.FIREBASE_PRIVATE_KEY
         .replace(/^"|"$/g, "")
         .replace(/\\n/g, "\n")
@@ -15,250 +16,372 @@ function getFirebaseAdmin() {
         .trim()
     : undefined;
 
-  return initializeApp({
+return initializeApp({
     credential: cert({
       projectId: process.env.FIREBASE_PROJECT_ID,
       clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
       privateKey: privateKey
-      
 })
-    
 });
-  
+
 }
+
 
 module.exports = async function handler(req, res) {
 
   if (req.method !== "POST") {
+
     return res.status(405).json({
       ok: false,
       error: "Método no permitido."
-      
 });
-    
+
 }
 
-  try {
 
-    getFirebaseAdmin();
+ try {
 
-    const auth = getAuth();
-    const db = getFirestore();
+  getFirebaseAdmin();
 
-    const {
+  const auth = getAuth();
+  const db = getFirestore();
+
+
+  const {
       email,
       password,
       payoneer,
       codigo
     } = req.body || {};
 
-    const emailLimpio = String(email || "").trim();
-    const payoneerLimpio = String(payoneer || "").trim();
-    const codigoLimpio = String(codigo || "").trim();
 
-    if (!emailLimpio) {
-      return res.status(400).json({
+    const emailLimpio =
+      String(email || "").trim();
+
+    const payoneerLimpio =
+      String(payoneer || "").trim();
+
+    const codigoLimpio =
+      String(codigo || "").trim();
+
+
+// ==========================================
+// VALIDACIONES
+// ==========================================
+
+  if (!emailLimpio) {
+
+  return res.status(400).json({
         ok: false,
         error: "Ingrese un correo electrónico."
-        
 });
-      
+
 }
 
-    if (!password) {
-      return res.status(400).json({
+
+ if (!password) {
+
+ return res.status(400).json({
         ok: false,
         error: "Ingrese una contraseña."
-        
 });
-      
+
 }
 
-    if (!payoneerLimpio) {
-      return res.status(400).json({
+
+ if (!payoneerLimpio) {
+
+ return res.status(400).json({
         ok: false,
         error: "Ingrese su correo de Payoneer."
-        
 });
-      
-      
+
 }
 
-    if (!codigoLimpio) {
-      return res.status(400).json({
+
+  if (!codigoLimpio) {
+
+  return res.status(400).json({
         ok: false,
         error: "Ingrese el código de acceso."
-        
 });
-      
+
 }
 
-    if (password.length < 6) {
-      return res.status(400).json({
+
+  if (password.length < 6) {
+
+  return res.status(400).json({
         ok: false,
         error: "La contraseña debe tener al menos 6 caracteres."
-        
 });
-      
+
 }
+
 
 // ==========================================
-// VALIDAR EL CÓDIGO ANTES DE CREAR LA CUENTA
+// VALIDAR CÓDIGO
 // ==========================================
 
-const codigosQuery = db
-  .collection("codigos_acceso")
-  .where("codigo", "==", codigoLimpio);
+const codigoRef =
+db.collection("codigos_acceso").doc(codigoLimpio);
 
-const resultadoCodigo = await codigosQuery.get();
+const codigoSnap =
+await codigoRef.get();
 
-if (resultadoCodigo.empty) {
+
+  if (!codigoSnap.exists) {
+
   return res.status(400).json({
-    ok: false,
-    error: "El código de acceso no es válido."
-  });
+        ok: false,
+        error: "El código de acceso no es válido."
+});
+
 }
 
-const codigoSnap = resultadoCodigo.docs[0];
-const codigoData = codigoSnap.data();
 
-if (codigoData.estado !== "disponible") {
+const codigoData =
+codigoSnap.data();
+
+
+const estado =
+      String(codigoData.estado || "")
+        .trim()
+        .toLowerCase();
+
+
+  if (estado !== "disponible") {
+
   return res.status(400).json({
-    ok: false,
-    error: "El código de acceso no es válido."
-  });
+        ok: false,
+        error: "El código de acceso no es válido."
+});
+
 }
-    
+
+
 // ==========================================
 // CREAR USUARIO EN FIREBASE AUTHENTICATION
 // ==========================================
 
-    let usuario;
+let usuario;
 
-    try {
 
-      usuario = await auth.createUser({
-        email: emailLimpio,
-        password: password
-        
+try {
+
+  usuario = await auth.createUser({
+      email: emailLimpio,
+      password: password
 });
 
-    } catch (error) {
+} catch (error) {
 
-      if (error.code === "auth/email-already-exists") {
-        return res.status(409).json({
+    if (error.code === "auth/email-already-exists") {
+
+    return res.status(409).json({
           ok: false,
           error: "Ese correo electrónico ya está registrado."
-          
 });
-        
+
 }
 
-      throw error;
+  throw error;
+
 }
 
-    const uid = usuario.uid;
 
-    try {
+const uid =
+  usuario.uid;
+
+
+try {
+
 
 // ==========================================
 // RESERVAR EL CÓDIGO
 // ==========================================
 
-      await db.runTransaction(async (transaction) => {
+await db.runTransaction(
+async (transaction) => {
 
-        const codigoActual = await transaction.get(codigoSnap.ref);
+const codigoActual =
+await transaction.get(codigoRef);
 
-        if (!codigoActual.exists) {
-          throw new Error("CODIGO_NO_VALIDO");
-          
+
+  if (!codigoActual.exists) {
+
+    throw new Error(
+    "CODIGO_NO_VALIDO"
+);
+
 }
 
-        const dataActual = codigoActual.data();
 
-        if (dataActual.estado !== "disponible") {
-          throw new Error("CODIGO_NO_VALIDO");
-          
+const dataActual =
+codigoActual.data();
+
+
+const estadoActual =
+      String(dataActual.estado || "")
+         .trim()
+         .toLowerCase();
+
+
+  if (
+    estadoActual !== "disponible"
+  ) {
+
+  throw new Error(
+     "CODIGO_NO_VALIDO"
+            
+);
+
 }
 
-        transaction.update(codigoSnap.ref, {
-          estado: "usado",
-          email: emailLimpio,
-          usuario_id: uid,
-          fecha_uso: FieldValue.serverTimestamp(),
-          liberado: false,
-          fecha_liberacion: null
-          
-});
 
-});
+  transaction.update(
+      codigoRef,
+{
+
+    estado: "usado",
+
+    email:
+    emailLimpio,
+
+    usuario_id:
+    uid,
+
+    fecha_uso:
+    FieldValue.serverTimestamp(),
+
+    liberado:
+    false,
+
+    fecha_liberacion:
+    null
+
+}
+);
+
+}
+);
+
 
 // ==========================================
 // CREAR DOCUMENTO DEL USUARIO
 // ==========================================
 
-      await db.collection("users").doc(uid).set({
-        usuario_id: uid,
-        email: emailLimpio,
-        payoneer: payoneerLimpio,
-        codigo_acceso: codigoLimpio,
-        fechaRegistro: FieldValue.serverTimestamp(),
-        admin: false,
-        activo: true,
-        fase: "Fase 1",
-        pagina_real: false
-        
+await db
+    .collection("users")
+    .doc(uid)
+    .set({
+
+    usuario_id:
+        uid,
+
+    email:
+        emailLimpio,
+
+    payoneer:
+        payoneerLimpio,
+
+    codigo_acceso:
+        codigoLimpio,
+
+    fechaRegistro:
+        FieldValue.serverTimestamp(),
+
+    admin:
+       false,
+
+    activo:
+       true,
+
+    fase:
+       "Fase 1",
+
+    pagina_real:
+        false
+
 });
+
 
 // ==========================================
 // CREAR ESTADÍSTICAS INICIALES
 // ==========================================
 
-      await db.collection("estadisticas_usuario").doc(uid).set({
-        email: emailLimpio,
-        usuario_id: uid,
-        tareas_realizadas: 0,
-        dias_trabajados: 0,
-        minutos_acumulados: 0,
-        ultima_fecha_trabajo: null
-        
-  });
+await db
+   .collection("estadisticas_usuario")
+   .doc(uid)
+   .set({
 
-      return res.status(200).json({
-        ok: true
-        
-  });
+    email:
+      emailLimpio,
 
-    } catch (error) {
+    usuario_id:
+      uid,
 
-      // Eliminar la cuenta si ocurrió un error
-      // después de crearla.
+    tareas_realizadas:
+          0,
 
-      try {
-        await auth.deleteUser(uid);
-      } catch (deleteError) {
-        
-  }
+    dias_trabajados:
+          0,
 
-      if (error.message === "CODIGO_NO_VALIDO") {
-        return res.status(400).json({
-          ok: false,
-          error: "El código de acceso no es válido."
-          
-  });
-        
-  }
+    minutos_acumulados:
+          0,
 
-      throw error;
+    ultima_fecha_trabajo:
+          null
+
+});
+
+
+return res.status(200).json({
+      ok: true
+});
+
+
+} catch (error) {
+
+
+// ==========================================
+// ELIMINAR CUENTA SI FALLÓ EL PROCESO
+// ==========================================
+
+try {
+
+await auth.deleteUser(uid);
+
+} catch (deleteError) {
       
-  }
+}
 
-  } catch (error) {
 
-    return res.status(500).json({
+if (
+   error.message ===
+  "CODIGO_NO_VALIDO"
+) {
+
+return res.status(400).json({
       ok: false,
-      error: "No se pudo crear la cuenta."
-    
+      error:
+      "El código de acceso no es válido."
+});
+
+}
+
+
+throw error;
+
+}
+
+
+} catch (error) {
+
+return res.status(500).json({
+      ok: false,
+      error:
+        "No se pudo crear la cuenta."
 });
 
 }
