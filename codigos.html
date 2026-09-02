@@ -837,13 +837,6 @@ await actualizarVista();
 
 } catch(error) {
 
-
-console.error(
-"Error generando códigos:",
-error
-);
-
-
 alert(
 "❌ No se pudieron generar los códigos.\n\n" +
 (error.message ||
@@ -1002,13 +995,6 @@ await actualizarVista();
 
 
 } catch(error) {
-
-
-console.error(
-"Error creando código personalizado:",
-error
-);
-
 
 alert(
 "❌ No se pudo crear el código.\n\n" +
@@ -1180,13 +1166,6 @@ await actualizarVista();
 
 } catch(error) {
 
-
-console.error(
-"Error liberando código:",
-error
-);
-
-
 alert(
 "❌ No se pudo liberar el código.\n\n" +
 (error.message ||
@@ -1205,11 +1184,6 @@ alert(
 await actualizarVista();
 
 } catch(error) {
-
-console.error(
-"Error inicializando Gestión de Códigos:",
-error
-);
 
 alert(
 "❌ No se pudo cargar Gestión de Códigos.\n\n" +
