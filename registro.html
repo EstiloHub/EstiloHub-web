@@ -44,14 +44,41 @@ input {
     right: 10px;
     top: 50%;
     transform: translateY(-50%);
-    width: auto;
+    width: 30px;
+    height: 30px;
     margin: 0;
     padding: 5px;
     background: transparent;
     color: #222222;
     border: none;
     cursor: pointer;
-    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.icono-ojo {
+    width: 20px;
+    height: 13px;
+    display: block;
+}
+
+.icono-ojo svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.icono-ojo .linea {
+    stroke: #222222;
+    stroke-width: 1.8;
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.icono-ojo .pupila {
+    fill: #222222;
 }
 
 button {
@@ -102,12 +129,28 @@ button {
         placeholder="Contraseña"
         autocomplete="new-password"
     >
+
     <button
         type="button"
         class="mostrar"
         data-target="password"
         aria-label="Mostrar contraseña"
-    >👁</button>
+    >
+        <span class="icono-ojo">
+            <svg viewBox="0 0 24 16" aria-hidden="true">
+                <path
+                    class="linea"
+                    d="M1.5 8s3.5-6 10.5-6 10.5 6 10.5 6-3.5 6-10.5 6S1.5 8 1.5 8Z"
+                ></path>
+                <circle
+                    class="pupila"
+                    cx="12"
+                    cy="8"
+                    r="2.5"
+                ></circle>
+            </svg>
+        </span>
+    </button>
 </div>
 
 <div class="campo">
@@ -117,12 +160,28 @@ button {
         placeholder="Confirmar contraseña"
         autocomplete="new-password"
     >
+
     <button
         type="button"
         class="mostrar"
         data-target="confirmPassword"
         aria-label="Mostrar confirmación de contraseña"
-    >👁</button>
+    >
+        <span class="icono-ojo">
+            <svg viewBox="0 0 24 16" aria-hidden="true">
+                <path
+                    class="linea"
+                    d="M1.5 8s3.5-6 10.5-6 10.5 6 10.5 6-3.5 6-10.5 6S1.5 8 1.5 8Z"
+                ></path>
+                <circle
+                    class="pupila"
+                    cx="12"
+                    cy="8"
+                    r="2.5"
+                ></circle>
+            </svg>
+        </span>
+    </button>
 </div>
 
 <input
@@ -139,15 +198,35 @@ button {
         placeholder="Código de acceso"
         autocomplete="off"
     >
+
     <button
         type="button"
         class="mostrar"
         data-target="codigo"
         aria-label="Mostrar código de acceso"
-    >👁</button>
+    >
+        <span class="icono-ojo">
+            <svg viewBox="0 0 24 16" aria-hidden="true">
+                <path
+                    class="linea"
+                    d="M1.5 8s3.5-6 10.5-6 10.5 6 10.5 6-3.5 6-10.5 6S1.5 8 1.5 8Z"
+                ></path>
+                <circle
+                    class="pupila"
+                    cx="12"
+                    cy="8"
+                    r="2.5"
+                ></circle>
+            </svg>
+        </span>
+    </button>
 </div>
 
-<button id="crearCuentaBtn" class="crear" type="button">
+<button
+    id="crearCuentaBtn"
+    class="crear"
+    type="button"
+>
     Crear cuenta
 </button>
 
@@ -163,126 +242,255 @@ button {
 
 </div>
 
-<script>
+<script type="module">
 
-const botonCrear = document.getElementById("crearCuentaBtn");
-const email = document.getElementById("email");
-const password = document.getElementById("password");
-const confirmPassword = document.getElementById("confirmPassword");
-const payoneer = document.getElementById("payoneer");
-const codigo = document.getElementById("codigo");
-const mensaje = document.getElementById("mensaje");
+import { auth } from "./firebase.js";
+
+import {
+    signInWithEmailAndPassword
+} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+
+
+const botonCrear =
+    document.getElementById("crearCuentaBtn");
+
+const email =
+    document.getElementById("email");
+
+const password =
+    document.getElementById("password");
+
+const confirmPassword =
+    document.getElementById("confirmPassword");
+
+const payoneer =
+    document.getElementById("payoneer");
+
+const codigo =
+    document.getElementById("codigo");
+
+const mensaje =
+    document.getElementById("mensaje");
+
 
 document.querySelectorAll(".mostrar").forEach((boton) => {
 
     boton.addEventListener("click", () => {
 
-        const campo = document.getElementById(boton.dataset.target);
+        const campo =
+            document.getElementById(
+                boton.dataset.target
+            );
 
         if (campo.type === "password") {
+
             campo.type = "text";
-            boton.textContent = "🙈";
+
+            boton.setAttribute(
+                "aria-label",
+                "Ocultar"
+            );
+
         } else {
+
             campo.type = "password";
-            boton.textContent = "👁";
+
+            boton.setAttribute(
+                "aria-label",
+                "Mostrar"
+            );
+
         }
 
     });
 
 });
 
+
 botonCrear.addEventListener("click", async () => {
 
     mensaje.textContent = "";
+
     botonCrear.disabled = true;
     botonCrear.textContent = "Creando cuenta...";
 
-    const emailLimpio = email.value.trim();
-    const payoneerLimpio = payoneer.value.trim();
-    const codigoLimpio = codigo.value.trim();
+
+    const emailLimpio =
+        email.value.trim();
+
+    const payoneerLimpio =
+        payoneer.value.trim();
+
+    const codigoLimpio =
+        codigo.value.trim();
+
 
     if (emailLimpio === "") {
+
         alert("Ingrese un correo electrónico.");
+
         botonCrear.disabled = false;
         botonCrear.textContent = "Crear cuenta";
+
         return;
     }
+
 
     if (password.value === "") {
+
         alert("Ingrese una contraseña.");
+
         botonCrear.disabled = false;
         botonCrear.textContent = "Crear cuenta";
+
         return;
     }
+
 
     if (confirmPassword.value === "") {
+
         alert("Confirme la contraseña.");
+
         botonCrear.disabled = false;
         botonCrear.textContent = "Crear cuenta";
+
         return;
     }
+
 
     if (password.value !== confirmPassword.value) {
+
         alert("Las contraseñas no coinciden.");
+
         botonCrear.disabled = false;
         botonCrear.textContent = "Crear cuenta";
+
         return;
     }
+
 
     if (password.value.length < 6) {
+
         alert("La contraseña debe tener al menos 6 caracteres.");
+
         botonCrear.disabled = false;
         botonCrear.textContent = "Crear cuenta";
+
         return;
     }
+
 
     if (payoneerLimpio === "") {
+
         alert("Ingrese su correo de Payoneer.");
+
         botonCrear.disabled = false;
         botonCrear.textContent = "Crear cuenta";
+
         return;
     }
 
+
     if (codigoLimpio === "") {
+
         alert("Ingrese el código de acceso.");
+
         botonCrear.disabled = false;
         botonCrear.textContent = "Crear cuenta";
+
         return;
     }
+
 
     try {
 
-        const respuesta = await fetch("/api/registro", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                email: emailLimpio,
-                password: password.value,
-                payoneer: payoneerLimpio,
-                codigo: codigoLimpio
-            })
-        });
+        const respuesta =
+            await fetch("/api/registro", {
 
-        const resultado = await respuesta.json();
+                method: "POST",
+
+                headers: {
+                    "Content-Type": "application/json"
+                },
+
+                body: JSON.stringify({
+
+                    email: emailLimpio,
+
+                    password: password.value,
+
+                    payoneer: payoneerLimpio,
+
+                    codigo: codigoLimpio
+
+                })
+
+            });
+
+
+        const resultado =
+            await respuesta.json();
+
 
         if (!respuesta.ok || !resultado.ok) {
-            alert(resultado.error || "No se pudo crear la cuenta.");
+
+            alert(
+                resultado.error ||
+                "No se pudo crear la cuenta."
+            );
+
             botonCrear.disabled = false;
             botonCrear.textContent = "Crear cuenta";
+
             return;
         }
 
+
+        botonCrear.textContent =
+            "Iniciando sesión...";
+
+
+        try {
+
+            await signInWithEmailAndPassword(
+                auth,
+                emailLimpio,
+                password.value
+            );
+
+        } catch (error) {
+
+            alert(
+                "La cuenta fue creada correctamente, " +
+                "pero no se pudo iniciar sesión automáticamente. " +
+                "Puede ingresar desde la página de inicio."
+            );
+
+            botonCrear.disabled = false;
+            botonCrear.textContent =
+                "Crear cuenta";
+
+            return;
+        }
+
+
         alert("¡Cuenta creada correctamente!");
-        window.location.href = "inicio.html";
+
+        window.location.href =
+            "inicio.html";
+
 
     } catch (error) {
 
-        alert("No se pudo conectar con el servidor. Inténtelo nuevamente.");
+        alert(
+            "No se pudo conectar con el servidor. " +
+            "Inténtelo nuevamente."
+        );
 
         botonCrear.disabled = false;
-        botonCrear.textContent = "Crear cuenta";
+        botonCrear.textContent =
+            "Crear cuenta";
+
     }
 
 });
@@ -290,4 +498,4 @@ botonCrear.addEventListener("click", async () => {
 </script>
 
 </body>
-    </html>
+</html>
