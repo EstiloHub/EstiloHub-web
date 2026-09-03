@@ -417,7 +417,7 @@ async function cargarInicio(user) {
     try {
 
         const idToken =
-            await user.getIdToken();
+            await user.getIdToken(true);
 
 
         const respuesta =
