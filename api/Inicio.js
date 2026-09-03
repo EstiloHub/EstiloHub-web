@@ -42,6 +42,8 @@ module.exports = async function handler(req, res) {
 
   try {
 
+   let etapa = "iniciando";
+    
     getFirebaseAdmin();
 
     const auth = getAuth();
@@ -103,7 +105,8 @@ module.exports = async function handler(req, res) {
     const estadisticasRef =
       db.collection("estadisticas_usuario").doc(uid);
 
-
+etapa = "leyendo usuario y estadísticas";
+    
     const [usuarioSnap, estadisticasSnap] =
       await Promise.all([
         usuarioRef.get(),
@@ -144,7 +147,8 @@ module.exports = async function handler(req, res) {
         ? estadisticasSnap.data()
         : {};
 
-
+etapa = "leyendo tareas";
+    
     const tareasSnapshot =
       await db
         .collection("tareas")
@@ -218,7 +222,8 @@ module.exports = async function handler(req, res) {
 
     });
 
-
+etapa = "leyendo progreso de tareas";
+    
     const progresoSnapshot =
       await db
         .collection("progreso_tareas")
@@ -330,14 +335,13 @@ module.exports = async function handler(req, res) {
 
     });
 
+} catch (error) {
 
-  } catch (error) {
+  return res.status(500).json({
+    ok: false,
+    error: "Error interno al cargar el inicio. Etapa: " + etapa
+  });
 
-    return res.status(500).json({
-      ok: false,
-      error: "No se pudieron cargar los datos."
-    });
-
-  }
+   }
 
 };
