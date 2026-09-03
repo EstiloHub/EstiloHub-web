@@ -562,10 +562,9 @@ async function cargarInicio(user) {
 
     } catch (error) {
 
-        mensaje.textContent =
-            "No se pudieron cargar las tareas. Inténtelo nuevamente.";
-
-    }
+    mensaje.textContent =
+        error.message ||
+        "No se pudieron cargar las tareas.";
 
 }
 
