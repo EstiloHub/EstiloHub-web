@@ -448,17 +448,15 @@ async function cargarInicio(user) {
 
         }
 
+if (!respuesta.ok || !resultado || !resultado.ok) {
 
-        if (!respuesta.ok || !resultado || !resultado.ok) {
+    throw new Error(
+        resultado
+            ? JSON.stringify(resultado)
+            : "El servidor no devolvió una respuesta válida."
+    );
 
-            throw new Error(
-                resultado &&
-                resultado.error
-                    ? resultado.error
-                    : "No se pudieron cargar los datos."
-            );
-
-        }
+    }
 
 
         const fase =
