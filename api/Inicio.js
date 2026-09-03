@@ -339,9 +339,12 @@ etapa = "leyendo progreso de tareas";
 
   return res.status(500).json({
     ok: false,
-    error: "Error interno al cargar el inicio. Etapa: " + etapa
+    error:
+      "Error en inicio: " +
+      (error && error.message
+        ? error.message
+        : "error desconocido")
   });
 
-   }
-
+}
 };
