@@ -476,6 +476,7 @@ document.getElementById("cancelarAsignacion");
 // ==================================================
 
 let idCodigoAAsignar = null;
+let codigoAAsignarTexto = null;
 
 
 // ==================================================
@@ -1098,6 +1099,7 @@ e.target.dataset.id;
 const codigo =
 e.target.dataset.codigo;
 
+codigoAAsignarTexto = codigo;
 
 codigoAAsignar.textContent =
 "🎟️ Código seleccionado: " +
@@ -1397,6 +1399,15 @@ fecha_liberacion: null
 
 );
 
+transaction.update(
+usuarioRef,
+{
+codigo_acceso:
+codigoAAsignarTexto
+    
+}
+);
+
 });
 
 alert(
@@ -1440,6 +1451,9 @@ panelAsignar.style.display =
 idCodigoAAsignar =
 null;
 
+codigoAAsignarTexto =
+null;
+    
 buscarUsuario.value = "";
 
 listaUsuarios.innerHTML =
