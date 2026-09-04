@@ -422,19 +422,17 @@ export default async function handler(request) {
       }
     );
 
+} catch (error) {
 
-  } catch (error) {
+  return Response.json(
+    {
+      ok: false,
+      error: error?.message || "Error interno del servidor."
+    },
+    {
+      status: 500
+    }
+  );
 
-    return Response.json(
-      {
-        ok: false,
-        error: "No se pudieron cargar los datos."
-      },
-      {
-        status: 500
-      }
-    );
+   }
 
-  }
-
-          }
