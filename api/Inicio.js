@@ -1,26 +1,14 @@
-import { createRequire } from "node:module";
-
-const require = createRequire(import.meta.url);
-
-const {
-  getApps,
-  initializeApp,
-  cert
-} = require("firebase-admin/app");
-
-const {
-  getAuth
-} = require("firebase-admin/auth");
-
-const {
-  getFirestore
-} = require("firebase-admin/firestore");
+const { getApps, initializeApp, cert } = require("firebase-admin/app");
+const { getAuth } = require("firebase-admin/auth");
+const { getFirestore } = require("firebase-admin/firestore");
 
 
 function getFirebaseAdmin() {
+
   if (getApps().length) {
     return getApps()[0];
   }
+
 
   const privateKey = process.env.FIREBASE_PRIVATE_KEY
     ? process.env.FIREBASE_PRIVATE_KEY
@@ -30,41 +18,63 @@ function getFirebaseAdmin() {
         .trim()
     : undefined;
 
+
   return initializeApp({
+
     credential: cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: privateKey
+
+      projectId:
+        process.env.FIREBASE_PROJECT_ID,
+
+      clientEmail:
+        process.env.FIREBASE_CLIENT_EMAIL,
+
+      privateKey:
+        privateKey
+
     })
+
   });
+
 }
 
 
 function convertirFecha(valor) {
+
   if (!valor) {
     return null;
   }
 
-  if (typeof valor.toDate === "function") {
-    return valor.toDate().toISOString();
+
+  if (
+    typeof valor.toDate === "function"
+  ) {
+
+    return valor
+      .toDate()
+      .toISOString();
+
   }
 
+
   return valor;
+
 }
 
 
-export default async function handler(request) {
+module.exports = async function handler(req, res) {
 
-  if (request.method !== "GET") {
-    return Response.json(
-      {
-        ok: false,
-        error: "Método no permitido."
-      },
-      {
-        status: 405
-      }
-    );
+  if (req.method !== "GET") {
+
+    return res.status(405).json({
+
+      ok: false,
+
+      error:
+        "Método no permitido."
+
+    });
+
   }
 
 
@@ -72,41 +82,53 @@ export default async function handler(request) {
 
     getFirebaseAdmin();
 
-    const auth = getAuth();
-    const db = getFirestore();
+
+    const auth =
+      getAuth();
+
+    const db =
+      getFirestore();
 
 
     const authorization =
-      request.headers.get("authorization") || "";
+      req.headers.authorization || "";
 
 
-    if (!authorization.startsWith("Bearer ")) {
-      return Response.json(
-        {
-          ok: false,
-          error: "No autorizado."
-        },
-        {
-          status: 401
-        }
-      );
+    if (
+      !authorization.startsWith(
+        "Bearer "
+      )
+    ) {
+
+      return res.status(401).json({
+
+        ok: false,
+
+        error:
+          "No autorizado."
+
+      });
+
     }
 
 
     const idToken =
-      authorization.substring(7).trim();
+      authorization
+        .substring(7)
+        .trim();
 
 
     if (!idToken) {
-      return Response.json(
-        {
-          ok: false,
-          error: "No autorizado."
-        },
-        {
-          status: 401
-        }
-      );
+
+      return res.status(401).json({
+
+        ok: false,
+
+        error:
+          "No autorizado."
+
+      });
+
     }
 
 
@@ -116,19 +138,20 @@ export default async function handler(request) {
     try {
 
       usuarioAutenticado =
-        await auth.verifyIdToken(idToken);
+        await auth.verifyIdToken(
+          idToken
+        );
 
     } catch (error) {
 
-      return Response.json(
-        {
-          ok: false,
-          error: "La sesión no es válida."
-        },
-        {
-          status: 401
-        }
-      );
+      return res.status(401).json({
+
+        ok: false,
+
+        error:
+          "La sesión no es válida."
+
+      });
 
     }
 
@@ -138,31 +161,42 @@ export default async function handler(request) {
 
 
     const usuarioRef =
-      db.collection("users").doc(uid);
+      db
+        .collection("users")
+        .doc(uid);
+
 
     const estadisticasRef =
-      db.collection("estadisticas_usuario").doc(uid);
+      db
+        .collection(
+          "estadisticas_usuario"
+        )
+        .doc(uid);
 
 
     const [
       usuarioSnap,
       estadisticasSnap
     ] = await Promise.all([
+
       usuarioRef.get(),
+
       estadisticasRef.get()
+
     ]);
 
 
     if (!usuarioSnap.exists) {
-      return Response.json(
-        {
-          ok: false,
-          error: "No se encontró el usuario."
-        },
-        {
-          status: 404
-        }
-      );
+
+      return res.status(404).json({
+
+        ok: false,
+
+        error:
+          "No se encontró el usuario."
+
+      });
+
     }
 
 
@@ -170,22 +204,26 @@ export default async function handler(request) {
       usuarioSnap.data();
 
 
-    if (usuario.activo === false) {
-      return Response.json(
-        {
-          ok: false,
-          error: "La cuenta no está activa."
-        },
-        {
-          status: 403
-        }
-      );
+    if (
+      usuario.activo === false
+    ) {
+
+      return res.status(403).json({
+
+        ok: false,
+
+        error:
+          "La cuenta no está activa."
+
+      });
+
     }
 
 
     const faseUsuario =
       String(
-        usuario.fase || "Fase 1"
+        usuario.fase ||
+        "Fase 1"
       ).trim();
 
 
@@ -198,7 +236,11 @@ export default async function handler(request) {
     const tareasSnapshot =
       await db
         .collection("tareas")
-        .where("activa", "==", true)
+        .where(
+          "activa",
+          "==",
+          true
+        )
         .get();
 
 
@@ -220,10 +262,12 @@ export default async function handler(request) {
 
         const correspondeFase =
           faseTarea === faseUsuario ||
+
           (
             faseTarea === "1" &&
             faseUsuario === "Fase 1"
           ) ||
+
           (
             faseTarea === "Fase 1" &&
             faseUsuario === "1"
@@ -236,7 +280,9 @@ export default async function handler(request) {
 
 
         tareas.push({
-          id: documento.id,
+
+          id:
+            documento.id,
 
           categoria:
             String(
@@ -269,6 +315,7 @@ export default async function handler(request) {
             )
               ? Number(datos.orden)
               : 999999
+
         });
 
       }
@@ -278,9 +325,17 @@ export default async function handler(request) {
     tareas.sort(
       (a, b) => {
 
-        if (a.orden !== b.orden) {
-          return a.orden - b.orden;
+        if (
+          a.orden !== b.orden
+        ) {
+
+          return (
+            a.orden -
+            b.orden
+          );
+
         }
+
 
         return a.titulo.localeCompare(
           b.titulo,
@@ -293,8 +348,14 @@ export default async function handler(request) {
 
     const progresoSnapshot =
       await db
-        .collection("progreso_tareas")
-        .where("usuario_id", "==", uid)
+        .collection(
+          "progreso_tareas"
+        )
+        .where(
+          "usuario_id",
+          "==",
+          uid
+        )
         .get();
 
 
@@ -313,7 +374,9 @@ export default async function handler(request) {
         }
 
 
-        progreso[datos.tarea_id] = {
+        progreso[
+          datos.tarea_id
+        ] = {
 
           fecha_realizada:
             convertirFecha(
@@ -365,15 +428,18 @@ export default async function handler(request) {
               tarea.link_url,
 
             fecha_realizada:
-              datosProgreso.fecha_realizada ||
+              datosProgreso
+                .fecha_realizada ||
               null,
 
             minutos_realizados:
-              datosProgreso.minutos_realizados ||
+              datosProgreso
+                .minutos_realizados ||
               0,
 
             veces_realizada:
-              datosProgreso.veces_realizada ||
+              datosProgreso
+                .veces_realizada ||
               0
 
           };
@@ -382,59 +448,63 @@ export default async function handler(request) {
       );
 
 
-    return Response.json(
-      {
-        ok: true,
+    return res.status(200).json({
 
-        usuario: {
-          fase:
-            faseUsuario
-        },
+      ok: true,
 
-        admin:
-          usuarioAutenticado.admin === true,
+      usuario: {
 
-        estadisticas: {
-
-          tareas_realizadas:
-            Number(
-              estadisticas.tareas_realizadas || 0
-            ),
-
-          dias_trabajados:
-            Number(
-              estadisticas.dias_trabajados || 0
-            ),
-
-          minutos_acumulados:
-            Number(
-              estadisticas.minutos_acumulados || 0
-            )
-
-        },
-
-        tareas:
-          tareasParaCliente
+        fase:
+          faseUsuario
 
       },
-      {
-        status: 200
-      }
-    );
 
-} catch (error) {
+      admin:
+        usuarioAutenticado.admin === true,
 
-  return Response.json(
-    {
+      estadisticas: {
+
+        tareas_realizadas:
+          Number(
+            estadisticas
+              .tareas_realizadas ||
+            0
+          ),
+
+        dias_trabajados:
+          Number(
+            estadisticas
+              .dias_trabajados ||
+            0
+          ),
+
+        minutos_acumulados:
+          Number(
+            estadisticas
+              .minutos_acumulados ||
+            0
+          )
+
+      },
+
+      tareas:
+        tareasParaCliente
+
+    });
+
+
+  } catch (error) {
+
+    return res.status(500).json({
+
       ok: false,
-      error: error?.message || "Error interno del servidor."
-    },
-    {
-      status: 500
-}
-    
-);
 
-}
-  
-}
+      error:
+        error?.message ||
+        "Error interno del servidor."
+
+    });
+
+  }
+
+};
