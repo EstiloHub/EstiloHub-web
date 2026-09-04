@@ -431,8 +431,10 @@ export default async function handler(request) {
     },
     {
       status: 500
-    }
-  );
+}
+    
+);
 
-   }
-
+}
+  
+}
