@@ -4,119 +4,77 @@
 <head>
 
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
->
-
-<title>Inicio</title>
+<title>Tarea</title>
 
 <style>
 
-body {
-    margin: 0;
-    background: #FFFFFF;
-    color: #222222;
-    font-family: Arial, sans-serif;
+body{
+  margin:0;
+  background:#FFFFFF;
+  color:#222222;
+  font-family:Arial, sans-serif;
 }
 
-.container {
-    max-width: 700px;
-    margin: auto;
-    padding: 40px 20px;
+.container{
+  max-width:800px;
+  margin:auto;
+  padding:40px 20px;
 }
 
-h1 {
-    text-align: center;
-    margin-bottom: 20px;
+h1{
+  text-align:center;
+  margin-bottom:30px;
 }
 
-.descripcion {
-    text-align: center;
-    color: #666666;
-    margin-bottom: 35px;
-    line-height: 1.6;
+.tarjeta{
+  background:#1b1b1b;
+  color:white;
+  border:1px solid #444;
+  border-radius:12px;
+  padding:15px;
 }
 
-.estadisticas {
-    border: 1px solid #444444;
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 40px;
-    background: #1b1b1b;
-    color: #FFFFFF;
+p{
+  line-height:1.7;
+  font-size:17px;
 }
 
-.estadisticas h2 {
-    margin-top: 0;
-    text-align: center;
+#contenido{
+  white-space:pre-line;
 }
 
-.estadisticas p {
-    font-size: 17px;
-    margin: 12px 0;
-    text-align: center;
+.info{
+  margin-bottom:20px;
 }
 
-h2 {
-    margin-bottom: 20px;
+button{
+  width:100%;
+  padding:15px;
+  border:none;
+  border-radius:10px;
+  cursor:pointer;
+  font-size:16px;
+  margin-top:20px;
 }
 
-.tarea {
-    background: #1b1b1b;
-    border: 1px solid #444444;
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 25px;
-    color: #FFFFFF;
+.completar{
+  background:#4CAF50;
+  color:white;
+  width:280px;
+  display:block;
+  margin:20px auto 0;
 }
 
-.tarea p {
-    margin: 8px 0;
+.volver{
+  background:#555;
+  color:white;
 }
 
-button {
-    width: 100%;
-    padding: 14px;
-    margin-top: 15px;
-    border: none;
-    border-radius: 10px;
-    cursor: pointer;
-    font-size: 16px;
-}
-
-.ver {
-    background: #4CAF50;
-    color: white;
-}
-
-.admin {
-    background: #0066cc;
-    color: white;
-}
-
-.cerrar {
-    background: #555555;
-    color: white;
-}
-
-.ver-mas {
-    background: #2196F3;
-    color: white;
-}
-
-.botones {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    margin-top: 40px;
-}
-
-#mensaje {
-    text-align: center;
-    margin: 25px 0;
-    line-height: 1.5;
+button:disabled{
+  opacity:0.6;
+  cursor:not-allowed;
 }
 
 </style>
@@ -127,518 +85,460 @@ button {
 
 <div class="container">
 
-<h1 id="tituloInicio">
-    Bienvenid@ a Fase 1
+<h1 id="titulo">
+Cargando...
 </h1>
 
-<p class="descripcion">
+<div class="tarjeta">
 
-    Se recomienda mantener una participación activa durante la semana,
-    idealmente alrededor de 1 hora diaria en varios días, para evaluar
-    correctamente el rendimiento del sistema durante esta fase.
+<div class="info">
 
+<p>
+<strong>Tiempo requerido:</strong>
+<span id="tiempo"></span>
 </p>
 
-
-<div class="estadisticas">
-
-    <h2>Tu progreso</h2>
-
-    <p>
-        <strong>Tareas realizadas:</strong>
-        <span id="tareasRealizadas">0</span>
-    </p>
-
-    <p>
-        <strong>Días trabajados:</strong>
-        <span id="diasTrabajados">0</span>
-    </p>
-
-    <p>
-        <strong>Minutos acumulados:</strong>
-        <span id="minutosAcumulados">0</span>
-    </p>
+<p>
+<strong>Tiempo realizado:</strong>
+<span id="tiempoRealizado">0:00</span>
+</p>
 
 </div>
 
+<p id="contenido"></p>
 
-<h2>Tareas</h2>
+<button
+  id="completarBtn"
+  class="completar"
+  style="display:none;"
+>
+Completar tarea
+</button>
 
-<div id="mensaje">
-    Cargando tareas...
-</div>
-
-<div id="listaTareas"></div>
-
-
-<div class="botones">
-
-    <button
-        id="adminBtn"
-        class="admin"
-        style="display:none;"
-        type="button"
-    >
-        Panel Admin
-    </button>
-
-    <button
-        id="cerrarSesionBtn"
-        class="cerrar"
-        type="button"
-    >
-        Cerrar sesión
-    </button>
+<button
+  id="volverBtn"
+  class="volver"
+>
+Volver
+</button>
 
 </div>
 
 </div>
-
 
 <script type="module">
 
 import { auth } from "./firebase.js";
 
 import {
-    onAuthStateChanged,
-    signOut
-} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+  onAuthStateChanged
+} from
+"https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 
+const params =
+  new URLSearchParams(window.location.search);
 
-const listaTareas =
-    document.getElementById("listaTareas");
+const tareaId =
+  params.get("id");
 
-const mensaje =
-    document.getElementById("mensaje");
+let tiempoAcumulado = 0;
+let tiempoRequerido = 0;
+let tiempoCorriendo = false;
+let inicioLocal = null;
+let tareaCompletada = false;
+let intervalo = null;
 
-const tareasRealizadas =
-    document.getElementById("tareasRealizadas");
+const titulo =
+  document.getElementById("titulo");
 
-const diasTrabajados =
-    document.getElementById("diasTrabajados");
+const tiempo =
+  document.getElementById("tiempo");
 
-const minutosAcumulados =
-    document.getElementById("minutosAcumulados");
+const tiempoRealizado =
+  document.getElementById("tiempoRealizado");
 
-const adminBtn =
-    document.getElementById("adminBtn");
+const contenido =
+  document.getElementById("contenido");
 
-const cerrarSesionBtn =
-    document.getElementById("cerrarSesionBtn");
+const completarBtn =
+  document.getElementById("completarBtn");
 
-const tituloInicio =
-    document.getElementById("tituloInicio");
+const volverBtn =
+  document.getElementById("volverBtn");
 
+function mostrarTiempo(milisegundos) {
 
-let lista = [];
+  const segundos =
+    Math.floor(milisegundos / 1000);
 
-let mostrarTodas = false;
+  const minutos =
+    Math.floor(segundos / 60);
 
+  const segundosRestantes =
+    segundos % 60;
 
-function escaparHTML(valor) {
-
-    return String(valor ?? "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-
+  tiempoRealizado.textContent =
+    `${minutos}:${String(segundosRestantes).padStart(2, "0")}`;
 }
 
+async function obtenerToken() {
 
-function obtenerFechaTiempo(fecha) {
+  const user = auth.currentUser;
 
-    if (!fecha) {
-        return 0;
-    }
+  if (!user) {
+    throw new Error("Sesión no disponible.");
+  }
 
-    if (
-        typeof fecha === "object" &&
-        typeof fecha.seconds === "number"
-    ) {
-
-        return fecha.seconds * 1000;
-
-    }
-
-    if (
-        typeof fecha === "string" ||
-        typeof fecha === "number"
-    ) {
-
-        const tiempo =
-            new Date(fecha).getTime();
-
-        return Number.isNaN(tiempo)
-            ? 0
-            : tiempo;
-
-    }
-
-    return 0;
-
+  return await user.getIdToken(true);
 }
 
+async function enviarAccion(accion) {
 
-function renderizarTareas() {
+  const token =
+    await obtenerToken();
 
-    listaTareas.innerHTML = "";
+  const respuesta =
+    await fetch("/api/tarea", {
+      method:"POST",
 
+      headers:{
+        "Content-Type":"application/json",
+        "Authorization":"Bearer " + token
+      },
 
-    if (lista.length === 0) {
-
-        mensaje.textContent =
-            "No hay tareas disponibles en este momento.";
-
-        return;
-
-    }
-
-
-    mensaje.textContent = "";
-
-
-    const tareasAMostrar =
-        mostrarTodas
-            ? lista
-            : lista.slice(0, 5);
-
-
-    tareasAMostrar.forEach((item) => {
-
-        const tarea =
-            item.tarea;
-
-
-        const contenedor =
-            document.createElement("div");
-
-        contenedor.className =
-            "tarea";
-
-
-        const categoria =
-            document.createElement("p");
-
-        categoria.innerHTML =
-            "<strong>Categoría:</strong> " +
-            escaparHTML(tarea.categoria);
-
-
-        const titulo =
-            document.createElement("p");
-
-        titulo.innerHTML =
-            "<strong>Título:</strong> " +
-            escaparHTML(tarea.titulo);
-
-
-        const boton =
-            document.createElement("button");
-
-        boton.className =
-            "ver";
-
-        boton.type =
-            "button";
-
-        boton.textContent =
-            "Ver contenido";
-
-
-        boton.addEventListener(
-            "click",
-            () => {
-
-                window.location.href =
-                    "tarea.html?id=" +
-                    encodeURIComponent(item.id);
-
-            }
-        );
-
-
-        contenedor.appendChild(categoria);
-
-        contenedor.appendChild(titulo);
-
-        contenedor.appendChild(boton);
-
-        listaTareas.appendChild(contenedor);
-
+      body:JSON.stringify({
+        tarea_id:tareaId,
+        accion:accion
+      })
     });
 
+  const resultado =
+    await respuesta.json();
 
-    if (lista.length > 5) {
+  if (!respuesta.ok || resultado.ok !== true) {
+    throw new Error(
+      resultado.error ||
+      "No se pudo procesar la tarea."
+    );
+  }
 
-        const botonVerMas =
-            document.createElement("button");
-
-        botonVerMas.id =
-            "verMas";
-
-        botonVerMas.className =
-            "ver-mas";
-
-        botonVerMas.type =
-            "button";
-
-        botonVerMas.textContent =
-            mostrarTodas
-                ? "Mostrar menos"
-                : "Ver más";
-
-
-        botonVerMas.addEventListener(
-            "click",
-            () => {
-
-                mostrarTodas =
-                    !mostrarTodas;
-
-                renderizarTareas();
-
-            }
-        );
-
-
-        listaTareas.appendChild(
-            botonVerMas
-        );
-
-    }
-
+  return resultado;
 }
 
+function actualizarReloj() {
 
-async function cargarInicio(user) {
+  let actual =
+    tiempoAcumulado;
+
+  if (tiempoCorriendo && inicioLocal) {
+
+    actual +=
+      Date.now() - inicioLocal;
+  }
+
+  actual =
+    Math.min(
+      actual,
+      tiempoRequerido
+    );
+
+  mostrarTiempo(actual);
+
+  if (
+    actual >= tiempoRequerido &&
+    !tareaCompletada
+  ) {
+
+    completarBtn.style.display =
+      "block";
+  }
+}
+
+async function iniciarConteo() {
+
+  if (
+    tareaCompletada ||
+    tiempoCorriendo ||
+    document.hidden
+  ) {
+    return;
+  }
+
+  try {
+
+    const resultado =
+      await enviarAccion("iniciar");
+
+    tiempoAcumulado =
+      Number(
+        resultado.tiempo_acumulado || 0
+      );
+
+    inicioLocal =
+      Date.now();
+
+    tiempoCorriendo = true;
+
+  } catch (error) {
+
+    tiempoCorriendo = false;
+  }
+}
+
+async function pausarConteo() {
+
+  if (!tiempoCorriendo) {
+    return;
+  }
+
+  try {
+
+    const resultado =
+      await enviarAccion("pausar");
+
+    tiempoAcumulado =
+      Number(
+        resultado.tiempo_acumulado || 0
+      );
+
+    tiempoCorriendo = false;
+    inicioLocal = null;
+
+    actualizarReloj();
+
+  } catch (error) {
+
+    const actual =
+      tiempoAcumulado +
+      (
+        inicioLocal
+          ? Date.now() - inicioLocal
+          : 0
+      );
+
+    tiempoAcumulado =
+      Math.min(
+        actual,
+        tiempoRequerido
+      );
+
+    tiempoCorriendo = false;
+    inicioLocal = null;
+
+    actualizarReloj();
+  }
+}
+
+async function cargarTarea() {
+
+  if (!tareaId) {
+
+    alert("No se encontró la tarea.");
+    window.location.href =
+      "inicio.html";
+
+    return;
+  }
+
+  try {
+
+    const token =
+      await obtenerToken();
+
+    const respuesta =
+      await fetch(
+        "/api/tarea?id=" +
+        encodeURIComponent(tareaId),
+        {
+          method:"GET",
+
+          headers:{
+            "Authorization":
+              "Bearer " + token
+          }
+        }
+      );
+
+    const resultado =
+      await respuesta.json();
+
+    if (
+      !respuesta.ok ||
+      resultado.ok !== true
+    ) {
+      throw new Error(
+        resultado.error ||
+        "No se pudo cargar la tarea."
+      );
+    }
+
+    const tarea =
+      resultado.tarea;
+
+    titulo.textContent =
+      tarea.titulo;
+
+    tiempo.textContent =
+      `${tarea.tiempo_requerido} minutos`;
+
+    contenido.textContent =
+      tarea.descripcion;
+
+    tiempoRequerido =
+      Number(
+        tarea.tiempo_requerido
+      ) * 60 * 1000;
+
+    tiempoAcumulado =
+      Number(
+        resultado.sesion?.tiempo_acumulado || 0
+      );
+
+    mostrarTiempo(
+      tiempoAcumulado
+    );
+
+    if (
+      tiempoAcumulado >=
+      tiempoRequerido
+    ) {
+
+      completarBtn.style.display =
+        "block";
+    }
+
+    intervalo =
+      setInterval(
+        actualizarReloj,
+        1000
+      );
+
+    await iniciarConteo();
+
+  } catch (error) {
+
+    alert(
+      "Error al cargar la tarea."
+    );
+
+    window.location.href =
+      "inicio.html";
+  }
+}
+
+completarBtn.addEventListener(
+  "click",
+  async () => {
+
+    if (tareaCompletada) {
+      return;
+    }
+
+    completarBtn.disabled = true;
 
     try {
 
-        const idToken =
-            await user.getIdToken(true);
+      if (tiempoCorriendo) {
 
+        const resultado =
+          await enviarAccion(
+            "pausar"
+          );
 
-        const respuesta =
-            await fetch("/api/inicio", {
+        tiempoAcumulado =
+          Number(
+            resultado.tiempo_acumulado ||
+            0
+          );
 
-                method: "GET",
+        tiempoCorriendo = false;
+        inicioLocal = null;
+      }
 
-                headers: {
+      const resultado =
+        await enviarAccion(
+          "completar"
+        );
 
-                    "Authorization":
-                        "Bearer " + idToken
+      if (
+        resultado.completada !== true
+      ) {
+        throw new Error(
+          "No se pudo completar la tarea."
+        );
+      }
 
-                }
+      tareaCompletada = true;
 
-            });
+      if (intervalo) {
+        clearInterval(intervalo);
+      }
 
+      alert(
+        "¡Tarea completada!"
+      );
 
-        let resultado = null;
-
-        try {
-
-            resultado =
-                await respuesta.json();
-
-        } catch (error) {
-
-            resultado = null;
-
-        }
-
-if (!respuesta.ok || !resultado || !resultado.ok) {
-
-    throw new Error(
-        resultado &&
-resultado.error
-    ? resultado.error
-    : "No se pudieron cargar los datos."
-    );
-
-    }
-
-
-        const fase =
-            resultado.usuario &&
-            resultado.usuario.fase
-                ? resultado.usuario.fase
-                : "Fase 1";
-
-
-        tituloInicio.textContent =
-            "Bienvenid@ a " + fase;
-
-
-        const estadisticas =
-            resultado.estadisticas || {};
-
-
-        tareasRealizadas.textContent =
-            Number(
-                estadisticas.tareas_realizadas || 0
-            );
-
-
-        diasTrabajados.textContent =
-            Number(
-                estadisticas.dias_trabajados || 0
-            );
-
-
-        minutosAcumulados.textContent =
-            Number(
-                estadisticas.minutos_acumulados || 0
-            );
-
-
-        lista =
-            (resultado.tareas || []).map(
-                (tarea) => {
-
-                    return {
-
-                        id:
-                            tarea.id,
-
-                        tarea: tarea,
-
-                        fecha:
-                            tarea.fecha_realizada || null
-
-                    };
-
-                }
-            );
-
-
-        lista.sort((a, b) => {
-
-            const fechaA =
-                obtenerFechaTiempo(
-                    a.fecha
-                );
-
-            const fechaB =
-                obtenerFechaTiempo(
-                    b.fecha
-                );
-
-
-            if (fechaA === 0 && fechaB === 0) {
-                return 0;
-            }
-
-            if (fechaA === 0) {
-                return -1;
-            }
-
-            if (fechaB === 0) {
-                return 1;
-            }
-
-            return fechaA - fechaB;
-
-        });
-
-
-        if (resultado.admin === true) {
-
-            adminBtn.style.display =
-                "block";
-
-        } else {
-
-            adminBtn.style.display =
-                "none";
-
-        }
-
-
-        renderizarTareas();
-
+      window.location.href =
+        "inicio.html";
 
     } catch (error) {
 
-    mensaje.textContent =
+      completarBtn.disabled =
+        false;
+
+      alert(
         error.message ||
-        "No se pudieron cargar las tareas.";
-
-}
-
-}
-
-
-adminBtn.addEventListener(
-    "click",
-    () => {
-
-        window.location.href =
-            "admin.html";
-
+        "No se pudo completar la tarea."
+      );
     }
+  }
 );
 
+document.addEventListener(
+  "visibilitychange",
+  async () => {
 
-cerrarSesionBtn.addEventListener(
-    "click",
-    async () => {
+    if (document.hidden) {
 
-        cerrarSesionBtn.disabled =
-            true;
+      await pausarConteo();
 
-        cerrarSesionBtn.textContent =
-            "Cerrando sesión...";
+    } else {
 
-
-        try {
-
-            await signOut(auth);
-
-            window.location.href =
-                "index.html";
-
-
-        } catch (error) {
-
-            cerrarSesionBtn.disabled =
-                false;
-
-            cerrarSesionBtn.textContent =
-                "Cerrar sesión";
-
-            alert(
-                "No se pudo cerrar la sesión."
-            );
-
-        }
-
+      await iniciarConteo();
     }
+  }
 );
 
+volverBtn.addEventListener(
+  "click",
+  async () => {
+
+    if (tiempoCorriendo) {
+      await pausarConteo();
+    }
+
+    window.location.href =
+      "inicio.html";
+  }
+);
 
 onAuthStateChanged(
-    auth,
-    async (user) => {
+  auth,
+  async (user) => {
 
-        if (!user) {
+    if (!user) {
 
-            window.location.href =
-                "index.html";
+      window.location.href =
+        "index.html";
 
-            return;
-
-        }
-
-
-        await cargarInicio(user);
-
+      return;
     }
+
+    await cargarTarea();
+  }
 );
 
 </script>
 
 </body>
-
 </html>
