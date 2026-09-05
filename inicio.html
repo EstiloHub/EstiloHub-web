@@ -18,63 +18,52 @@ body{
 }
 
 .container{
-  max-width:800px;
-  margin:auto;
-  padding:40px 20px;
+    max-width:800px;
+    margin:auto;
+    padding:40px 20px;
 }
 
 h1{
-  text-align:center;
-  margin-bottom:30px;
+    text-align:center;
+    margin-bottom:30px;
 }
 
 .tarjeta{
-  background:#1b1b1b;
-  color:white;
-  border:1px solid #444;
-  border-radius:12px;
-  padding:15px;
+    background:#1b1b1b;
+    border:1px solid #444;
+    border-radius:12px;
+    padding:15px;
 }
 
 p{
-  line-height:1.7;
-  font-size:17px;
+    line-height:1.7;
+    font-size:17px;
 }
 
 #contenido{
-  white-space:pre-line;
+    white-space:pre-line;
 }
 
 .info{
-  margin-bottom:20px;
+    margin-bottom:20px;
 }
 
 button{
-  width:100%;
-  padding:15px;
-  border:none;
-  border-radius:10px;
-  cursor:pointer;
-  font-size:16px;
-  margin-top:20px;
+    width:100%;
+    padding:15px;
+    border:none;
+    border-radius:10px;
+    cursor:pointer;
+    font-size:16px;
+    margin-top:20px;
 }
 
 .completar{
-  background:#4CAF50;
-  color:white;
-  width:280px;
-  display:block;
-  margin:20px auto 0;
-}
-
-.volver{
-  background:#555;
-  color:white;
-}
-
-button:disabled{
-  opacity:0.6;
-  cursor:not-allowed;
+    background:#4CAF50;
+    color:white;
+    width:280px;
+    display:block;
+    margin:20px auto 0;
 }
 
 </style>
@@ -98,11 +87,6 @@ Cargando...
 <span id="tiempo"></span>
 </p>
 
-<p>
-<strong>Tiempo realizado:</strong>
-<span id="tiempoRealizado">0:00</span>
-</p>
-
 </div>
 
 <p id="contenido"></p>
@@ -113,13 +97,6 @@ Cargando...
   style="display:none;"
 >
 Completar tarea
-</button>
-
-<button
-  id="volverBtn"
-  class="volver"
->
-Volver
 </button>
 
 </div>
@@ -136,7 +113,9 @@ import {
 "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 
 const params =
-  new URLSearchParams(window.location.search);
+  new URLSearchParams(
+    window.location.search
+  );
 
 const tareaId =
   params.get("id");
@@ -154,39 +133,64 @@ const titulo =
 const tiempo =
   document.getElementById("tiempo");
 
-const tiempoRealizado =
-  document.getElementById("tiempoRealizado");
-
 const contenido =
   document.getElementById("contenido");
 
 const completarBtn =
-  document.getElementById("completarBtn");
+  document.getElementById(
+    "completarBtn"
+  );
 
-const volverBtn =
-  document.getElementById("volverBtn");
+function mostrarTiempo() {
 
-function mostrarTiempo(milisegundos) {
+  let tiempoActual =
+    tiempoAcumulado;
+
+  if (
+    tiempoCorriendo &&
+    inicioLocal
+  ) {
+    tiempoActual +=
+      Date.now() - inicioLocal;
+  }
+
+  tiempoActual =
+    Math.min(
+      tiempoActual,
+      tiempoRequerido
+    );
 
   const segundos =
-    Math.floor(milisegundos / 1000);
+    Math.floor(
+      tiempoActual / 1000
+    );
 
   const minutos =
-    Math.floor(segundos / 60);
+    Math.floor(
+      segundos / 60
+    );
 
   const segundosRestantes =
     segundos % 60;
 
-  tiempoRealizado.textContent =
-    `${minutos}:${String(segundosRestantes).padStart(2, "0")}`;
+  if (
+    tiempoActual >=
+    tiempoRequerido
+  ) {
+    completarBtn.style.display =
+      "block";
+  }
 }
 
 async function obtenerToken() {
 
-  const user = auth.currentUser;
+  const user =
+    auth.currentUser;
 
   if (!user) {
-    throw new Error("Sesión no disponible.");
+    throw new Error(
+      "Sesión no disponible."
+    );
   }
 
   return await user.getIdToken(true);
@@ -198,24 +202,33 @@ async function enviarAccion(accion) {
     await obtenerToken();
 
   const respuesta =
-    await fetch("/api/tarea", {
-      method:"POST",
+    await fetch(
+      "/api/tarea",
+      {
+        method:"POST",
 
-      headers:{
-        "Content-Type":"application/json",
-        "Authorization":"Bearer " + token
-      },
+        headers:{
+          "Content-Type":
+            "application/json",
 
-      body:JSON.stringify({
-        tarea_id:tareaId,
-        accion:accion
-      })
-    });
+          "Authorization":
+            "Bearer " + token
+        },
+
+        body:JSON.stringify({
+          tarea_id:tareaId,
+          accion:accion
+        })
+      }
+    );
 
   const resultado =
     await respuesta.json();
 
-  if (!respuesta.ok || resultado.ok !== true) {
+  if (
+    !respuesta.ok ||
+    resultado.ok !== true
+  ) {
     throw new Error(
       resultado.error ||
       "No se pudo procesar la tarea."
@@ -223,35 +236,6 @@ async function enviarAccion(accion) {
   }
 
   return resultado;
-}
-
-function actualizarReloj() {
-
-  let actual =
-    tiempoAcumulado;
-
-  if (tiempoCorriendo && inicioLocal) {
-
-    actual +=
-      Date.now() - inicioLocal;
-  }
-
-  actual =
-    Math.min(
-      actual,
-      tiempoRequerido
-    );
-
-  mostrarTiempo(actual);
-
-  if (
-    actual >= tiempoRequerido &&
-    !tareaCompletada
-  ) {
-
-    completarBtn.style.display =
-      "block";
-  }
 }
 
 async function iniciarConteo() {
@@ -267,17 +251,22 @@ async function iniciarConteo() {
   try {
 
     const resultado =
-      await enviarAccion("iniciar");
+      await enviarAccion(
+        "iniciar"
+      );
 
     tiempoAcumulado =
       Number(
-        resultado.tiempo_acumulado || 0
+        resultado.tiempo_acumulado ||
+        0
       );
 
     inicioLocal =
       Date.now();
 
     tiempoCorriendo = true;
+
+    mostrarTiempo();
 
   } catch (error) {
 
@@ -294,38 +283,25 @@ async function pausarConteo() {
   try {
 
     const resultado =
-      await enviarAccion("pausar");
+      await enviarAccion(
+        "pausar"
+      );
 
     tiempoAcumulado =
       Number(
-        resultado.tiempo_acumulado || 0
+        resultado.tiempo_acumulado ||
+        0
       );
 
     tiempoCorriendo = false;
     inicioLocal = null;
 
-    actualizarReloj();
+    mostrarTiempo();
 
   } catch (error) {
 
-    const actual =
-      tiempoAcumulado +
-      (
-        inicioLocal
-          ? Date.now() - inicioLocal
-          : 0
-      );
-
-    tiempoAcumulado =
-      Math.min(
-        actual,
-        tiempoRequerido
-      );
-
     tiempoCorriendo = false;
     inicioLocal = null;
-
-    actualizarReloj();
   }
 }
 
@@ -333,7 +309,10 @@ async function cargarTarea() {
 
   if (!tareaId) {
 
-    alert("No se encontró la tarea.");
+    alert(
+      "No se encontró la tarea."
+    );
+
     window.location.href =
       "inicio.html";
 
@@ -348,7 +327,9 @@ async function cargarTarea() {
     const respuesta =
       await fetch(
         "/api/tarea?id=" +
-        encodeURIComponent(tareaId),
+        encodeURIComponent(
+          tareaId
+        ),
         {
           method:"GET",
 
@@ -391,25 +372,23 @@ async function cargarTarea() {
 
     tiempoAcumulado =
       Number(
-        resultado.sesion?.tiempo_acumulado || 0
+        resultado.sesion?.tiempo_acumulado ||
+        0
       );
 
-    mostrarTiempo(
-      tiempoAcumulado
-    );
+    mostrarTiempo();
 
     if (
       tiempoAcumulado >=
       tiempoRequerido
     ) {
-
       completarBtn.style.display =
         "block";
     }
 
     intervalo =
       setInterval(
-        actualizarReloj,
+        mostrarTiempo,
         1000
       );
 
@@ -439,20 +418,7 @@ completarBtn.addEventListener(
     try {
 
       if (tiempoCorriendo) {
-
-        const resultado =
-          await enviarAccion(
-            "pausar"
-          );
-
-        tiempoAcumulado =
-          Number(
-            resultado.tiempo_acumulado ||
-            0
-          );
-
-        tiempoCorriendo = false;
-        inicioLocal = null;
+        await pausarConteo();
       }
 
       const resultado =
@@ -499,26 +465,10 @@ document.addEventListener(
   async () => {
 
     if (document.hidden) {
-
       await pausarConteo();
-
     } else {
-
       await iniciarConteo();
     }
-  }
-);
-
-volverBtn.addEventListener(
-  "click",
-  async () => {
-
-    if (tiempoCorriendo) {
-      await pausarConteo();
-    }
-
-    window.location.href =
-      "inicio.html";
   }
 );
 
@@ -541,4 +491,5 @@ onAuthStateChanged(
 </script>
 
 </body>
-</html>
+
+  </html>
