@@ -1,6 +1,12 @@
-const { getApps, initializeApp, cert } = require("firebase-admin/app");
+const {
+  getApps,
+  initializeApp,
+  cert
+} = require("firebase-admin/app");
 
-const { getAuth } = require("firebase-admin/auth");
+const {
+  getAuth
+} = require("firebase-admin/auth");
 
 const {
   getFirestore,
@@ -44,7 +50,9 @@ async function verificarUsuario(req) {
     !autorizacion.startsWith("Bearer ")
   ) {
 
-    throw new Error("No autorizado");
+    throw new Error(
+      "No autorizado"
+    );
 
   }
 
@@ -60,7 +68,10 @@ async function verificarUsuario(req) {
 }
 
 
-async function obtenerDatos(uid, tareaId) {
+async function obtenerDatos(
+  uid,
+  tareaId
+) {
 
   const usuarioSnap =
     await db
@@ -139,14 +150,16 @@ async function obtenerDatos(uid, tareaId) {
 }
 
 
-function obtenerTiempoActual(
+function calcularTiempoActual(
   tiempoAcumulado,
   activa,
   inicioActual
 ) {
 
   let tiempo =
-    Number(tiempoAcumulado || 0);
+    Number(
+      tiempoAcumulado || 0
+    );
 
 
   if (
@@ -154,11 +167,12 @@ function obtenerTiempoActual(
     inicioActual
   ) {
 
-    tiempo += Math.max(
-      0,
-      Date.now() -
-        inicioActual.toMillis()
-    );
+    tiempo +=
+      Math.max(
+        0,
+        Date.now() -
+          inicioActual.toMillis()
+      );
 
   }
 
@@ -224,8 +238,6 @@ module.exports = async function handler(
 
 
       let tiempoAcumulado = 0;
-      let activa = false;
-      let inicioActual = null;
 
 
       if (sesionSnap.exists) {
@@ -235,24 +247,10 @@ module.exports = async function handler(
 
 
         tiempoAcumulado =
-          Number(
-            sesion.tiempo_acumulado || 0
-          );
-
-
-        activa =
-          sesion.activa === true;
-
-
-        inicioActual =
-          sesion.inicio_actual || null;
-
-
-        tiempoAcumulado =
-          obtenerTiempoActual(
-            tiempoAcumulado,
-            activa,
-            inicioActual
+          calcularTiempoActual(
+            sesion.tiempo_acumulado,
+            sesion.activa === true,
+            sesion.inicio_actual || null
           );
 
       }
@@ -271,6 +269,42 @@ module.exports = async function handler(
           tiempoAcumulado,
           tiempoRequerido
         );
+
+
+      /*
+       * Al cargar la tarea se deja la sesión
+       * pausada. De esta manera, si existía
+       * un tramo anterior activo, primero se
+       * incorpora su tiempo y luego la página
+       * inicia un tramo nuevo una sola vez.
+       */
+
+      await sesionRef.set(
+        {
+
+          usuario_id:
+            uid,
+
+          tarea_id:
+            tareaId,
+
+          tiempo_acumulado:
+            tiempoAcumulado,
+
+          activa:
+            false,
+
+          inicio_actual:
+            null,
+
+          actualizado:
+            FieldValue.serverTimestamp()
+
+        },
+        {
+          merge: true
+        }
+      );
 
 
       return res.status(200).json({
@@ -301,7 +335,7 @@ module.exports = async function handler(
             tiempoAcumulado,
 
           activa:
-            activa
+            false
 
         }
 
@@ -330,9 +364,12 @@ module.exports = async function handler(
       ) {
 
         return res.status(400).json({
+
           ok: false,
+
           error:
             "Solicitud incompleta."
+
         });
 
       }
@@ -396,54 +433,56 @@ module.exports = async function handler(
 
       if (accion === "iniciar") {
 
+        /*
+         * Si ya existe una sesión activa,
+         * no se inicia otro tramo.
+         */
+
         if (
           activa &&
           inicioActual
         ) {
 
-          tiempoAcumulado +=
-            Math.max(
-              0,
-              Date.now() -
-                inicioActual.toMillis()
+          tiempoAcumulado =
+            calcularTiempoActual(
+              tiempoAcumulado,
+              true,
+              inicioActual
             );
 
         }
 
 
-        tiempoAcumulado =
-          Math.min(
-            tiempoAcumulado,
-            tiempoRequerido
+        if (!activa) {
+
+          await sesionRef.set(
+            {
+
+              usuario_id:
+                uid,
+
+              tarea_id:
+                tareaId,
+
+              tiempo_acumulado:
+                tiempoAcumulado,
+
+              activa:
+                true,
+
+              inicio_actual:
+                FieldValue.serverTimestamp(),
+
+              actualizado:
+                FieldValue.serverTimestamp()
+
+            },
+            {
+              merge: true
+            }
           );
 
-
-        await sesionRef.set(
-          {
-
-            usuario_id:
-              uid,
-
-            tarea_id:
-              tareaId,
-
-            tiempo_acumulado:
-              tiempoAcumulado,
-
-            activa:
-              true,
-
-            inicio_actual:
-              FieldValue.serverTimestamp(),
-
-            actualizado:
-              FieldValue.serverTimestamp()
-
-          },
-          {
-            merge: true
-          }
-        );
+        }
 
 
         return res.status(200).json({
@@ -468,11 +507,11 @@ module.exports = async function handler(
           inicioActual
         ) {
 
-          tiempoAcumulado +=
-            Math.max(
-              0,
-              Date.now() -
-                inicioActual.toMillis()
+          tiempoAcumulado =
+            calcularTiempoActual(
+              tiempoAcumulado,
+              true,
+              inicioActual
             );
 
         }
@@ -535,11 +574,11 @@ module.exports = async function handler(
           inicioActual
         ) {
 
-          tiempoAcumulado +=
-            Math.max(
-              0,
-              Date.now() -
-                inicioActual.toMillis()
+          tiempoAcumulado =
+            calcularTiempoActual(
+              tiempoAcumulado,
+              true,
+              inicioActual
             );
 
         }
@@ -602,7 +641,9 @@ module.exports = async function handler(
 
         const progresoRef =
           db
-            .collection("progreso_tareas")
+            .collection(
+              "progreso_tareas"
+            )
             .doc(
               `${uid}_${tareaId}`
             );
