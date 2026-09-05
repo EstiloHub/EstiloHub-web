@@ -4,66 +4,70 @@
 <head>
 
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+>
 
 <title>Tarea</title>
 
 <style>
 
-body{
-  margin:0;
-  background:#FFFFFF;
-  color:#222222;
-  font-family:Arial, sans-serif;
+body {
+    margin: 0;
+    background: #FFFFFF;
+    color: #222222;
+    font-family: Arial, sans-serif;
 }
 
-.container{
-    max-width:800px;
-    margin:auto;
-    padding:40px 20px;
+.container {
+    max-width: 800px;
+    margin: auto;
+    padding: 40px 20px;
 }
 
-h1{
-    text-align:center;
-    margin-bottom:30px;
+h1 {
+    text-align: center;
+    margin-bottom: 30px;
 }
 
-.tarjeta{
-    background:#1b1b1b;
-    border:1px solid #444;
-    border-radius:12px;
-    padding:15px;
+.tarjeta {
+    background: #1b1b1b;
+    border: 1px solid #444;
+    border-radius: 12px;
+    padding: 15px;
 }
 
-p{
-    line-height:1.7;
-    font-size:17px;
+p {
+    line-height: 1.7;
+    font-size: 17px;
 }
 
-#contenido{
-    white-space:pre-line;
+#contenido {
+    white-space: pre-line;
 }
 
-.info{
-    margin-bottom:20px;
+.info {
+    margin-bottom: 20px;
 }
 
-button{
-    width:100%;
-    padding:15px;
-    border:none;
-    border-radius:10px;
-    cursor:pointer;
-    font-size:16px;
-    margin-top:20px;
+button {
+    width: 100%;
+    padding: 15px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 16px;
+    margin-top: 20px;
 }
 
-.completar{
-    background:#4CAF50;
-    color:white;
-    width:280px;
-    display:block;
-    margin:20px auto 0;
+.completar {
+    background: #4CAF50;
+    color: white;
+    width: 280px;
+    display: block;
+    margin: 20px auto 0;
 }
 
 </style>
@@ -92,9 +96,10 @@ Cargando...
 <p id="contenido"></p>
 
 <button
-  id="completarBtn"
-  class="completar"
-  style="display:none;"
+    id="completarBtn"
+    class="completar"
+    style="display:none;"
+    type="button"
 >
 Completar tarea
 </button>
@@ -103,393 +108,576 @@ Completar tarea
 
 </div>
 
+
 <script type="module">
 
 import { auth } from "./firebase.js";
 
 import {
-  onAuthStateChanged
-} from
-"https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+    onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+
 
 const params =
-  new URLSearchParams(
-    window.location.search
-  );
+    new URLSearchParams(
+        window.location.search
+    );
+
 
 const tareaId =
-  params.get("id");
+    params.get("id");
+
 
 let tiempoAcumulado = 0;
+
 let tiempoRequerido = 0;
+
 let tiempoCorriendo = false;
+
 let inicioLocal = null;
+
 let tareaCompletada = false;
+
 let intervalo = null;
 
+
 const titulo =
-  document.getElementById("titulo");
+    document.getElementById(
+        "titulo"
+    );
+
 
 const tiempo =
-  document.getElementById("tiempo");
+    document.getElementById(
+        "tiempo"
+    );
+
 
 const contenido =
-  document.getElementById("contenido");
+    document.getElementById(
+        "contenido"
+    );
+
 
 const completarBtn =
-  document.getElementById(
-    "completarBtn"
-  );
+    document.getElementById(
+        "completarBtn"
+    );
+
 
 function mostrarTiempo() {
 
-  let tiempoActual =
-    tiempoAcumulado;
+    let tiempoActual =
+        tiempoAcumulado;
 
-  if (
-    tiempoCorriendo &&
-    inicioLocal
-  ) {
-    tiempoActual +=
-      Date.now() - inicioLocal;
-  }
 
-  tiempoActual =
-    Math.min(
-      tiempoActual,
-      tiempoRequerido
-    );
+    if (
+        tiempoCorriendo &&
+        inicioLocal
+    ) {
 
-  const segundos =
-    Math.floor(
-      tiempoActual / 1000
-    );
+        tiempoActual +=
+            Date.now() -
+            inicioLocal;
 
-  const minutos =
-    Math.floor(
-      segundos / 60
-    );
+    }
 
-  const segundosRestantes =
-    segundos % 60;
 
-  if (
-    tiempoActual >=
-    tiempoRequerido
-  ) {
-    completarBtn.style.display =
-      "block";
-  }
+    tiempoActual =
+        Math.min(
+            tiempoActual,
+            tiempoRequerido
+        );
+
+
+    const segundos =
+        Math.floor(
+            tiempoActual / 1000
+        );
+
+
+    const minutos =
+        Math.floor(
+            segundos / 60
+        );
+
+
+    const segundosRestantes =
+        segundos % 60;
+
+
+    if (
+        tiempoActual >=
+        tiempoRequerido
+    ) {
+
+        completarBtn.style.display =
+            "block";
+
+    }
+
 }
+
 
 async function obtenerToken() {
 
-  const user =
-    auth.currentUser;
+    const user =
+        auth.currentUser;
 
-  if (!user) {
-    throw new Error(
-      "Sesión no disponible."
-    );
-  }
-
-  return await user.getIdToken(true);
-}
-
-async function enviarAccion(accion) {
-
-  const token =
-    await obtenerToken();
-
-  const respuesta =
-    await fetch(
-      "/api/tarea",
-      {
-        method:"POST",
-
-        headers:{
-          "Content-Type":
-            "application/json",
-
-          "Authorization":
-            "Bearer " + token
-        },
-
-        body:JSON.stringify({
-          tarea_id:tareaId,
-          accion:accion
-        })
-      }
-    );
-
-  const resultado =
-    await respuesta.json();
-
-  if (
-    !respuesta.ok ||
-    resultado.ok !== true
-  ) {
-    throw new Error(
-      resultado.error ||
-      "No se pudo procesar la tarea."
-    );
-  }
-
-  return resultado;
-}
-
-async function iniciarConteo() {
-
-  if (
-    tareaCompletada ||
-    tiempoCorriendo ||
-    document.hidden
-  ) {
-    return;
-  }
-
-  try {
-
-    const resultado =
-      await enviarAccion(
-        "iniciar"
-      );
-
-    tiempoAcumulado =
-      Number(
-        resultado.tiempo_acumulado ||
-        0
-      );
-
-    inicioLocal =
-      Date.now();
-
-    tiempoCorriendo = true;
-
-    mostrarTiempo();
-
-  } catch (error) {
-
-    tiempoCorriendo = false;
-  }
-}
-
-async function pausarConteo() {
-
-  if (!tiempoCorriendo) {
-    return;
-  }
-
-  try {
-
-    const resultado =
-      await enviarAccion(
-        "pausar"
-      );
-
-    tiempoAcumulado =
-      Number(
-        resultado.tiempo_acumulado ||
-        0
-      );
-
-    tiempoCorriendo = false;
-    inicioLocal = null;
-
-    mostrarTiempo();
-
-  } catch (error) {
-
-    tiempoCorriendo = false;
-    inicioLocal = null;
-  }
-}
-
-async function cargarTarea() {
-
-  if (!tareaId) {
-
-    alert(
-      "No se encontró la tarea."
-    );
-
-    window.location.href =
-      "inicio.html";
-
-    return;
-  }
-
-  try {
-
-    const token =
-      await obtenerToken();
-
-    const respuesta =
-      await fetch(
-        "/api/tarea?id=" +
-        encodeURIComponent(
-          tareaId
-        ),
-        {
-          method:"GET",
-
-          headers:{
-            "Authorization":
-              "Bearer " + token
-          }
-        }
-      );
-
-    const resultado =
-      await respuesta.json();
-
-    if (
-      !respuesta.ok ||
-      resultado.ok !== true
-    ) {
-      throw new Error(
-        resultado.error ||
-        "No se pudo cargar la tarea."
-      );
-    }
-
-    const tarea =
-      resultado.tarea;
-
-    titulo.textContent =
-      tarea.titulo;
-
-    tiempo.textContent =
-      `${tarea.tiempo_requerido} minutos`;
-
-    contenido.textContent =
-      tarea.descripcion;
-
-    tiempoRequerido =
-      Number(
-        tarea.tiempo_requerido
-      ) * 60 * 1000;
-
-    tiempoAcumulado =
-      Number(
-        resultado.sesion?.tiempo_acumulado ||
-        0
-      );
-
-    mostrarTiempo();
-
-    if (
-      tiempoAcumulado >=
-      tiempoRequerido
-    ) {
-      completarBtn.style.display =
-        "block";
-    }
-
-    intervalo =
-      setInterval(
-        mostrarTiempo,
-        1000
-      );
-
-    await iniciarConteo();
-
-  } catch (error) {
-
-    alert(
-      "Error al cargar la tarea."
-    );
-
-    window.location.href =
-      "inicio.html";
-  }
-}
-
-completarBtn.addEventListener(
-  "click",
-  async () => {
-
-    if (tareaCompletada) {
-      return;
-    }
-
-    completarBtn.disabled = true;
-
-    try {
-
-      if (tiempoCorriendo) {
-        await pausarConteo();
-      }
-
-      const resultado =
-        await enviarAccion(
-          "completar"
-        );
-
-      if (
-        resultado.completada !== true
-      ) {
-        throw new Error(
-          "No se pudo completar la tarea."
-        );
-      }
-
-      tareaCompletada = true;
-
-      if (intervalo) {
-        clearInterval(intervalo);
-      }
-
-      alert(
-        "¡Tarea completada!"
-      );
-
-      window.location.href =
-        "inicio.html";
-
-    } catch (error) {
-
-      completarBtn.disabled =
-        false;
-
-      alert(
-        error.message ||
-        "No se pudo completar la tarea."
-      );
-    }
-  }
-);
-
-document.addEventListener(
-  "visibilitychange",
-  async () => {
-
-    if (document.hidden) {
-      await pausarConteo();
-    } else {
-      await iniciarConteo();
-    }
-  }
-);
-
-onAuthStateChanged(
-  auth,
-  async (user) => {
 
     if (!user) {
 
-      window.location.href =
-        "index.html";
+        throw new Error(
+            "Sesión no disponible."
+        );
 
-      return;
     }
 
-    await cargarTarea();
-  }
+
+    return await user.getIdToken(true);
+
+}
+
+
+async function enviarAccion(
+    accion
+) {
+
+    const token =
+        await obtenerToken();
+
+
+    const respuesta =
+        await fetch(
+            "/api/tarea",
+            {
+
+                method:
+                    "POST",
+
+                headers: {
+
+                    "Content-Type":
+                        "application/json",
+
+                    "Authorization":
+                        "Bearer " +
+                        token
+
+                },
+
+                body:
+                    JSON.stringify({
+                        tarea_id:
+                            tareaId,
+
+                        accion:
+                            accion
+                    })
+
+            }
+        );
+
+
+    let resultado =
+        null;
+
+
+    try {
+
+        resultado =
+            await respuesta.json();
+
+    } catch (error) {
+
+        resultado =
+            null;
+
+    }
+
+
+    if (
+        !respuesta.ok ||
+        !resultado ||
+        resultado.ok !== true
+    ) {
+
+        throw new Error(
+            resultado &&
+            resultado.error
+                ? resultado.error
+                : "No se pudo procesar la tarea."
+        );
+
+    }
+
+
+    return resultado;
+
+}
+
+
+async function iniciarConteo() {
+
+    if (
+        tareaCompletada ||
+        tiempoCorriendo ||
+        document.hidden
+    ) {
+
+        return;
+
+    }
+
+
+    try {
+
+        const resultado =
+            await enviarAccion(
+                "iniciar"
+            );
+
+
+        tiempoAcumulado =
+            Number(
+                resultado.tiempo_acumulado ||
+                0
+            );
+
+
+        inicioLocal =
+            Date.now();
+
+
+        tiempoCorriendo =
+            true;
+
+
+        mostrarTiempo();
+
+    } catch (error) {
+
+        tiempoCorriendo =
+            false;
+
+    }
+
+}
+
+
+async function pausarConteo() {
+
+    if (
+        !tiempoCorriendo
+    ) {
+
+        return;
+
+    }
+
+
+    try {
+
+        const resultado =
+            await enviarAccion(
+                "pausar"
+            );
+
+
+        tiempoAcumulado =
+            Number(
+                resultado.tiempo_acumulado ||
+                0
+            );
+
+
+        tiempoCorriendo =
+            false;
+
+
+        inicioLocal =
+            null;
+
+
+        mostrarTiempo();
+
+    } catch (error) {
+
+    }
+
+}
+
+
+async function cargarTarea() {
+
+    if (!tareaId) {
+
+        alert(
+            "No se encontró la tarea."
+        );
+
+
+        window.location.href =
+            "inicio.html";
+
+
+        return;
+
+    }
+
+
+    try {
+
+        const token =
+            await obtenerToken();
+
+
+        const respuesta =
+            await fetch(
+                "/api/tarea?id=" +
+                encodeURIComponent(
+                    tareaId
+                ),
+                {
+
+                    method:
+                        "GET",
+
+                    headers: {
+
+                        "Authorization":
+                            "Bearer " +
+                            token
+
+                    }
+
+                }
+            );
+
+
+        let resultado =
+            null;
+
+
+        try {
+
+            resultado =
+                await respuesta.json();
+
+        } catch (error) {
+
+            resultado =
+                null;
+
+        }
+
+
+        if (
+            !respuesta.ok ||
+            !resultado ||
+            resultado.ok !== true
+        ) {
+
+            throw new Error(
+                resultado &&
+                resultado.error
+                    ? resultado.error
+                    : "No se pudo cargar la tarea."
+            );
+
+        }
+
+
+        const tarea =
+            resultado.tarea;
+
+
+        titulo.textContent =
+            tarea.titulo;
+
+
+        tiempo.textContent =
+            `${tarea.tiempo_requerido} minutos`;
+
+
+        contenido.textContent =
+            tarea.descripcion;
+
+
+        tiempoRequerido =
+            Number(
+                tarea.tiempo_requerido
+            ) *
+            60 *
+            1000;
+
+
+        tiempoAcumulado =
+            Number(
+                resultado.sesion?.tiempo_acumulado ||
+                0
+            );
+
+
+        mostrarTiempo();
+
+
+        if (
+            tiempoAcumulado >=
+            tiempoRequerido
+        ) {
+
+            completarBtn.style.display =
+                "block";
+
+        }
+
+
+        intervalo =
+            setInterval(
+                mostrarTiempo,
+                1000
+            );
+
+
+        await iniciarConteo();
+
+    } catch (error) {
+
+        alert(
+            "Error al cargar la tarea."
+        );
+
+
+        window.location.href =
+            "inicio.html";
+
+    }
+
+}
+
+
+completarBtn.addEventListener(
+    "click",
+    async () => {
+
+        if (tareaCompletada) {
+
+            return;
+
+        }
+
+
+        completarBtn.disabled =
+            true;
+
+
+        try {
+
+            if (
+                tiempoCorriendo
+            ) {
+
+                await pausarConteo();
+
+            }
+
+
+            const resultado =
+                await enviarAccion(
+                    "completar"
+                );
+
+
+            if (
+                resultado.completada !==
+                true
+            ) {
+
+                throw new Error(
+                    "No se pudo completar la tarea."
+                );
+
+            }
+
+
+            tareaCompletada =
+                true;
+
+
+            if (intervalo) {
+
+                clearInterval(
+                    intervalo
+                );
+
+            }
+
+
+            alert(
+                "¡Tarea completada!"
+            );
+
+
+            window.location.href =
+                "inicio.html";
+
+        } catch (error) {
+
+            completarBtn.disabled =
+                false;
+
+
+            alert(
+                error.message ||
+                "No se pudo completar la tarea."
+            );
+
+        }
+
+    }
+);
+
+
+document.addEventListener(
+    "visibilitychange",
+    async () => {
+
+        if (document.hidden) {
+
+            await pausarConteo();
+
+        } else {
+
+            await iniciarConteo();
+
+        }
+
+    }
+);
+
+
+onAuthStateChanged(
+    auth,
+    async (user) => {
+
+        if (!user) {
+
+            window.location.href =
+                "index.html";
+
+            return;
+
+        }
+
+
+        await cargarTarea();
+
+    }
 );
 
 </script>
 
 </body>
 
-</html>
+  </html>
