@@ -1,20 +1,17 @@
-const {
-  getApps,
-  initializeApp,
-  cert
-} = require("firebase-admin/app");
-
-const {
-  getAuth
-} = require("firebase-admin/auth");
-
+const { getApps, initializeApp, cert } = require("firebase-admin/app");
+const { getAuth } = require("firebase-admin/auth");
 const {
   getFirestore,
   FieldValue
 } = require("firebase-admin/firestore");
 
-
 if (!getApps().length) {
+
+  const privateKey =
+    String(process.env.FIREBASE_PRIVATE_KEY || "")
+      .replace(/^"(.*)"$/s, "$1")
+      .replace(/\\n/g, "\n")
+      .replace(/\r\n/g, "\n");
 
   initializeApp({
     credential: cert({
@@ -24,20 +21,14 @@ if (!getApps().length) {
       clientEmail:
         process.env.FIREBASE_CLIENT_EMAIL,
 
-      privateKey:
-        process.env.FIREBASE_PRIVATE_KEY
-          .replace(/\\n/g, "\n")
+      privateKey
     })
   });
 
 }
 
-
-const authAdmin =
-  getAuth();
-
-const db =
-  getFirestore();
+const authAdmin = getAuth();
+const db = getFirestore();
 
 
 async function verificarUsuario(req) {
