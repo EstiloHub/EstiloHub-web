@@ -5,30 +5,42 @@ const {
   FieldValue
 } = require("firebase-admin/firestore");
 
-if (!getApps().length) {
+
+function getFirebaseAdmin() {
+
+  if (getApps().length) {
+    return getApps()[0];
+  }
+
 
   const privateKey =
-    String(process.env.FIREBASE_PRIVATE_KEY || "")
-      .replace(/^"(.*)"$/s, "$1")
-      .replace(/\\n/g, "\n")
-      .replace(/\r\n/g, "\n");
+    process.env.FIREBASE_PRIVATE_KEY
+      ? process.env.FIREBASE_PRIVATE_KEY
+          .replace(/^"|"$/g, "")
+          .replace(/\\n/g, "\n")
+          .replace(/\\r/g, "")
+          .trim()
+      : undefined;
 
-  initializeApp({
+
+  return initializeApp({
+
     credential: cert({
+
       projectId:
         process.env.FIREBASE_PROJECT_ID,
 
       clientEmail:
         process.env.FIREBASE_CLIENT_EMAIL,
 
-      privateKey
+      privateKey:
+        privateKey
+
     })
+
   });
 
 }
-
-const authAdmin = getAuth();
-const db = getFirestore();
 
 
 async function verificarUsuario(req) {
@@ -52,6 +64,10 @@ async function verificarUsuario(req) {
     autorizacion.substring(7);
 
 
+  const authAdmin =
+    getAuth();
+
+
   return await authAdmin.verifyIdToken(
     token
   );
@@ -60,6 +76,7 @@ async function verificarUsuario(req) {
 
 
 async function obtenerDatos(
+  db,
   uid,
   tareaId
 ) {
@@ -158,12 +175,19 @@ function calcularTiempoActual(
     inicioActual
   ) {
 
-    tiempo +=
-      Math.max(
-        0,
-        Date.now() -
-          inicioActual.toMillis()
-      );
+    if (
+      typeof inicioActual.toMillis ===
+      "function"
+    ) {
+
+      tiempo +=
+        Math.max(
+          0,
+          Date.now() -
+            inicioActual.toMillis()
+        );
+
+    }
 
   }
 
@@ -180,8 +204,30 @@ module.exports = async function handler(
 
   try {
 
+    getFirebaseAdmin();
+
+
+    const authAdmin =
+      getAuth();
+
+
+    const db =
+      getFirestore();
+
+
     const usuarioAutenticado =
-      await verificarUsuario(req);
+      await authAdmin.verifyIdToken(
+        String(
+          (
+            req.headers.authorization ||
+            ""
+          ).startsWith("Bearer ")
+            ? req.headers.authorization
+                .substring(7)
+                .trim()
+            : ""
+        )
+      );
 
 
     const uid =
@@ -199,9 +245,12 @@ module.exports = async function handler(
       if (!tareaId) {
 
         return res.status(400).json({
+
           ok: false,
+
           error:
             "No se especificó la tarea."
+
         });
 
       }
@@ -209,6 +258,7 @@ module.exports = async function handler(
 
       const { tarea } =
         await obtenerDatos(
+          db,
           uid,
           tareaId
         );
@@ -228,7 +278,8 @@ module.exports = async function handler(
         await sesionRef.get();
 
 
-      let tiempoAcumulado = 0;
+      let tiempoAcumulado =
+        0;
 
 
       if (sesionSnap.exists) {
@@ -241,7 +292,8 @@ module.exports = async function handler(
           calcularTiempoActual(
             sesion.tiempo_acumulado,
             sesion.activa === true,
-            sesion.inicio_actual || null
+            sesion.inicio_actual ||
+              null
           );
 
       }
@@ -261,14 +313,6 @@ module.exports = async function handler(
           tiempoRequerido
         );
 
-
-      /*
-       * Al cargar la tarea se deja la sesión
-       * pausada. De esta manera, si existía
-       * un tramo anterior activo, primero se
-       * incorpora su tiempo y luego la página
-       * inicia un tramo nuevo una sola vez.
-       */
 
       await sesionRef.set(
         {
@@ -368,6 +412,7 @@ module.exports = async function handler(
 
       const { tarea } =
         await obtenerDatos(
+          db,
           uid,
           tareaId
         );
@@ -387,9 +432,14 @@ module.exports = async function handler(
         await sesionRef.get();
 
 
-      let tiempoAcumulado = 0;
-      let inicioActual = null;
-      let activa = false;
+      let tiempoAcumulado =
+        0;
+
+      let inicioActual =
+        null;
+
+      let activa =
+        false;
 
 
       if (sesionSnap.exists) {
@@ -405,7 +455,8 @@ module.exports = async function handler(
 
 
         inicioActual =
-          sesion.inicio_actual || null;
+          sesion.inicio_actual ||
+          null;
 
 
         activa =
@@ -423,11 +474,6 @@ module.exports = async function handler(
 
 
       if (accion === "iniciar") {
-
-        /*
-         * Si ya existe una sesión activa,
-         * no se inicia otro tramo.
-         */
 
         if (
           activa &&
@@ -774,7 +820,9 @@ module.exports = async function handler(
               } else {
 
                 const ultima =
-                  datos.ultima_fecha_trabajo.toDate();
+                  datos
+                    .ultima_fecha_trabajo
+                    .toDate();
 
 
                 if (
@@ -906,7 +954,8 @@ module.exports = async function handler(
       ok: false,
 
       error:
-        "No se pudo procesar la tarea."
+        error?.message ||
+        "Error interno del servidor."
 
     });
 
