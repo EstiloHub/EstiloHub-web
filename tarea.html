@@ -15,7 +15,6 @@ body{
   background:#FFFFFF;
   color:#222222;
   font-family:Arial, sans-serif;
-
 }
 
 .container{
@@ -34,22 +33,19 @@ h1{
     border:1px solid #444;
     border-radius:12px;
     padding:15px;
-
 }
 
 p{
     line-height:1.7;
     font-size:17px;
 }
-    
-#contenido{
-    white-space: pre-line;
 
+#contenido{
+    white-space:pre-line;
 }
 
 .info{
     margin-bottom:20px;
-
 }
 
 button{
@@ -60,7 +56,6 @@ button{
     cursor:pointer;
     font-size:16px;
     margin-top:20px;
-
 }
 
 .completar{
@@ -69,16 +64,10 @@ button{
     width:280px;
     display:block;
     margin:20px auto 0;
-
-}
-
-.volver{
-    background:#555;
-    color:white;
-
 }
 
 </style>
+
 </head>
 
 <body>
@@ -93,13 +82,20 @@ Cargando...
 
 <div class="info">
 
-<p><strong>Tiempo requerido:</strong> <span id="tiempo"></span></p>
+<p>
+<strong>Tiempo requerido:</strong>
+<span id="tiempo"></span>
+</p>
 
 </div>
 
 <p id="contenido"></p>
 
-<button id="completarBtn" class="completar" style="display:none;">
+<button
+  id="completarBtn"
+  class="completar"
+  style="display:none;"
+>
 Completar tarea
 </button>
 
@@ -108,381 +104,392 @@ Completar tarea
 </div>
 
 <script type="module">
-  
-import { auth, db } from "./firebase.js";
+
+import { auth } from "./firebase.js";
 
 import {
   onAuthStateChanged
-
-} from 
+} from
 "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 
-import {
-  doc,
-  collection,
-  query,
-  where,
-  getDocs,
-  getDoc,
-  setDoc,
-  updateDoc,
-  increment,
-  serverTimestamp
+const params =
+  new URLSearchParams(
+    window.location.search
+  );
 
-} from 
-"https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
-
-const params = new URLSearchParams(window.location.search);
-
-const tareaId = params.get("id");
+const tareaId =
+  params.get("id");
 
 let tiempoAcumulado = 0;
-let inicioTramo = null;
+let tiempoRequerido = 0;
 let tiempoCorriendo = false;
+let inicioLocal = null;
 let tareaCompletada = false;
+let intervalo = null;
 
-onAuthStateChanged(auth, async (user) => {
+const titulo =
+  document.getElementById("titulo");
 
-if (!user) {
+const tiempo =
+  document.getElementById("tiempo");
 
- window.location.href = "index.html";
- return;
+const contenido =
+  document.getElementById("contenido");
 
+const completarBtn =
+  document.getElementById(
+    "completarBtn"
+  );
+
+function mostrarTiempo() {
+
+  let tiempoActual =
+    tiempoAcumulado;
+
+  if (
+    tiempoCorriendo &&
+    inicioLocal
+  ) {
+    tiempoActual +=
+      Date.now() - inicioLocal;
+  }
+
+  tiempoActual =
+    Math.min(
+      tiempoActual,
+      tiempoRequerido
+    );
+
+  const segundos =
+    Math.floor(
+      tiempoActual / 1000
+    );
+
+  const minutos =
+    Math.floor(
+      segundos / 60
+    );
+
+  const segundosRestantes =
+    segundos % 60;
+
+  if (
+    tiempoActual >=
+    tiempoRequerido
+  ) {
+    completarBtn.style.display =
+      "block";
+  }
 }
 
-if (!tareaId) {
-alert("No se encontró la tarea.");
+async function obtenerToken() {
 
-window.location.href = "inicio.html";
-return;
+  const user =
+    auth.currentUser;
 
+  if (!user) {
+    throw new Error(
+      "Sesión no disponible."
+    );
+  }
+
+  return await user.getIdToken(true);
 }
 
-try {
+async function enviarAccion(accion) {
 
-const tareaRef = doc(db, "tareas", tareaId);
+  const token =
+    await obtenerToken();
 
-const tareaSnap = await getDoc(tareaRef);
+  const respuesta =
+    await fetch(
+      "/api/tarea",
+      {
+        method:"POST",
 
-if (!tareaSnap.exists()) {
+        headers:{
+          "Content-Type":
+            "application/json",
 
-alert("La tarea no existe.");
+          "Authorization":
+            "Bearer " + token
+        },
 
-window.location.href = "inicio.html";
-return;
+        body:JSON.stringify({
+          tarea_id:tareaId,
+          accion:accion
+        })
+      }
+    );
 
+  const resultado =
+    await respuesta.json();
+
+  if (
+    !respuesta.ok ||
+    resultado.ok !== true
+  ) {
+    throw new Error(
+      resultado.error ||
+      "No se pudo procesar la tarea."
+    );
+  }
+
+  return resultado;
 }
 
-const tarea = tareaSnap.data();
+async function iniciarConteo() {
 
-const sesionId = `${user.uid}_${tareaId}`;
+  if (
+    tareaCompletada ||
+    tiempoCorriendo ||
+    document.hidden
+  ) {
+    return;
+  }
 
-const sesionRef = doc(
-  db,
-  "sesiones_tareas",
-  sesionId
-);
+  try {
 
-const sesionSnap = await getDoc(sesionRef);
+    const resultado =
+      await enviarAccion(
+        "iniciar"
+      );
 
-if (sesionSnap.exists()) {
+    tiempoAcumulado =
+      Number(
+        resultado.tiempo_acumulado ||
+        0
+      );
 
-const datosSesion = sesionSnap.data();
+    inicioLocal =
+      Date.now();
 
-tiempoAcumulado = datosSesion.tiempo_acumulado || 0;
+    tiempoCorriendo = true;
 
-}
+    mostrarTiempo();
 
-document.getElementById("titulo").textContent =
-tarea.titulo;
+  } catch (error) {
 
-document.getElementById("tiempo").textContent = `${tarea.tiempo_requerido} minutos`;
-        
-document.getElementById("contenido").textContent =
-tarea.descripcion;
-            
-const completarBtn = document.getElementById("completarBtn");
-
-completarBtn.style.display = "none";
-
-function iniciarConteo() {
-
-if (tareaCompletada) return;
-
-if (!document.hidden && !tiempoCorriendo) {
-
-inicioTramo = Date.now();
-tiempoCorriendo = true;
-
-}
-
+    tiempoCorriendo = false;
+  }
 }
 
 async function pausarConteo() {
 
-if (!tiempoCorriendo) return;
+  if (!tiempoCorriendo) {
+    return;
+  }
 
-tiempoAcumulado += Date.now() - inicioTramo;
+  try {
 
-inicioTramo = null;
-tiempoCorriendo = false;
+    const resultado =
+      await enviarAccion(
+        "pausar"
+      );
 
-await setDoc(sesionRef, {
-usuario_id: user.uid,
-tarea_id: tareaId,
-email: user.email,
-tiempo_acumulado: tiempoAcumulado,
-actualizado: serverTimestamp()
+    tiempoAcumulado =
+      Number(
+        resultado.tiempo_acumulado ||
+        0
+      );
 
-}, { merge: true });
+    tiempoCorriendo = false;
+    inicioLocal = null;
 
+    mostrarTiempo();
+
+  } catch (error) {
+
+    tiempoCorriendo = false;
+    inicioLocal = null;
+  }
 }
 
-document.addEventListener("visibilitychange", () => {
+async function cargarTarea() {
 
-if (document.hidden) {
+  if (!tareaId) {
 
-pausarConteo();
+    alert(
+      "No se encontró la tarea."
+    );
 
-} else {
+    window.location.href =
+      "inicio.html";
 
-iniciarConteo();
+    return;
+  }
 
+  try {
+
+    const token =
+      await obtenerToken();
+
+    const respuesta =
+      await fetch(
+        "/api/tarea?id=" +
+        encodeURIComponent(
+          tareaId
+        ),
+        {
+          method:"GET",
+
+          headers:{
+            "Authorization":
+              "Bearer " + token
+          }
+        }
+      );
+
+    const resultado =
+      await respuesta.json();
+
+    if (
+      !respuesta.ok ||
+      resultado.ok !== true
+    ) {
+      throw new Error(
+        resultado.error ||
+        "No se pudo cargar la tarea."
+      );
+    }
+
+    const tarea =
+      resultado.tarea;
+
+    titulo.textContent =
+      tarea.titulo;
+
+    tiempo.textContent =
+      `${tarea.tiempo_requerido} minutos`;
+
+    contenido.textContent =
+      tarea.descripcion;
+
+    tiempoRequerido =
+      Number(
+        tarea.tiempo_requerido
+      ) * 60 * 1000;
+
+    tiempoAcumulado =
+      Number(
+        resultado.sesion?.tiempo_acumulado ||
+        0
+      );
+
+    mostrarTiempo();
+
+    if (
+      tiempoAcumulado >=
+      tiempoRequerido
+    ) {
+      completarBtn.style.display =
+        "block";
+    }
+
+    intervalo =
+      setInterval(
+        mostrarTiempo,
+        1000
+      );
+
+    await iniciarConteo();
+
+  } catch (error) {
+
+    alert(
+      "Error al cargar la tarea."
+    );
+
+    window.location.href =
+      "inicio.html";
+  }
 }
 
-});
+completarBtn.addEventListener(
+  "click",
+  async () => {
 
-iniciarConteo();
+    if (tareaCompletada) {
+      return;
+    }
 
-const revisarTiempo = setInterval(() => {
+    completarBtn.disabled = true;
 
-if (tareaCompletada) return;
+    try {
 
-let tiempoActual = tiempoAcumulado;
+      if (tiempoCorriendo) {
+        await pausarConteo();
+      }
 
-if (tiempoCorriendo && inicioTramo) {
+      const resultado =
+        await enviarAccion(
+          "completar"
+        );
 
-tiempoActual += Date.now() - inicioTramo;
+      if (
+        resultado.completada !== true
+      ) {
+        throw new Error(
+          "No se pudo completar la tarea."
+        );
+      }
 
-}
+      tareaCompletada = true;
 
-if (tiempoActual >= tiempoRequerido) {
+      if (intervalo) {
+        clearInterval(intervalo);
+      }
 
-tiempoAcumulado = tiempoRequerido;
+      alert(
+        "¡Tarea completada!"
+      );
 
-if (tiempoCorriendo) {
+      window.location.href =
+        "inicio.html";
 
-tiempoAcumulado = tiempoRequerido;
+    } catch (error) {
 
-inicioTramo = null;
-tiempoCorriendo = false;
+      completarBtn.disabled =
+        false;
 
-}
-
-completarBtn.style.display = "block";
-
-}
-
-}, 1000);
-        
-completarBtn.addEventListener("click", async () => {
-
-if (tareaCompletada) return;
-
-completarBtn.disabled = true;
-
-if (tiempoCorriendo) {
-
-tiempoAcumulado += Date.now() - inicioTramo;
-
-inicioTramo = null;
-
-tiempoCorriendo = false;
-
-}
-
-await setDoc(sesionRef, {
-usuario_id: user.uid,
-tarea_id: tareaId,
-email: user.email,
-tiempo_acumulado: tiempoAcumulado,
-actualizado: serverTimestamp()
-
-}, { merge: true });
-
-const tiempoRequerido =
-tarea.tiempo_requerido * 60 * 1000;
-
-if (tiempoAcumulado < tiempoRequerido) {
-
-alert("Todavía no cumpliste el tiempo requerido.");
-
-return;
-
-}
-            
-try {
-                          
-const progresoId = `${user.uid}_${tareaId}`;
-
-const progresoRef = doc(
-   db,
-   "progreso_tareas",
-   progresoId
-
+      alert(
+        error.message ||
+        "No se pudo completar la tarea."
+      );
+    }
+  }
 );
 
-const progresoSnap = await getDoc(progresoRef);
+document.addEventListener(
+  "visibilitychange",
+  async () => {
 
-if (progresoSnap.exists()) {
-    
-await updateDoc(progresoRef, {
-veces_realizada: increment(1),
-fecha_realizada: serverTimestamp(),
-titulo_tarea: tarea.titulo,
-minutos_realizados: increment(
-tarea.tiempo_requerido
-
-)
-  
-});
-
-} else {
-
-await setDoc(progresoRef, {
-email: user.email,
-usuario_id: user.uid,
-tarea_id: tareaId,
-titulo_tarea: tarea.titulo,
-fecha_realizada: serverTimestamp(),
-veces_realizada: 1,
-minutos_realizados:
-tarea.tiempo_requerido
-
-});
-
-}
-        
-const consultaEstadisticas = query(
-collection(db, "estadisticas_usuario"),
-where("usuario_id", "==", user.uid) 
-
+    if (document.hidden) {
+      await pausarConteo();
+    } else {
+      await iniciarConteo();
+    }
+  }
 );
 
-const resultadoEstadisticas = await getDocs(consultaEstadisticas);
+onAuthStateChanged(
+  auth,
+  async (user) => {
 
-if (resultadoEstadisticas.empty) {
+    if (!user) {
 
-alert("No se encontró el documento de estadísticas.");
-return;
+      window.location.href =
+        "index.html";
 
-}
+      return;
+    }
 
-const estadisticasRef = resultadoEstadisticas.docs[0].ref;
-
-const estadisticasSnap = resultadoEstadisticas.docs[0];
-
-
-if (estadisticasSnap.exists()) {
-
-const datos =estadisticasSnap.data();
-
-let sumarDia = false;
-
-if (!datos.ultima_fecha_trabajo) {
-
- sumarDia = true;
-
-} else {
-
-const ultima =
-datos.ultima_fecha_trabajo.toDate();
-
-const hoy = new Date();
-
-if (
-
-ultima.getFullYear() !== hoy.getFullYear() ||
-
-ultima.getMonth() !== hoy.getMonth() ||
-
-ultima.getDate() !== hoy.getDate()
-
-) {
-
-sumarDia = true;
-
-}
-
-}
-
-const actualizar = {
-
-tareas_realizadas:
-increment(1),
-
-minutos_acumulados:
-increment(
-tarea.tiempo_requerido
-),
-
-ultima_fecha_trabajo:
-serverTimestamp()
-
-};
-
-if (sumarDia) {
-
-actualizar.dias_trabajados =
-increment(1);
-
-}
-
-await updateDoc(
-estadisticasRef,
-actualizar
-
+    await cargarTarea();
+  }
 );
-
-}
-
-await setDoc(sesionRef, {
-usuario_id: user.uid,
-tarea_id: tareaId,
-email: user.email,
-tiempo_acumulado: tiempoAcumulado,
-completada: true,
-fecha_completada: serverTimestamp()
-
-}, { merge: true });
-
-tareaCompletada = true;
-
-clearInterval(revisarTiempo);
-  
-alert("¡Tarea completada!");
-completarBtn.disabled= true;
-
-window.location.href = "inicio.html";
-
-} catch (error) {
-
-alert("Error al completar la tarea.");
-
-completarBtn.disabled = false;
-
-}
-
-});
-
-} catch (error) {
- 
-alert("Error al cargar la tarea.");
-
-}
-
-});
 
 </script>
+
 </body>
+
 </html>
