@@ -268,11 +268,13 @@ async function enviarAccion(
 
                 body:
                     JSON.stringify({
+
                         tarea_id:
                             tareaId,
 
                         accion:
                             accion
+
                     })
 
             }
@@ -303,10 +305,14 @@ async function enviarAccion(
     ) {
 
         throw new Error(
+
             resultado &&
             resultado.error
+
                 ? resultado.error
+
                 : "No se pudo procesar la tarea."
+
         );
 
     }
@@ -403,6 +409,12 @@ async function pausarConteo() {
 
     } catch (error) {
 
+        tiempoCorriendo =
+            false;
+
+        inicioLocal =
+            null;
+
     }
 
 }
@@ -479,10 +491,14 @@ async function cargarTarea() {
         ) {
 
             throw new Error(
+
                 resultado &&
                 resultado.error
+
                     ? resultado.error
+
                     : "No se pudo cargar la tarea."
+
             );
 
         }
@@ -561,7 +577,9 @@ completarBtn.addEventListener(
     "click",
     async () => {
 
-        if (tareaCompletada) {
+        if (
+            tareaCompletada
+        ) {
 
             return;
 
@@ -629,8 +647,11 @@ completarBtn.addEventListener(
 
 
             alert(
+
                 error.message ||
+
                 "No se pudo completar la tarea."
+
             );
 
         }
@@ -680,4 +701,4 @@ onAuthStateChanged(
 
 </body>
 
-  </html>
+    </html>
