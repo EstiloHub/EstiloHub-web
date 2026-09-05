@@ -558,19 +558,19 @@ async function cargarTarea() {
 
         await iniciarConteo();
 
-    } catch (error) {
+   } catch (error) {
 
-        alert(
-            "Error al cargar la tarea."
-        );
+    alert(
+      "Error al cargar la tarea:\n\n" +
+      (
+        error.message ||
+        "Error desconocido."
+      )
+    );
 
-
-        window.location.href =
-            "inicio.html";
+  }
 
     }
-
-}
 
 
 completarBtn.addEventListener(
