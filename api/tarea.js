@@ -139,10 +139,33 @@ async function obtenerDatos(
   }
 
 
-  if (
-    String(tarea.fase || "") !==
-    String(usuario.fase || "")
-  ) {
+  const faseTarea =
+    String(
+      tarea.fase ?? ""
+    ).trim();
+
+
+  const faseUsuario =
+    String(
+      usuario.fase ?? ""
+    ).trim();
+
+
+  const correspondeFase =
+    faseTarea === faseUsuario ||
+
+    (
+      faseTarea === "1" &&
+      faseUsuario === "Fase 1"
+    ) ||
+
+    (
+      faseTarea === "Fase 1" &&
+      faseUsuario === "1"
+    );
+
+
+  if (!correspondeFase) {
 
     throw new Error(
       "Tarea no disponible"
