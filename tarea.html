@@ -52,6 +52,13 @@ p {
     margin-bottom: 20px;
 }
 
+.aclaracion-tiempo {
+    font-size: 14px;
+    color: #666666;
+    line-height: 1.5;
+    margin-top: -8px;
+}
+
 button {
     width: 100%;
     padding: 15px;
@@ -68,6 +75,11 @@ button {
     width: 280px;
     display: block;
     margin: 20px auto 0;
+}
+
+.completar:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
 </style>
@@ -89,6 +101,11 @@ Cargando...
 <p>
 <strong>Tiempo requerido:</strong>
 <span id="tiempo"></span>
+</p>
+
+<p class="aclaracion-tiempo">
+Se contabiliza únicamente el tiempo de uso activo y válido de la tarea.
+Tener la página abierta sin estar en uso no se contabiliza.
 </p>
 
 </div>
@@ -140,6 +157,8 @@ let tareaCompletada = false;
 
 let intervalo = null;
 
+let procesandoAccion = false;
+
 
 const titulo =
     document.getElementById(
@@ -183,29 +202,6 @@ function mostrarTiempo() {
     }
 
 
-    tiempoActual =
-        Math.min(
-            tiempoActual,
-            tiempoRequerido
-        );
-
-
-    const segundos =
-        Math.floor(
-            tiempoActual / 1000
-        );
-
-
-    const minutos =
-        Math.floor(
-            segundos / 60
-        );
-
-
-    const segundosRestantes =
-        segundos % 60;
-
-
     if (
         tiempoActual >=
         tiempoRequerido
@@ -228,7 +224,7 @@ async function obtenerToken() {
     if (!user) {
 
         throw new Error(
-            "Sesión no disponible."
+            "SESION_NO_DISPONIBLE"
         );
 
     }
@@ -243,82 +239,95 @@ async function enviarAccion(
     accion
 ) {
 
-    const token =
-        await obtenerToken();
+    if (procesandoAccion) {
 
-
-    const respuesta =
-        await fetch(
-            "/api/tarea",
-            {
-
-                method:
-                    "POST",
-
-                headers: {
-
-                    "Content-Type":
-                        "application/json",
-
-                    "Authorization":
-                        "Bearer " +
-                        token
-
-                },
-
-                body:
-                    JSON.stringify({
-
-                        tarea_id:
-                            tareaId,
-
-                        accion:
-                            accion
-
-                    })
-
-            }
+        throw new Error(
+            "ACCION_EN_PROCESO"
         );
 
+    }
 
-    let resultado =
-        null;
+
+    procesandoAccion = true;
 
 
     try {
 
-        resultado =
-            await respuesta.json();
+        const token =
+            await obtenerToken();
 
-    } catch (error) {
 
-        resultado =
+        const respuesta =
+            await fetch(
+                "/api/tarea",
+                {
+
+                    method:
+                        "POST",
+
+                    headers: {
+
+                        "Content-Type":
+                            "application/json",
+
+                        "Authorization":
+                            "Bearer " +
+                            token
+
+                    },
+
+                    body:
+                        JSON.stringify({
+
+                            tarea_id:
+                                tareaId,
+
+                            accion:
+                                accion
+
+                        })
+
+                }
+            );
+
+
+        let resultado =
             null;
 
+
+        try {
+
+            resultado =
+                await respuesta.json();
+
+        } catch (error) {
+
+            resultado =
+                null;
+
+        }
+
+
+        if (
+            !respuesta.ok ||
+            !resultado ||
+            resultado.ok !== true
+        ) {
+
+            throw new Error(
+                "ACCION_NO_PROCESADA"
+            );
+
+        }
+
+
+        return resultado;
+
+    } finally {
+
+        procesandoAccion = false;
+
     }
-
-
-    if (
-        !respuesta.ok ||
-        !resultado ||
-        resultado.ok !== true
-    ) {
-
-        throw new Error(
-
-            resultado &&
-            resultado.error
-
-                ? resultado.error
-
-                : "No se pudo procesar la tarea."
-
-        );
-
-    }
-
-
-    return resultado;
 
 }
 
@@ -365,6 +374,9 @@ async function iniciarConteo() {
 
         tiempoCorriendo =
             false;
+
+        inicioLocal =
+            null;
 
     }
 
@@ -491,14 +503,7 @@ async function cargarTarea() {
         ) {
 
             throw new Error(
-
-                resultado &&
-                resultado.error
-
-                    ? resultado.error
-
-                    : "No se pudo cargar la tarea."
-
+                "TAREA_NO_DISPONIBLE"
             );
 
         }
@@ -508,16 +513,21 @@ async function cargarTarea() {
             resultado.tarea;
 
 
+        if (
+            !tarea ||
+            !tarea.titulo ||
+            typeof tarea.descripcion !== "string"
+        ) {
+
+            throw new Error(
+                "DATOS_TAREA_INVALIDOS"
+            );
+
+        }
+
+
         titulo.textContent =
             tarea.titulo;
-
-
-        tiempo.textContent =
-            `${tarea.tiempo_requerido} minutos`;
-
-
-        contenido.textContent =
-            tarea.descripcion;
 
 
         tiempoRequerido =
@@ -528,6 +538,28 @@ async function cargarTarea() {
             1000;
 
 
+        if (
+            !Number.isFinite(
+                tiempoRequerido
+            ) ||
+            tiempoRequerido <= 0
+        ) {
+
+            throw new Error(
+                "TIEMPO_TAREA_INVALIDO"
+            );
+
+        }
+
+
+        tiempo.textContent =
+            `${tarea.tiempo_requerido} minutos`;
+
+
+        contenido.textContent =
+            tarea.descripcion;
+
+
         tiempoAcumulado =
             Number(
                 resultado.sesion?.tiempo_acumulado ||
@@ -535,18 +567,19 @@ async function cargarTarea() {
             );
 
 
-        mostrarTiempo();
-
-
         if (
-            tiempoAcumulado >=
-            tiempoRequerido
+            !Number.isFinite(
+                tiempoAcumulado
+            ) ||
+            tiempoAcumulado < 0
         ) {
 
-            completarBtn.style.display =
-                "block";
+            tiempoAcumulado = 0;
 
         }
+
+
+        mostrarTiempo();
 
 
         intervalo =
@@ -558,19 +591,32 @@ async function cargarTarea() {
 
         await iniciarConteo();
 
-   } catch (error) {
+    } catch (error) {
 
-    alert(
-      "Error al cargar la tarea:\n\n" +
-      (
-        error.message ||
-        "Error desconocido."
-      )
-    );
+        if (
+            intervalo
+        ) {
 
-  }
+            clearInterval(
+                intervalo
+            );
+
+            intervalo = null;
+
+        }
+
+
+        alert(
+            "No se pudo cargar la tarea."
+        );
+
+
+        window.location.href =
+            "inicio.html";
 
     }
+
+}
 
 
 completarBtn.addEventListener(
@@ -578,7 +624,8 @@ completarBtn.addEventListener(
     async () => {
 
         if (
-            tareaCompletada
+            tareaCompletada ||
+            completarBtn.disabled
         ) {
 
             return;
@@ -608,12 +655,13 @@ completarBtn.addEventListener(
 
 
             if (
+                !resultado ||
                 resultado.completada !==
                 true
             ) {
 
                 throw new Error(
-                    "No se pudo completar la tarea."
+                    "TAREA_NO_COMPLETADA"
                 );
 
             }
@@ -628,6 +676,8 @@ completarBtn.addEventListener(
                 clearInterval(
                     intervalo
                 );
+
+                intervalo = null;
 
             }
 
@@ -647,11 +697,7 @@ completarBtn.addEventListener(
 
 
             alert(
-
-                error.message ||
-
-                "No se pudo completar la tarea."
-
+                "No se pudo completar la tarea. Inténtelo nuevamente."
             );
 
         }
@@ -671,6 +717,24 @@ document.addEventListener(
         } else {
 
             await iniciarConteo();
+
+        }
+
+    }
+);
+
+
+window.addEventListener(
+    "pagehide",
+    () => {
+
+        if (intervalo) {
+
+            clearInterval(
+                intervalo
+            );
+
+            intervalo = null;
 
         }
 
@@ -701,4 +765,4 @@ onAuthStateChanged(
 
 </body>
 
-    </html>
+</html>
