@@ -34,9 +34,10 @@ h1 {
 
 .tarjeta {
     background: #1b1b1b;
-    border: 1px solid #444;
+    border: 1px solid #444444;
     border-radius: 12px;
-    padding: 15px;
+    padding: 20px;
+    color: #FFFFFF;
 }
 
 p {
@@ -52,11 +53,22 @@ p {
     margin-bottom: 20px;
 }
 
-.aclaracion-tiempo {
-    font-size: 14px;
-    color: #666666;
-    line-height: 1.5;
-    margin-top: -8px;
+.tiempo {
+    text-align: center;
+    margin: 25px 0;
+    padding: 15px;
+    border-radius: 10px;
+    background: #2a2a2a;
+}
+
+.tiempo p {
+    margin: 8px 0;
+}
+
+.estado {
+    text-align: center;
+    font-size: 15px;
+    color: #CCCCCC;
 }
 
 button {
@@ -79,7 +91,7 @@ button {
 
 .completar:disabled {
     opacity: 0.6;
-    cursor: not-allowed;
+    cursor: default;
 }
 
 </style>
@@ -91,35 +103,50 @@ button {
 <div class="container">
 
 <h1 id="titulo">
-Cargando...
+    Cargando...
 </h1>
+
 
 <div class="tarjeta">
 
-<div class="info">
+    <div class="info">
 
-<p>
-<strong>Tiempo requerido:</strong>
-<span id="tiempo"></span>
-</p>
+        <p>
+            <strong>Tiempo requerido:</strong>
+            <span id="tiempoRequerido"></span>
+        </p>
 
-<p class="aclaracion-tiempo">
-Se contabiliza únicamente el tiempo de uso activo y válido de la tarea.
-Tener la página abierta sin estar en uso no se contabiliza.
-</p>
+    </div>
 
-</div>
 
-<p id="contenido"></p>
+    <div class="tiempo">
 
-<button
-    id="completarBtn"
-    class="completar"
-    style="display:none;"
-    type="button"
->
-Completar tarea
-</button>
+        <p>
+            <strong>Tiempo válido realizado</strong>
+        </p>
+
+        <p id="tiempoRealizado">
+            0 minutos
+        </p>
+
+        <p class="estado" id="estadoTiempo">
+            Preparando la tarea...
+        </p>
+
+    </div>
+
+
+    <p id="contenido"></p>
+
+
+    <button
+        id="completarBtn"
+        class="completar"
+        style="display:none;"
+        type="button"
+    >
+        Completar tarea
+    </button>
 
 </div>
 
@@ -157,8 +184,6 @@ let tareaCompletada = false;
 
 let intervalo = null;
 
-let procesandoAccion = false;
-
 
 const titulo =
     document.getElementById(
@@ -166,9 +191,21 @@ const titulo =
     );
 
 
-const tiempo =
+const tiempoRequeridoElemento =
     document.getElementById(
-        "tiempo"
+        "tiempoRequerido"
+    );
+
+
+const tiempoRealizado =
+    document.getElementById(
+        "tiempoRealizado"
+    );
+
+
+const estadoTiempo =
+    document.getElementById(
+        "estadoTiempo"
     );
 
 
@@ -184,7 +221,40 @@ const completarBtn =
     );
 
 
-function mostrarTiempo() {
+function formatearTiempo(
+    milisegundos
+) {
+
+    const segundosTotales =
+        Math.floor(
+            milisegundos / 1000
+        );
+
+
+    const minutos =
+        Math.floor(
+            segundosTotales / 60
+        );
+
+
+    const segundos =
+        segundosTotales % 60;
+
+
+    if (minutos > 0) {
+
+        return
+            `${minutos} min ${segundos} s`;
+
+    }
+
+
+    return `${segundos} s`;
+
+}
+
+
+function obtenerTiempoActual() {
 
     let tiempoActual =
         tiempoAcumulado;
@@ -202,13 +272,55 @@ function mostrarTiempo() {
     }
 
 
+    return Math.min(
+        tiempoActual,
+        tiempoRequerido
+    );
+
+}
+
+
+function actualizarPantalla() {
+
+    const tiempoActual =
+        obtenerTiempoActual();
+
+
+    tiempoRealizado.textContent =
+        formatearTiempo(
+            tiempoActual
+        );
+
+
     if (
         tiempoActual >=
         tiempoRequerido
     ) {
 
+        estadoTiempo.textContent =
+            "Tiempo requerido cumplido.";
+
         completarBtn.style.display =
             "block";
+
+        return;
+
+    }
+
+
+    completarBtn.style.display =
+        "none";
+
+
+    if (tiempoCorriendo) {
+
+        estadoTiempo.textContent =
+            "Contando tiempo válido...";
+
+    } else {
+
+        estadoTiempo.textContent =
+            "Tiempo pausado.";
 
     }
 
@@ -224,7 +336,7 @@ async function obtenerToken() {
     if (!user) {
 
         throw new Error(
-            "SESION_NO_DISPONIBLE"
+            "Sesión no disponible."
         );
 
     }
@@ -239,95 +351,82 @@ async function enviarAccion(
     accion
 ) {
 
-    if (procesandoAccion) {
+    const token =
+        await obtenerToken();
+
+
+    const respuesta =
+        await fetch(
+            "/api/tarea",
+            {
+
+                method:
+                    "POST",
+
+                headers: {
+
+                    "Content-Type":
+                        "application/json",
+
+                    "Authorization":
+                        "Bearer " +
+                        token
+
+                },
+
+                body:
+                    JSON.stringify({
+
+                        tarea_id:
+                            tareaId,
+
+                        accion:
+                            accion
+
+                    })
+
+            }
+        );
+
+
+    let resultado =
+        null;
+
+
+    try {
+
+        resultado =
+            await respuesta.json();
+
+    } catch (error) {
+
+        resultado =
+            null;
+
+    }
+
+
+    if (
+        !respuesta.ok ||
+        !resultado ||
+        resultado.ok !== true
+    ) {
 
         throw new Error(
-            "ACCION_EN_PROCESO"
+
+            resultado &&
+            resultado.error
+
+                ? resultado.error
+
+                : "No se pudo procesar la tarea."
+
         );
 
     }
 
 
-    procesandoAccion = true;
-
-
-    try {
-
-        const token =
-            await obtenerToken();
-
-
-        const respuesta =
-            await fetch(
-                "/api/tarea",
-                {
-
-                    method:
-                        "POST",
-
-                    headers: {
-
-                        "Content-Type":
-                            "application/json",
-
-                        "Authorization":
-                            "Bearer " +
-                            token
-
-                    },
-
-                    body:
-                        JSON.stringify({
-
-                            tarea_id:
-                                tareaId,
-
-                            accion:
-                                accion
-
-                        })
-
-                }
-            );
-
-
-        let resultado =
-            null;
-
-
-        try {
-
-            resultado =
-                await respuesta.json();
-
-        } catch (error) {
-
-            resultado =
-                null;
-
-        }
-
-
-        if (
-            !respuesta.ok ||
-            !resultado ||
-            resultado.ok !== true
-        ) {
-
-            throw new Error(
-                "ACCION_NO_PROCESADA"
-            );
-
-        }
-
-
-        return resultado;
-
-    } finally {
-
-        procesandoAccion = false;
-
-    }
+    return resultado;
 
 }
 
@@ -339,6 +438,18 @@ async function iniciarConteo() {
         tiempoCorriendo ||
         document.hidden
     ) {
+
+        return;
+
+    }
+
+
+    if (
+        tiempoAcumulado >=
+        tiempoRequerido
+    ) {
+
+        actualizarPantalla();
 
         return;
 
@@ -368,7 +479,7 @@ async function iniciarConteo() {
             true;
 
 
-        mostrarTiempo();
+        actualizarPantalla();
 
     } catch (error) {
 
@@ -377,6 +488,9 @@ async function iniciarConteo() {
 
         inicioLocal =
             null;
+
+        estadoTiempo.textContent =
+            "No se pudo iniciar el conteo.";
 
     }
 
@@ -417,7 +531,7 @@ async function pausarConteo() {
             null;
 
 
-        mostrarTiempo();
+        actualizarPantalla();
 
     } catch (error) {
 
@@ -426,6 +540,8 @@ async function pausarConteo() {
 
         inicioLocal =
             null;
+
+        actualizarPantalla();
 
     }
 
@@ -503,7 +619,14 @@ async function cargarTarea() {
         ) {
 
             throw new Error(
-                "TAREA_NO_DISPONIBLE"
+
+                resultado &&
+                resultado.error
+
+                    ? resultado.error
+
+                    : "No se pudo cargar la tarea."
+
             );
 
         }
@@ -513,21 +636,16 @@ async function cargarTarea() {
             resultado.tarea;
 
 
-        if (
-            !tarea ||
-            !tarea.titulo ||
-            typeof tarea.descripcion !== "string"
-        ) {
-
-            throw new Error(
-                "DATOS_TAREA_INVALIDOS"
-            );
-
-        }
-
-
         titulo.textContent =
             tarea.titulo;
+
+
+        tiempoRequeridoElemento.textContent =
+            `${tarea.tiempo_requerido} minutos`;
+
+
+        contenido.textContent =
+            tarea.descripcion;
 
 
         tiempoRequerido =
@@ -538,28 +656,6 @@ async function cargarTarea() {
             1000;
 
 
-        if (
-            !Number.isFinite(
-                tiempoRequerido
-            ) ||
-            tiempoRequerido <= 0
-        ) {
-
-            throw new Error(
-                "TIEMPO_TAREA_INVALIDO"
-            );
-
-        }
-
-
-        tiempo.textContent =
-            `${tarea.tiempo_requerido} minutos`;
-
-
-        contenido.textContent =
-            tarea.descripcion;
-
-
         tiempoAcumulado =
             Number(
                 resultado.sesion?.tiempo_acumulado ||
@@ -567,24 +663,12 @@ async function cargarTarea() {
             );
 
 
-        if (
-            !Number.isFinite(
-                tiempoAcumulado
-            ) ||
-            tiempoAcumulado < 0
-        ) {
-
-            tiempoAcumulado = 0;
-
-        }
-
-
-        mostrarTiempo();
+        actualizarPantalla();
 
 
         intervalo =
             setInterval(
-                mostrarTiempo,
+                actualizarPantalla,
                 1000
             );
 
@@ -593,20 +677,8 @@ async function cargarTarea() {
 
     } catch (error) {
 
-        if (
-            intervalo
-        ) {
-
-            clearInterval(
-                intervalo
-            );
-
-            intervalo = null;
-
-        }
-
-
         alert(
+            error.message ||
             "No se pudo cargar la tarea."
         );
 
@@ -624,8 +696,7 @@ completarBtn.addEventListener(
     async () => {
 
         if (
-            tareaCompletada ||
-            completarBtn.disabled
+            tareaCompletada
         ) {
 
             return;
@@ -655,13 +726,12 @@ completarBtn.addEventListener(
 
 
             if (
-                !resultado ||
                 resultado.completada !==
                 true
             ) {
 
                 throw new Error(
-                    "TAREA_NO_COMPLETADA"
+                    "No se pudo completar la tarea."
                 );
 
             }
@@ -677,7 +747,8 @@ completarBtn.addEventListener(
                     intervalo
                 );
 
-                intervalo = null;
+                intervalo =
+                    null;
 
             }
 
@@ -697,7 +768,11 @@ completarBtn.addEventListener(
 
 
             alert(
-                "No se pudo completar la tarea. Inténtelo nuevamente."
+
+                error.message ||
+
+                "No se pudo completar la tarea."
+
             );
 
         }
@@ -726,15 +801,11 @@ document.addEventListener(
 
 window.addEventListener(
     "pagehide",
-    () => {
+    async () => {
 
-        if (intervalo) {
+        if (tiempoCorriendo) {
 
-            clearInterval(
-                intervalo
-            );
-
-            intervalo = null;
+            await pausarConteo();
 
         }
 
