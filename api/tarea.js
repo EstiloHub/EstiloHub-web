@@ -1,24 +1,12 @@
-const { getApps, initializeApp, cert } = require("firebase-admin/app");
-const { getAuth } = require("firebase-admin/auth");
-const {
-  getFirestore,
-  Timestamp,
-  FieldValue
-} = require("firebase-admin/firestore");
+const admin = require("firebase-admin");
 
-function getFirebaseAdmin() {
-  if (getApps().length) return getApps()[0];
-
+if (!admin.apps.length) {
   const privateKey = process.env.FIREBASE_PRIVATE_KEY
-    ? process.env.FIREBASE_PRIVATE_KEY
-        .replace(/^"|"$/g, "")
-        .replace(/\\n/g, "\n")
-        .replace(/\\r/g, "")
-        .trim()
+    ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n")
     : undefined;
 
-  return initializeApp({
-    credential: cert({
+  admin.initializeApp({
+    credential: admin.credential.cert({
       projectId: process.env.FIREBASE_PROJECT_ID,
       clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
       privateKey
@@ -26,19 +14,19 @@ function getFirebaseAdmin() {
   });
 }
 
-const app = getFirebaseAdmin();
-const auth = getAuth(app);
-const db = getFirestore(app);
+const db = admin.firestore();
+const { FieldValue, Timestamp } = admin.firestore;
 
 const MAX_ACTIVE_GAP_MS = 23000;
 const ACTIVITY_WINDOW_MS = 30000;
 const HEARTBEAT_INTERVAL_EXPECTED_MS = 10000;
+const DURACION_REALIZACION_MS = 7 * 24 * 60 * 60 * 1000;
 
 function respuesta(res, status, datos) {
   return res.status(status).json(datos);
 }
 
-function ahoraTimestamp() {
+function ahora() {
   return Timestamp.now();
 }
 
@@ -53,11 +41,12 @@ function timestampMs(valor) {
     return valor.toMillis();
   }
 
-  if (valor._seconds !== undefined) {
-    return (
-      Number(valor._seconds) * 1000 +
-      Math.floor(Number(valor._nanoseconds || 0) / 1000000)
-    );
+  if (valor instanceof Date) {
+    return valor.getTime();
+  }
+
+  if (typeof valor === "number") {
+    return valor;
   }
 
   return null;
@@ -67,78 +56,81 @@ function minutosCompletos(ms) {
   return Math.floor(Math.max(0, ms) / 60000);
 }
 
-function generarIdRealizacion() {
-  return db.collection("realizaciones_tareas").doc().id;
+function generarId() {
+  return `${Date.now()}_${Math.random().toString(36).slice(2, 12)}`;
 }
 
-function generarIdSesion() {
-  return db.collection("sesiones_tareas").doc().id;
+function obtenerTiempoRequeridoMs(tarea) {
+  const minutos = Number(tarea?.tiempo_requerido);
+
+  if (!Number.isFinite(minutos) || minutos <= 0) {
+    throw new Error("TIEMPO_REQUERIDO_INVALIDO");
+  }
+
+  return Math.floor(minutos * 60000);
 }
 
-function faseCoincide(faseTarea, faseUsuario) {
-  const tarea = String(faseTarea ?? "").trim();
-  const usuario = String(faseUsuario ?? "").trim();
+function faseCoincide(usuario, tarea) {
+  if (!usuario || !tarea) return false;
 
-  return (
-    tarea === usuario ||
-    (tarea === "1" && usuario === "Fase 1") ||
-    (tarea === "Fase 1" && usuario === "1") ||
-    (tarea === "2" && usuario === "Fase 2") ||
-    (tarea === "Fase 2" && usuario === "2")
-  );
+  if (usuario.fase === undefined || usuario.fase === null) {
+    return Number(tarea.fase) === 1;
+  }
+
+  return String(usuario.fase) === String(tarea.fase);
 }
 
 async function verificarToken(req) {
-  const encabezado = req.headers.authorization || "";
+  const authorization = req.headers.authorization || "";
 
-  if (!encabezado.startsWith("Bearer ")) {
+  if (!authorization.startsWith("Bearer ")) {
     throw new Error("NO_AUTORIZADO");
   }
 
-  const token = encabezado.substring(7).trim();
+  const token = authorization.substring(7).trim();
 
   if (!token) {
     throw new Error("NO_AUTORIZADO");
   }
 
-  return await auth.verifyIdToken(token);
+  return admin.auth().verifyIdToken(token);
 }
 
 async function obtenerUsuario(uid) {
-  const referencia = db.collection("users").doc(uid);
-  const snapshot = await referencia.get();
+  const ref = db.collection("users").doc(uid);
+  const snap = await ref.get();
 
-  if (!snapshot.exists) {
-    throw new Error("USUARIO_NO_EXISTE");
+  if (!snap.exists) {
+    throw new Error("USUARIO_NO_ENCONTRADO");
   }
 
-  const usuario = snapshot.data();
+  const usuario = snap.data();
 
   if (usuario.activo !== true) {
     throw new Error("USUARIO_INACTIVO");
   }
 
   return {
-    referencia,
-    datos: usuario
+    ref,
+    ...usuario
   };
 }
 
 async function obtenerTarea(tareaId) {
-  if (!tareaId || typeof tareaId !== "string") {
-    throw new Error("TAREA_INVALIDA");
+  if (!tareaId) {
+    throw new Error("TAREA_ID_REQUERIDO");
   }
 
-  const referencia = db.collection("tareas").doc(tareaId);
-  const snapshot = await referencia.get();
+  const ref = db.collection("tareas").doc(tareaId);
+  const snap = await ref.get();
 
-  if (!snapshot.exists) {
-    throw new Error("TAREA_NO_EXISTE");
+  if (!snap.exists) {
+    throw new Error("TAREA_NO_ENCONTRADA");
   }
 
   return {
-    referencia,
-    datos: snapshot.data()
+    ref,
+    ...snap.data()
   };
 }
 
@@ -146,2297 +138,1057 @@ function tareaRetirada(tarea) {
   return tarea.retirada === true;
 }
 
-function validarFase(tarea, usuario) {
-  if (!faseCoincide(tarea.fase, usuario.fase)) {
-    throw new Error("TAREA_NO_DISPONIBLE");
-  }
+function tareaDisponibleParaNuevaRealizacion(tarea) {
+  return tarea.activa === true && !tareaRetirada(tarea);
 }
 
-function obtenerTiempoRequeridoMs(tarea) {
-  const minutos = Number(tarea.tiempo_requerido);
-
-  if (!Number.isFinite(minutos) || minutos <= 0) {
-    throw new Error("TIEMPO_INVALIDO");
-  }
-
-  return Math.floor(minutos * 60000);
-}
-
-function obtenerRealizacionPublica(realizacion) {
+function tareaPublica(tarea) {
   return {
-    realizacion_id: realizacion.realizacion_id,
-    tarea_id: realizacion.tarea_id,
-    estado: realizacion.estado,
-    fecha_inicio: realizacion.fecha_inicio,
-    fecha_vencimiento: realizacion.fecha_vencimiento,
-    tiempo_requerido: realizacion.tiempo_requerido,
-    tiempo_activo_valido:
-      Number(realizacion.tiempo_activo_valido || 0),
-    tiempo_adicional:
-      Number(realizacion.tiempo_adicional || 0),
-    momento_requerido_alcanzado:
-      realizacion.momento_requerido_alcanzado || null
+    id: tarea.ref.id,
+    titulo: tarea.titulo || "",
+    descripcion: tarea.descripcion || "",
+    categoria: tarea.categoria || "",
+    fase: tarea.fase ?? null,
+    link_url: tarea.link_url || "",
+    tiempo_requerido: Number(tarea.tiempo_requerido) || 0
   };
 }
 
-function obtenerSesionPublica(sesion) {
+function realizacionPublica(realizacion) {
+  if (!realizacion) return null;
+
+  return {
+    id: realizacion.ref.id,
+    tarea_id: realizacion.tarea_id,
+    usuario_id: realizacion.usuario_id,
+    fecha_inicio: realizacion.fecha_inicio || null,
+    fecha_vencimiento: realizacion.fecha_vencimiento || null,
+    estado: realizacion.estado || null,
+    tiempo_activo_valido: Number(realizacion.tiempo_activo_valido) || 0
+  };
+}
+
+function sesionPublica(sesion, tiempoCalculado = null) {
+  if (!sesion) return null;
+
+  const tiempoActivo =
+    tiempoCalculado?.tiempo_activo_valido ??
+    Number(sesion.tiempo_activo_valido) ??
+    0;
+
   return {
     activa: sesion.activa === true,
     instancia_id: sesion.instancia_id || null,
-    tiempo_activo_valido:
-      Number(sesion.tiempo_activo_valido || 0),
-    tiempo_adicional:
-      Number(sesion.tiempo_adicional || 0),
-    tiempo_total_valido:
-      Number(sesion.tiempo_activo_valido || 0) +
-      Number(sesion.tiempo_adicional || 0),
+    tiempo_activo_valido: tiempoActivo,
     tiempo_requerido_alcanzado:
-      sesion.tiempo_requerido_alcanzado === true,
+      tiempoActivo >= Number(sesion.tiempo_requerido_ms || 0),
     bloqueada: sesion.bloqueada === true
   };
 }
 
-function tiempoContableHastaAhora(
-  sesion,
-  realizacion,
-  ahora
-) {
-  if (!sesion || sesion.activa !== true) {
-    return 0;
-  }
+async function obtenerRealizacionUsuario(tareaId, uid) {
+  const snap = await db
+    .collection("realizaciones_tareas")
+    .where("tarea_id", "==", tareaId)
+    .where("usuario_id", "==", uid)
+    .where("estado", "==", "pendiente")
+    .limit(1)
+    .get();
 
-  const ahoraNumero = ahora.getTime();
+  if (snap.empty) return null;
 
-  const inicio =
-    timestampMs(sesion.inicio_actual) ??
-    timestampMs(sesion.ultimo_punto_conteo) ??
-    timestampMs(realizacion.fecha_inicio);
-
-  if (!inicio) {
-    return 0;
-  }
-
-  const ultimoHeartbeat =
-    timestampMs(sesion.ultimo_heartbeat_valido);
-
-  const ultimaInteraccion =
-    timestampMs(sesion.ultima_interaccion_valida);
-
-  const ultimoPunto =
-    timestampMs(sesion.ultimo_punto_conteo);
-
-  if (!ultimoPunto) {
-    return 0;
-  }
-
-  let limite = ahoraNumero;
-
-  if (ultimoHeartbeat !== null) {
-    limite = Math.min(
-      limite,
-      ultimoHeartbeat + MAX_ACTIVE_GAP_MS
-    );
-  }
-
-  if (ultimaInteraccion !== null) {
-    limite = Math.min(
-      limite,
-      ultimaInteraccion + ACTIVITY_WINDOW_MS
-    );
-  } else {
-    limite = Math.min(
-      limite,
-      inicio + ACTIVITY_WINDOW_MS
-    );
-  }
-
-  const diferencia = limite - ultimoPunto;
-
-  if (diferencia <= 0) {
-    return 0;
-  }
-
-  return diferencia;
-}
-
-function distribuirTiempo(
-  tiempoBaseRequerido,
-  tiempoBaseAdicional,
-  tiempoNuevo
-) {
-  const requeridoActual = Math.max(
-    0,
-    Number(tiempoBaseRequerido || 0)
-  );
-
-  const adicionalActual = Math.max(
-    0,
-    Number(tiempoBaseAdicional || 0)
-  );
-
-  const restanteRequerido = Math.max(
-    0,
-    tiempoNuevo
-  );
-
-  const requeridoMaximo =
-    Number.MAX_SAFE_INTEGER;
-
-  const nuevoRequerido = Math.min(
-    requeridoActual + restanteRequerido,
-    requeridoMaximo
-  );
+  const doc = snap.docs[0];
 
   return {
-    requerido: nuevoRequerido,
-    adicional: adicionalActual
+    ref: doc.ref,
+    ...doc.data()
   };
 }
 
-function calcularNuevoTiempo(
-  sesion,
-  realizacion,
-  tarea,
-  ahora
-) {
-  const requerido = obtenerTiempoRequeridoMs(tarea);
+async function cerrarRealizacionPorCaducidad(ref, realizacion, motivo) {
+  const ahoraTimestamp = ahora();
 
-  const tiempoRequeridoActual =
-    Math.min(
-      requerido,
-      Number(
-        sesion.tiempo_activo_valido || 0
-      )
-    );
+  await db.runTransaction(async (tx) => {
+    const actualSnap = await tx.get(ref);
 
-  const adicionalActual =
-    Number(
-      sesion.tiempo_adicional ??
-      realizacion.tiempo_adicional ??
-      0
-    );
+    if (!actualSnap.exists) return;
 
-  const pendiente =
-    tiempoContableHastaAhora(
-      sesion,
-      realizacion,
-      ahora
-    );
+    const actual = actualSnap.data();
 
-  const restanteRequerido =
-    Math.max(
-      0,
-      requerido - tiempoRequeridoActual
-    );
+    if (actual.estado !== "pendiente") return;
 
-  const usadoParaRequerido =
-    Math.min(
-      pendiente,
-      restanteRequerido
-    );
+    const historialRef = db.collection("historial_realizaciones").doc();
 
-  const exceso =
-    Math.max(
-      0,
-      pendiente - usadoParaRequerido
-    );
+    tx.update(ref, {
+      estado: "vencida",
+      fecha_cierre: ahoraTimestamp,
+      motivo_cierre: motivo
+    });
 
-  const nuevoTiempoRequerido =
-    tiempoRequeridoActual +
-    usadoParaRequerido;
+    tx.set(historialRef, {
+      tarea_id: actual.tarea_id,
+      usuario_id: actual.usuario_id,
+      email: actual.email || null,
+      titulo_tarea: actual.titulo_tarea || null,
+      fecha_inicio: actual.fecha_inicio || null,
+      fecha_vencimiento: actual.fecha_vencimiento || null,
+      fecha_cierre: ahoraTimestamp,
+      motivo_cierre: motivo,
+      estado_final: "vencida",
+      tiempo_activo_valido: Number(actual.tiempo_activo_valido) || 0,
+      tiempo_adicional: Number(actual.tiempo_adicional) || 0
+    });
+  });
 
-  const nuevoTiempoAdicional =
-    adicionalActual +
-    exceso;
-
-  return {
-    requerido,
-    tiempoRequerido: nuevoTiempoRequerido,
-    tiempoAdicional: nuevoTiempoAdicional,
-    tiempoPendiente: pendiente,
-    alcanzado:
-      nuevoTiempoRequerido >= requerido
-  };
+  return null;
 }
 
-async function cerrarRealizacionPorCaducidad(
-  realizacionRef,
-  realizacion,
-  usuario,
-  tarea,
-  ahora
-) {
-  const ahoraMsValue = ahora.getTime();
+async function obtenerOCrearRealizacion(tarea, usuario, uid) {
+  let realizacion = await obtenerRealizacionUsuario(tarea.ref.id, uid);
 
-  const vencimiento =
-    timestampMs(
-      realizacion.fecha_vencimiento
-    );
+  if (realizacion) {
+    const vencimientoMs = timestampMs(realizacion.fecha_vencimiento);
 
-  if (
-    realizacion.estado !== "pendiente" ||
-    vencimiento === null ||
-    ahoraMsValue < vencimiento
-  ) {
-    return {
-      caducada: false,
-      nuevaRealizacion: null
-    };
-  }
-
-  const historialRef = db
-    .collection("historial_realizaciones")
-    .doc(realizacion.realizacion_id);
-
-  const esRetirada =
-    tareaRetirada(tarea);
-
-  const nuevaRef = !esRetirada
-    ? db
-        .collection("realizaciones_tareas")
-        .doc(generarIdRealizacion())
-    : null;
-
-  await db.runTransaction(
-    async transaction => {
-      const actual =
-        await transaction.get(
-          realizacionRef
-        );
-
-      if (!actual.exists) {
-        throw new Error(
-          "REALIZACION_NO_EXISTE"
-        );
-      }
-
-      const datosActuales =
-        actual.data();
-
-      if (
-        datosActuales.estado !==
-        "pendiente"
-      ) {
-        return;
-      }
-
-      const vencimientoActual =
-        timestampMs(
-          datosActuales.fecha_vencimiento
-        );
-
-      if (
-        vencimientoActual === null ||
-        ahoraMsValue < vencimientoActual
-      ) {
-        return;
-      }
-
-      const datosHistorial = {
-        realizacion_id:
-          datosActuales.realizacion_id,
-        usuario_id:
-          usuario.usuario_id ||
-          realizacion.usuario_id,
-        email:
-          usuario.email ||
-          realizacion.email ||
-          null,
-        tarea_id:
-          datosActuales.tarea_id,
-        titulo_tarea:
-          tarea.titulo || "",
-        fase:
-          usuario.fase ||
-          tarea.fase ||
-          null,
-        fecha_inicio:
-          datosActuales.fecha_inicio ||
-          null,
-        fecha_fin:
-          ahora,
-        ultima_actualizacion:
-          ahora,
-        fecha_vencimiento:
-          datosActuales.fecha_vencimiento ||
-          null,
-        estado:
-          esRetirada
-            ? "retiro_estilo_hub"
-            : "caducada",
-        motivo_cierre:
-          esRetirada
-            ? "Tarea retirada con realización pendiente vencida"
-            : "Vencimiento de realización",
-        tiempo_requerido:
-          datosActuales.tiempo_requerido ||
-          0,
-        tiempo_activo_valido:
-          datosActuales.tiempo_activo_valido ||
-          0,
-        tiempo_adicional:
-          datosActuales.tiempo_adicional ||
-          0,
-        momento_requerido_alcanzado:
-          datosActuales.momento_requerido_alcanzado ||
-          null,
-        cantidad_pausas:
-          datosActuales.cantidad_pausas ||
-          0,
-        cantidad_reanudaciones:
-          datosActuales.cantidad_reanudaciones ||
-          0,
-        pausas_relevantes:
-          datosActuales.pausas_relevantes ||
-          0,
-        reanudaciones_relevantes:
-          datosActuales.reanudaciones_relevantes ||
-          0,
-        interrupciones_relevantes:
-          datosActuales.interrupciones_relevantes ||
-          0,
-        cambios_visibilidad_relevantes:
-          datosActuales.cambios_visibilidad_relevantes ||
-          0,
-        heartbeats_esperados:
-          datosActuales.heartbeats_esperados ||
-          0,
-        heartbeats_recibidos:
-          datosActuales.heartbeats_recibidos ||
-          0,
-        heartbeats_perdidos:
-          datosActuales.heartbeats_perdidos ||
-          0,
-        ultimo_heartbeat_valido:
-          datosActuales.ultimo_heartbeat_valido ||
-          null,
-        ultima_comunicacion_valida:
-          datosActuales.ultima_comunicacion_valida ||
-          null,
-        eventos_actividad:
-          datosActuales.eventos_actividad ||
-          [],
-        eventos_tecnicos:
-          datosActuales.eventos_tecnicos ||
-          []
-      };
-
-      transaction.set(
-        historialRef,
-        datosHistorial
+    if (vencimientoMs && vencimientoMs <= ahoraMs()) {
+      await cerrarRealizacionPorCaducidad(
+        realizacion.ref,
+        realizacion,
+        "vencimiento_7_dias"
       );
 
-      transaction.update(
-        realizacionRef,
-        {
-          estado:
-            esRetirada
-              ? "retiro_estilo_hub"
-              : "caducada",
-          fecha_fin:
-            ahora,
-          ultima_actualizacion:
-            ahora,
-          motivo_cierre:
-            esRetirada
-              ? "Tarea retirada con realización pendiente vencida"
-              : "Vencimiento de realización"
-        }
-      );
-
-      if (nuevaRef) {
-        const fechaVencimiento =
-          Timestamp.fromMillis(
-            ahoraMsValue +
-              7 * 24 * 60 * 60 * 1000
-          );
-
-        transaction.set(
-          nuevaRef,
-          {
-            realizacion_id:
-              nuevaRef.id,
-            usuario_id:
-              usuario.usuario_id,
-            email:
-              usuario.email || null,
-            tarea_id:
-              datosActuales.tarea_id,
-            titulo_tarea:
-              tarea.titulo || "",
-            fase:
-              usuario.fase ||
-              tarea.fase ||
-              null,
-            fecha_inicio:
-              ahora,
-            fecha_vencimiento:
-              fechaVencimiento,
-            fecha_fin:
-              null,
-            ultima_actualizacion:
-              ahora,
-            estado:
-              "pendiente",
-            motivo_cierre:
-              null,
-            tiempo_requerido:
-              datosActuales.tiempo_requerido,
-            tiempo_activo_valido:
-              0,
-            tiempo_adicional:
-              0,
-            momento_requerido_alcanzado:
-              null,
-            cantidad_pausas:
-              0,
-            cantidad_reanudaciones:
-              0,
-            pausas_relevantes:
-              0,
-            reanudaciones_relevantes:
-              0,
-            interrupciones_relevantes:
-              0,
-            cambios_visibilidad_relevantes:
-              0,
-            heartbeats_esperados:
-              0,
-            heartbeats_recibidos:
-              0,
-            heartbeats_perdidos:
-              0,
-            ultimo_heartbeat_valido:
-              null,
-            ultima_comunicacion_valida:
-              null,
-            eventos_actividad:
-              [],
-            eventos_tecnicos:
-              []
-          }
-        );
-      }
+      realizacion = null;
     }
+  }
+
+  if (realizacion) {
+    return realizacion;
+  }
+
+  if (!tareaDisponibleParaNuevaRealizacion(tarea)) {
+    throw new Error("TAREA_NO_DISPONIBLE");
+  }
+
+  if (!faseCoincide(usuario, tarea)) {
+    throw new Error("TAREA_NO_CORRESPONDE");
+  }
+
+  const fechaInicio = ahora();
+  const fechaVencimiento = Timestamp.fromMillis(
+    fechaInicio.toMillis() + DURACION_REALIZACION_MS
   );
 
-  return {
-    caducada: true,
-    nuevaRealizacion: nuevaRef
-      ? {
-          referencia: nuevaRef
-        }
-      : null
-  };
-}
-
-async function obtenerOcrearRealizacion(
-  uid,
-  usuario,
-  tareaId,
-  tarea,
-  permitirCrear
-) {
-  const realizacionesRef =
-    db.collection(
-      "realizaciones_tareas"
-    );
-
-  const existentes =
-    await realizacionesRef
-      .where(
-        "usuario_id",
-        "==",
-        uid
-      )
-      .where(
-        "tarea_id",
-        "==",
-        tareaId
-      )
-      .where(
-        "estado",
-        "==",
-        "pendiente"
-      )
-      .limit(1)
-      .get();
-
-  if (!existentes.empty) {
-    const doc =
-      existentes.docs[0];
-
-    return {
-      referencia: doc.ref,
-      datos: doc.data(),
-      creada: false
-    };
-  }
-
-  if (!permitirCrear) {
-    throw new Error(
-      "TAREA_NO_DISPONIBLE"
-    );
-  }
-
-  const ahora =
-    ahoraTimestamp();
-
-  const fechaVencimiento =
-    Timestamp.fromMillis(
-      ahoraMs() +
-        7 * 24 * 60 * 60 * 1000
-    );
-
-  const nuevaRef =
-    realizacionesRef.doc(
-      generarIdRealizacion()
-    );
+  const ref = db.collection("realizaciones_tareas").doc();
 
   const datos = {
-    realizacion_id:
-      nuevaRef.id,
-    usuario_id:
-      uid,
-    email:
-      usuario.email || null,
-    tarea_id:
-      tareaId,
-    titulo_tarea:
-      tarea.titulo || "",
-    fase:
-      usuario.fase ||
-      tarea.fase ||
-      null,
-    fecha_inicio:
-      ahora,
-    fecha_fin:
-      null,
-    ultima_actualizacion:
-      ahora,
-    fecha_vencimiento:
-      fechaVencimiento,
-    estado:
-      "pendiente",
-    motivo_cierre:
-      null,
-    tiempo_requerido:
-      Number(
-        tarea.tiempo_requerido
-      ),
-    tiempo_activo_valido:
-      0,
-    tiempo_adicional:
-      0,
-    momento_requerido_alcanzado:
-      null,
-    cantidad_pausas:
-      0,
-    cantidad_reanudaciones:
-      0,
-    pausas_relevantes:
-      0,
-    reanudaciones_relevantes:
-      0,
-    interrupciones_relevantes:
-      0,
-    cambios_visibilidad_relevantes:
-      0,
-    heartbeats_esperados:
-      0,
-    heartbeats_recibidos:
-      0,
-    heartbeats_perdidos:
-      0,
-    ultimo_heartbeat_valido:
-      null,
-    ultima_comunicacion_valida:
-      null,
-    eventos_actividad:
-      [],
-    eventos_tecnicos:
-      []
+    tarea_id: tarea.ref.id,
+    usuario_id: uid,
+    email: usuario.email || null,
+    titulo_tarea: tarea.titulo || null,
+    fecha_inicio: fechaInicio,
+    fecha_vencimiento: fechaVencimiento,
+    estado: "pendiente",
+
+    tiempo_activo_valido: 0,
+    tiempo_adicional: 0,
+
+    cantidad_pausas: 0,
+    cantidad_reanudaciones: 0,
+    cantidad_heartbeat: 0,
+    cantidad_actividades: 0
   };
 
-  await nuevaRef.create(
-    datos
-  );
+  await ref.set(datos);
 
   return {
-    referencia:
-      nuevaRef,
-    datos,
-    creada: true
+    ref,
+    ...datos
   };
 }
 
-async function obtenerSesionActivaUsuario(
-  uid,
-  excluirSesionId = null
-) {
-  const snapshot =
-    await db
-      .collection(
-        "sesiones_tareas"
-      )
-      .where(
-        "usuario_id",
-        "==",
-        uid
-      )
-      .where(
-        "activa",
-        "==",
-        true
-      )
-      .limit(10)
-      .get();
+async function obtenerSesionActivaUsuario(uid) {
+  const snap = await db
+    .collection("sesiones_tareas")
+    .where("usuario_id", "==", uid)
+    .where("activa", "==", true)
+    .limit(20)
+    .get();
 
-  for (
-    const doc of snapshot.docs
-  ) {
+  if (snap.empty) return null;
+
+  for (const doc of snap.docs) {
+    const sesion = {
+      ref: doc.ref,
+      ...doc.data()
+    };
+
+    const ultimaComunicacion =
+      timestampMs(sesion.ultima_comunicacion_valida) ??
+      timestampMs(sesion.ultimo_punto_conteo) ??
+      timestampMs(sesion.fecha_inicio);
+
     if (
-      doc.id ===
-      excluirSesionId
+      ultimaComunicacion &&
+      ahoraMs() - ultimaComunicacion > MAX_ACTIVE_GAP_MS
     ) {
+      await cerrarSesionPorInactividad(sesion);
       continue;
     }
 
-    return {
-      referencia:
-        doc.ref,
-      datos:
-        doc.data()
-    };
+    return sesion;
   }
 
   return null;
 }
 
-async function registrarTiempoSesion(
-  transaction,
-  sesionRef,
-  sesion,
-  realizacionRef,
-  realizacion,
-  tarea,
-  ahora
-) {
-  const calculo =
-    calcularNuevoTiempo(
-      sesion,
-      realizacion,
-      tarea,
-      ahora
-    );
+async function obtenerSesionDeRealizacion(realizacionId) {
+  const snap = await db
+    .collection("sesiones_tareas")
+    .where("realizacion_id", "==", realizacionId)
+    .where("activa", "==", true)
+    .limit(1)
+    .get();
 
-  const requerido =
-    calculo.requerido;
+  if (snap.empty) return null;
 
-  const datosSesion = {
-    tiempo_activo_valido:
-      calculo.tiempoRequerido,
-    tiempo_adicional:
-      calculo.tiempoAdicional,
-    ultimo_punto_conteo:
-      ahora,
-    ultima_actualizacion:
-      ahora,
-    ultima_comunicacion_valida:
-      ahora
-  };
-
-  if (
-    calculo.alcanzado &&
-    !sesion.tiempo_requerido_alcanzado
-  ) {
-    datosSesion.tiempo_requerido_alcanzado =
-      true;
-
-    datosSesion.momento_requerido_alcanzado =
-      ahora;
-  }
-
-  transaction.update(
-    sesionRef,
-    datosSesion
-  );
-
-  const datosRealizacion = {
-    tiempo_activo_valido:
-      calculo.tiempoRequerido,
-    tiempo_adicional:
-      calculo.tiempoAdicional,
-    ultima_actualizacion:
-      ahora
-  };
-
-  if (
-    calculo.alcanzado &&
-    !realizacion.momento_requerido_alcanzado
-  ) {
-    datosRealizacion.momento_requerido_alcanzado =
-      ahora;
-  }
-
-  transaction.update(
-    realizacionRef,
-    datosRealizacion
-  );
+  const doc = snap.docs[0];
 
   return {
-    requerido,
-    tiempoRequerido:
-      calculo.tiempoRequerido,
-    tiempoAdicional:
-      calculo.tiempoAdicional,
-    alcanzado:
-      calculo.alcanzado,
-    tiempoPendiente:
-      calculo.tiempoPendiente
+    ref: doc.ref,
+    ...doc.data()
   };
 }
 
-async function manejarInicio(
-  uid,
-  usuario,
-  tareaId,
+function tiempoContableHastaAhora(sesion, ahoraActualMs = ahoraMs()) {
+  if (!sesion || sesion.activa !== true) return 0;
+
+  const ultimoPunto =
+    timestampMs(sesion.ultimo_punto_conteo) ??
+    timestampMs(sesion.fecha_inicio);
+
+  const ultimaComunicacion =
+    timestampMs(sesion.ultima_comunicacion_valida) ??
+    ultimoPunto;
+
+  if (!ultimoPunto || !ultimaComunicacion) return 0;
+
+  const desdePunto = Math.max(0, ahoraActualMs - ultimoPunto);
+  const desdeComunicacion = Math.max(
+    0,
+    ahoraActualMs - ultimaComunicacion
+  );
+
+  const limiteComunicacion = Math.min(
+    desdeComunicacion,
+    MAX_ACTIVE_GAP_MS
+  );
+
+  const limiteActividad = Math.min(
+    desdePunto,
+    ACTIVITY_WINDOW_MS
+  );
+
+  return Math.min(limiteComunicacion, limiteActividad);
+}
+
+function calcularNuevoTiempo(sesion, realizacion, tarea) {
+  const requeridoMs = obtenerTiempoRequeridoMs(tarea);
+
+  const activoActual = Math.max(
+    0,
+    Number(sesion.tiempo_activo_valido) ||
+      Number(realizacion.tiempo_activo_valido) ||
+      0
+  );
+
+  const adicionalActual = Math.max(
+    0,
+    Number(sesion.tiempo_adicional) ||
+      Number(realizacion.tiempo_adicional) ||
+      0
+  );
+
+  const pendiente = tiempoContableHastaAhora(sesion);
+
+  const faltanteRequerido = Math.max(
+    0,
+    requeridoMs - activoActual
+  );
+
+  const paraRequerido = Math.min(
+    pendiente,
+    faltanteRequerido
+  );
+
+  const restante = Math.max(
+    0,
+    pendiente - paraRequerido
+  );
+
+  const nuevoActivo = activoActual + paraRequerido;
+  const nuevoAdicional = adicionalActual + restante;
+
+  return {
+    requerido_ms: requeridoMs,
+    tiempo_activo_valido: nuevoActivo,
+    tiempo_adicional: nuevoAdicional,
+    tiempo_requerido_alcanzado: nuevoActivo >= requeridoMs
+  };
+}
+
+async function registrarTiempoSesion(
+  tx,
+  sesion,
+  realizacion,
   tarea,
-  instanciaId
+  valores,
+  ahoraTimestamp
 ) {
-  if (
-    !instanciaId ||
-    typeof instanciaId !== "string"
-  ) {
-    throw new Error(
-      "INSTANCIA_INVALIDA"
+  tx.update(sesion.ref, {
+    tiempo_activo_valido: valores.tiempo_activo_valido,
+    tiempo_adicional: valores.tiempo_adicional,
+    ultimo_punto_conteo: ahoraTimestamp
+  });
+
+  tx.update(realizacion.ref, {
+    tiempo_activo_valido: valores.tiempo_activo_valido,
+    tiempo_adicional: valores.tiempo_adicional
+  });
+}
+
+async function cerrarSesionPorInactividad(sesion) {
+  const realizacionRef = db
+    .collection("realizaciones_tareas")
+    .doc(sesion.realizacion_id);
+
+  await db.runTransaction(async (tx) => {
+    const [sesionSnap, realizacionSnap] = await Promise.all([
+      tx.get(sesion.ref),
+      tx.get(realizacionRef)
+    ]);
+
+    if (!sesionSnap.exists || !realizacionSnap.exists) return;
+
+    const sesionActual = sesionSnap.data();
+    const realizacion = {
+      ref: realizacionRef,
+      ...realizacionSnap.data()
+    };
+
+    if (sesionActual.activa !== true) return;
+
+    const tareaFicticia = {
+      tiempo_requerido: sesionActual.tiempo_requerido_minutos
+    };
+
+    const valores = calcularNuevoTiempo(
+      sesionActual,
+      realizacion,
+      tareaFicticia
     );
+
+    const ahoraTimestamp = ahora();
+
+    tx.update(sesion.ref, {
+      activa: false,
+      tiempo_activo_valido: valores.tiempo_activo_valido,
+      tiempo_adicional: valores.tiempo_adicional,
+      ultima_comunicacion_valida: ahoraTimestamp,
+      ultimo_punto_conteo: ahoraTimestamp,
+      motivo_pausa: "inactividad_comunicacion"
+    });
+
+    tx.update(realizacionRef, {
+      tiempo_activo_valido: valores.tiempo_activo_valido,
+      tiempo_adicional: valores.tiempo_adicional
+    });
+  });
+}
+
+async function obtenerSesionActual(realizacionId, instanciaId) {
+  const snap = await db
+    .collection("sesiones_tareas")
+    .where("realizacion_id", "==", realizacionId)
+    .where("activa", "==", true)
+    .limit(1)
+    .get();
+
+  if (snap.empty) return null;
+
+  const doc = snap.docs[0];
+
+  const sesion = {
+    ref: doc.ref,
+    ...doc.data()
+  };
+
+  const ultimaComunicacion =
+    timestampMs(sesion.ultima_comunicacion_valida) ??
+    timestampMs(sesion.ultimo_punto_conteo) ??
+    timestampMs(sesion.fecha_inicio);
+
+  if (
+    ultimaComunicacion &&
+    ahoraMs() - ultimaComunicacion > MAX_ACTIVE_GAP_MS
+  ) {
+    await cerrarSesionPorInactividad(sesion);
+    return null;
   }
 
-  const retirada =
-    tareaRetirada(tarea);
+  if (instanciaId && sesion.instancia_id !== instanciaId) {
+    throw new Error("SESION_BLOQUEADA");
+  }
 
-  const realizacionEncontrada =
-    await obtenerOcrearRealizacion(
-      uid,
-      usuario,
-      tareaId,
-      tarea,
-      !retirada
-    );
+  return sesion;
+}
 
-  let realizacionRef =
-    realizacionEncontrada.referencia;
+async function manejarInicio(uid, usuario, tarea, instanciaId) {
+  if (!instanciaId) {
+    throw new Error("INSTANCIA_ID_REQUERIDO");
+  }
 
-  let realizacion =
-    realizacionEncontrada.datos;
+  if (!faseCoincide(usuario, tarea)) {
+    throw new Error("TAREA_NO_CORRESPONDE");
+  }
 
-  const ahora =
-    ahoraTimestamp();
+  const otraSesion = await obtenerSesionActivaUsuario(uid);
 
-  const vencimiento =
-    timestampMs(
+  if (otraSesion) {
+    throw new Error("OTRA_TAREA_ACTIVA");
+  }
+
+  let realizacion = await obtenerRealizacionUsuario(
+    tarea.ref.id,
+    uid
+  );
+
+  if (realizacion) {
+    const vencimientoMs = timestampMs(
       realizacion.fecha_vencimiento
     );
 
-  if (
-    realizacion.estado ===
-      "pendiente" &&
-    vencimiento !== null &&
-    ahoraMs() >= vencimiento
-  ) {
-    const resultadoCaducidad =
+    if (vencimientoMs && vencimientoMs <= ahoraMs()) {
       await cerrarRealizacionPorCaducidad(
-        realizacionRef,
+        realizacion.ref,
         realizacion,
-        usuario,
-        {
-          ...tarea,
-          tarea_id:
-            tareaId
-        },
-        ahora
+        "vencimiento_7_dias"
       );
 
-    if (
-      resultadoCaducidad.nuevaRealizacion
-    ) {
-      realizacionRef =
-        resultadoCaducidad
-          .nuevaRealizacion
-          .referencia;
-
-      const nuevaSnapshot =
-        await realizacionRef.get();
-
-      if (
-        !nuevaSnapshot.exists
-      ) {
-        throw new Error(
-          "REALIZACION_NO_EXISTE"
-        );
-      }
-
-      realizacion =
-        nuevaSnapshot.data();
-    } else {
-      throw new Error(
-        "TAREA_NO_DISPONIBLE"
-      );
+      realizacion = null;
     }
   }
 
-  const sesionExistente =
-    await db
-      .collection(
-        "sesiones_tareas"
-      )
-      .where(
-        "realizacion_id",
-        "==",
-        realizacion.realizacion_id
-      )
-      .where(
-        "activa",
-        "==",
-        true
-      )
-      .limit(1)
-      .get();
+  if (!realizacion) {
+    realizacion = await obtenerOCrearRealizacion(
+      tarea,
+      usuario,
+      uid
+    );
+  }
 
-  if (
-    !sesionExistente.empty
-  ) {
-    const sesionDoc =
-      sesionExistente.docs[0];
+  const sesionExistente = await obtenerSesionActual(
+    realizacion.ref.id,
+    instanciaId
+  );
 
-    const sesion =
-      sesionDoc.data();
-
-    if (
-      sesion.instancia_id !==
-      instanciaId
-    ) {
-      throw new Error(
-        "SESION_BLOQUEADA"
-      );
-    }
-
+  if (sesionExistente) {
     return {
       realizacion,
-      sesion
+      sesion: sesionExistente
     };
   }
 
-  const otraSesion =
-    await obtenerSesionActivaUsuario(
-      uid
-    );
+  const requeridoMs = obtenerTiempoRequeridoMs(tarea);
+  const ahoraTimestamp = ahora();
 
-  if (otraSesion) {
-    throw new Error(
-      "OTRA_TAREA_ACTIVA"
-    );
-  }
+  const sesionRef = db
+    .collection("sesiones_tareas")
+    .doc();
 
-  const sesionRef =
-    db
-      .collection(
-        "sesiones_tareas"
-      )
-      .doc(generarIdSesion());
+  const fueReanudacion =
+    Number(realizacion.cantidad_pausas || 0) > 0;
 
   const datosSesion = {
-    sesion_id:
-      sesionRef.id,
-    realizacion_id:
-      realizacion.realizacion_id,
-    usuario_id:
-      uid,
-    tarea_id:
-      tareaId,
-    instancia_id:
-      instanciaId,
-    activa:
-      true,
-    bloqueada:
-      false,
-    inicio_actual:
-      ahora,
-    ultimo_punto_conteo:
-      ahora,
-    ultima_interaccion_valida:
-      null,
-    ultimo_heartbeat_valido:
-      ahora,
-    ultima_comunicacion_valida:
-      ahora,
+    tarea_id: tarea.ref.id,
+    realizacion_id: realizacion.ref.id,
+    usuario_id: uid,
+
+    instancia_id: instanciaId,
+
+    activa: true,
+
+    fecha_inicio: ahoraTimestamp,
+    ultima_comunicacion_valida: ahoraTimestamp,
+    ultimo_punto_conteo: ahoraTimestamp,
+    ultimo_heartbeat: ahoraTimestamp,
+    ultima_actividad: ahoraTimestamp,
+
+    tiempo_requerido_ms: requeridoMs,
+    tiempo_requerido_minutos: Number(tarea.tiempo_requerido),
+
     tiempo_activo_valido:
-      Number(
-        realizacion.tiempo_activo_valido ||
-        0
-      ),
+      Number(realizacion.tiempo_activo_valido) || 0,
+
     tiempo_adicional:
-      Number(
-        realizacion.tiempo_adicional ||
-        0
-      ),
-    tiempo_requerido_alcanzado:
-      !!realizacion.momento_requerido_alcanzado,
-    momento_requerido_alcanzado:
-      realizacion.momento_requerido_alcanzado ||
-      null,
-    cantidad_pausas:
-      0,
-    cantidad_reanudaciones:
-      Number(
-        realizacion.cantidad_reanudaciones ||
-        0
-      ),
-    heartbeats_esperados:
-      0,
-    heartbeats_recibidos:
-      0,
-    heartbeats_perdidos:
-      0,
-    fecha_inicio:
-      ahora,
-    ultima_actualizacion:
-      ahora
+      Number(realizacion.tiempo_adicional) || 0,
+
+    cantidad_heartbeat: 0,
+    cantidad_actividades: 0,
+
+    cantidad_reanudaciones: fueReanudacion ? 1 : 0
   };
 
-  await db.runTransaction(
-    async transaction => {
-      const realizacionActual =
-        await transaction.get(
-          realizacionRef
-        );
+  await db.runTransaction(async (tx) => {
+    tx.set(sesionRef, datosSesion);
 
-      if (
-        !realizacionActual.exists
-      ) {
-        throw new Error(
-          "REALIZACION_NO_EXISTE"
-        );
-      }
+    const cambios = {};
 
-      const datosActuales =
-        realizacionActual.data();
-
-      if (
-        datosActuales.estado !==
-        "pendiente"
-      ) {
-        throw new Error(
-          "REALIZACION_CERRADA"
-        );
-      }
-
-      transaction.set(
-        sesionRef,
-        datosSesion
-      );
-
-      transaction.update(
-        realizacionRef,
-        {
-          ultima_actualizacion:
-            ahora,
-          cantidad_reanudaciones:
-            Number(
-              datosActuales.cantidad_reanudaciones ||
-              0
-            ) + 1
-        }
-      );
+    if (fueReanudacion) {
+      cambios.cantidad_reanudaciones =
+        FieldValue.increment(1);
     }
-  );
+
+    if (Object.keys(cambios).length > 0) {
+      tx.update(realizacion.ref, cambios);
+    }
+  });
 
   return {
     realizacion: {
       ...realizacion,
-      ultima_actualizacion:
-        ahora
+      ...(fueReanudacion
+        ? {
+            cantidad_reanudaciones:
+              Number(realizacion.cantidad_reanudaciones || 0) + 1
+          }
+        : {})
     },
-    sesion:
-      datosSesion
-  };
-}
-
-async function obtenerSesionActual(
-  uid,
-  tareaId,
-  instanciaId
-) {
-  if (
-    !instanciaId ||
-    typeof instanciaId !== "string"
-  ) {
-    throw new Error(
-      "INSTANCIA_INVALIDA"
-    );
-  }
-
-  const sesionQuery =
-    await db
-      .collection(
-        "sesiones_tareas"
-      )
-      .where(
-        "usuario_id",
-        "==",
-        uid
-      )
-      .where(
-        "tarea_id",
-        "==",
-        tareaId
-      )
-      .where(
-        "activa",
-        "==",
-        true
-      )
-      .limit(10)
-      .get();
-
-  for (
-    const doc of sesionQuery.docs
-  ) {
-    const sesion =
-      doc.data();
-
-    if (
-      sesion.instancia_id ===
-      instanciaId
-    ) {
-      return {
-        referencia:
-          doc.ref,
-        datos:
-          sesion
-      };
+    sesion: {
+      ref: sesionRef,
+      ...datosSesion
     }
-  }
-
-  if (
-    !sesionQuery.empty
-  ) {
-    throw new Error(
-      "SESION_BLOQUEADA"
-    );
-  }
-
-  throw new Error(
-    "SESION_NO_ACTIVA"
-  );
+  };
 }
 
 async function manejarActividad(
   uid,
-  tareaId,
   tarea,
-  instanciaId,
-  tipoActividad
+  realizacion,
+  instanciaId
 ) {
-  const sesionActual =
-    await obtenerSesionActual(
-      uid,
-      tareaId,
-      instanciaId
-    );
-
-  const sesionRef =
-    sesionActual.referencia;
-
-  const sesion =
-    sesionActual.datos;
-
-  const realizacionRef =
-    db
-      .collection(
-        "realizaciones_tareas"
-      )
-      .doc(
-        sesion.realizacion_id
-      );
-
-  const ahora =
-    ahoraTimestamp();
-
-  await db.runTransaction(
-    async transaction => {
-      const sesionSnapshot =
-        await transaction.get(
-          sesionRef
-        );
-
-      const realizacionSnapshot =
-        await transaction.get(
-          realizacionRef
-        );
-
-      if (
-        !sesionSnapshot.exists
-      ) {
-        throw new Error(
-          "SESION_NO_ACTIVA"
-        );
-      }
-
-      if (
-        !realizacionSnapshot.exists
-      ) {
-        throw new Error(
-          "REALIZACION_NO_EXISTE"
-        );
-      }
-
-      const sesionActualizada =
-        sesionSnapshot.data();
-
-      const realizacion =
-        realizacionSnapshot.data();
-
-      if (
-        sesionActualizada.instancia_id !==
-        instanciaId
-      ) {
-        throw new Error(
-          "SESION_BLOQUEADA"
-        );
-      }
-
-      if (
-        sesionActualizada.activa !==
-        true
-      ) {
-        throw new Error(
-          "SESION_PAUSADA"
-        );
-      }
-
-      if (
-        realizacion.estado !==
-        "pendiente"
-      ) {
-        throw new Error(
-          "REALIZACION_CERRADA"
-        );
-      }
-
-      const vencimiento =
-        timestampMs(
-          realizacion.fecha_vencimiento
-        );
-
-      if (
-        vencimiento !== null &&
-        ahoraMs() >= vencimiento
-      ) {
-        throw new Error(
-          "REALIZACION_VENCIDA"
-        );
-      }
-
-      const ultimaComunicacion =
-        timestampMs(
-          sesionActualizada
-            .ultima_comunicacion_valida
-        );
-
-      if (
-        ultimaComunicacion !== null &&
-        ahoraMs() -
-          ultimaComunicacion >
-          MAX_ACTIVE_GAP_MS
-      ) {
-        transaction.update(
-          sesionRef,
-          {
-            activa:
-              false,
-            ultima_actualizacion:
-              ahora,
-            heartbeats_perdidos:
-              Number(
-                sesionActualizada
-                  .heartbeats_perdidos ||
-                0
-              ) + 1,
-            eventos_tecnicos:
-              FieldValue.arrayUnion({
-                tipo:
-                  "interrupcion",
-                motivo:
-                  "perdida_comunicacion",
-                fecha_hora:
-                  ahora
-              })
-          }
-        );
-
-        transaction.update(
-          realizacionRef,
-          {
-            ultima_actualizacion:
-              ahora,
-            interrupciones_relevantes:
-              Number(
-                realizacion
-                  .interrupciones_relevantes ||
-                0
-              ) + 1
-          }
-        );
-
-        throw new Error(
-          "SESION_PAUSADA"
-        );
-      }
-
-      const calculo =
-        await registrarTiempoSesion(
-          transaction,
-          sesionRef,
-          sesionActualizada,
-          realizacionRef,
-          realizacion,
-          tarea,
-          ahora
-        );
-
-      transaction.update(
-        sesionRef,
-        {
-          ultima_interaccion_valida:
-            ahora,
-          ultima_comunicacion_valida:
-            ahora,
-          tipo_ultima_actividad:
-            typeof tipoActividad ===
-              "string"
-              ? tipoActividad.substring(
-                  0,
-                  50
-                )
-              : "interaccion"
-        }
-      );
-
-      transaction.update(
-        realizacionRef,
-        {
-          eventos_actividad:
-            FieldValue.arrayUnion({
-              tipo:
-                typeof tipoActividad ===
-                  "string"
-                  ? tipoActividad.substring(
-                      0,
-                      50
-                    )
-                  : "interaccion",
-              fecha_hora:
-                ahora
-            })
-        }
-      );
-
-      if (
-        calculo.alcanzado
-      ) {
-        transaction.update(
-          sesionRef,
-          {
-            tiempo_requerido_alcanzado:
-              true,
-            momento_requerido_alcanzado:
-              sesionActualizada
-                .momento_requerido_alcanzado ||
-              ahora
-          }
-        );
-      }
-    }
+  const sesion = await obtenerSesionActual(
+    realizacion.ref.id,
+    instanciaId
   );
 
-  return {
-    ok: true
-  };
+  if (!sesion) {
+    throw new Error("SESION_NO_ACTIVA");
+  }
+
+  if (sesion.usuario_id !== uid) {
+    throw new Error("NO_AUTORIZADO");
+  }
+
+  const ahoraTimestamp = ahora();
+
+  await db.runTransaction(async (tx) => {
+    const [sesionSnap, realizacionSnap] = await Promise.all([
+      tx.get(sesion.ref),
+      tx.get(realizacion.ref)
+    ]);
+
+    if (!sesionSnap.exists || !realizacionSnap.exists) {
+      throw new Error("SESION_NO_ENCONTRADA");
+    }
+
+    const sesionActual = {
+      ref: sesion.ref,
+      ...sesionSnap.data()
+    };
+
+    const realizacionActual = {
+      ref: realizacion.ref,
+      ...realizacionSnap.data()
+    };
+
+    if (sesionActual.activa !== true) {
+      throw new Error("SESION_NO_ACTIVA");
+    }
+
+    if (sesionActual.instancia_id !== instanciaId) {
+      throw new Error("SESION_BLOQUEADA");
+    }
+
+    const ultimaComunicacion =
+      timestampMs(sesionActual.ultima_comunicacion_valida) ??
+      timestampMs(sesionActual.ultimo_punto_conteo);
+
+    if (
+      ultimaComunicacion &&
+      ahoraMs() - ultimaComunicacion > MAX_ACTIVE_GAP_MS
+    ) {
+      const valores = calcularNuevoTiempo(
+        sesionActual,
+        realizacionActual,
+        tarea
+      );
+
+      await registrarTiempoSesion(
+        tx,
+        sesionActual,
+        realizacionActual,
+        tarea,
+        valores,
+        ahoraTimestamp
+      );
+
+      tx.update(sesionActual.ref, {
+        activa: false,
+        ultima_comunicacion_valida: ahoraTimestamp,
+        motivo_pausa: "inactividad_comunicacion"
+      });
+
+      throw new Error("SESION_PAUSADA");
+    }
+
+    const valores = calcularNuevoTiempo(
+      sesionActual,
+      realizacionActual,
+      tarea
+    );
+
+    await registrarTiempoSesion(
+      tx,
+      sesionActual,
+      realizacionActual,
+      tarea,
+      valores,
+      ahoraTimestamp
+    );
+
+    tx.update(sesionActual.ref, {
+      ultima_actividad: ahoraTimestamp,
+      ultima_comunicacion_valida: ahoraTimestamp,
+      cantidad_actividades: FieldValue.increment(1)
+    });
+
+    tx.update(realizacionActual.ref, {
+      cantidad_actividades: FieldValue.increment(1)
+    });
+  });
 }
 
 async function manejarHeartbeat(
   uid,
-  tareaId,
+  tarea,
+  realizacion,
   instanciaId
 ) {
-  const sesionActual =
-    await obtenerSesionActual(
-      uid,
-      tareaId,
-      instanciaId
-    );
-
-  const sesionRef =
-    sesionActual.referencia;
-
-  const ahora =
-    ahoraTimestamp();
-
-  const realizacionRef =
-    db
-      .collection(
-        "realizaciones_tareas"
-      )
-      .doc(
-        sesionActual.datos
-          .realizacion_id
-      );
-
-  await db.runTransaction(
-    async transaction => {
-      const sesionSnapshot =
-        await transaction.get(
-          sesionRef
-        );
-
-      const realizacionSnapshot =
-        await transaction.get(
-          realizacionRef
-        );
-
-      if (
-        !sesionSnapshot.exists
-      ) {
-        throw new Error(
-          "SESION_NO_ACTIVA"
-        );
-      }
-
-      if (
-        !realizacionSnapshot.exists
-      ) {
-        throw new Error(
-          "REALIZACION_NO_EXISTE"
-        );
-      }
-
-      const sesion =
-        sesionSnapshot.data();
-
-      const realizacion =
-        realizacionSnapshot.data();
-
-      if (
-        sesion.instancia_id !==
-        instanciaId
-      ) {
-        throw new Error(
-          "SESION_BLOQUEADA"
-        );
-      }
-
-      if (
-        sesion.activa !==
-        true
-      ) {
-        throw new Error(
-          "SESION_PAUSADA"
-        );
-      }
-
-      if (
-        realizacion.estado !==
-        "pendiente"
-      ) {
-        throw new Error(
-          "REALIZACION_CERRADA"
-        );
-      }
-
-      const vencimiento =
-        timestampMs(
-          realizacion.fecha_vencimiento
-        );
-
-      if (
-        vencimiento !== null &&
-        ahoraMs() >= vencimiento
-      ) {
-        throw new Error(
-          "REALIZACION_VENCIDA"
-        );
-      }
-
-      const ultimoHeartbeat =
-        timestampMs(
-          sesion.ultimo_heartbeat_valido
-        );
-
-      const diferencia =
-        ultimoHeartbeat === null
-          ? 0
-          : ahoraMs() -
-            ultimoHeartbeat;
-
-      if (
-        diferencia >
-        MAX_ACTIVE_GAP_MS
-      ) {
-        transaction.update(
-          sesionRef,
-          {
-            activa:
-              false,
-            ultima_actualizacion:
-              ahora,
-            heartbeats_perdidos:
-              Number(
-                sesion.heartbeats_perdidos ||
-                0
-              ) + 1,
-            ultima_comunicacion_valida:
-              ahora
-          }
-        );
-
-        transaction.update(
-          realizacionRef,
-          {
-            ultima_actualizacion:
-              ahora,
-            interrupciones_relevantes:
-              Number(
-                realizacion
-                  .interrupciones_relevantes ||
-                0
-              ) + 1
-          }
-        );
-
-        throw new Error(
-          "SESION_PAUSADA"
-        );
-      }
-
-      const calculo =
-        await registrarTiempoSesion(
-          transaction,
-          sesionRef,
-          sesion,
-          realizacionRef,
-          realizacion,
-          {
-            tiempo_requerido:
-              realizacion.tiempo_requerido
-          },
-          ahora
-        );
-
-      let heartbeatsEsperados =
-        Number(
-          sesion.heartbeats_esperados ||
-          0
-        );
-
-      if (
-        ultimoHeartbeat !== null
-      ) {
-        const intervalos =
-          Math.floor(
-            diferencia /
-              HEARTBEAT_INTERVAL_EXPECTED_MS
-          );
-
-        if (
-          intervalos > 0
-        ) {
-          heartbeatsEsperados +=
-            intervalos;
-        } else {
-          heartbeatsEsperados += 1;
-        }
-      } else {
-        heartbeatsEsperados +=
-          1;
-      }
-
-      const recibidos =
-        Number(
-          sesion.heartbeats_recibidos ||
-          0
-        ) + 1;
-
-      const perdidos =
-        Math.max(
-          0,
-          heartbeatsEsperados -
-            recibidos
-        );
-
-      transaction.update(
-        sesionRef,
-        {
-          ultimo_heartbeat_valido:
-            ahora,
-          ultima_comunicacion_valida:
-            ahora,
-          heartbeats_recibidos:
-            recibidos,
-          heartbeats_esperados:
-            heartbeatsEsperados,
-          heartbeats_perdidos:
-            perdidos,
-          tiempo_requerido_alcanzado:
-            calculo.alcanzado ||
-            sesion.tiempo_requerido_alcanzado ===
-              true,
-          momento_requerido_alcanzado:
-            calculo.alcanzado
-              ? sesion.momento_requerido_alcanzado ||
-                ahora
-              : sesion.momento_requerido_alcanzado ||
-                null
-        }
-      );
-
-      transaction.update(
-        realizacionRef,
-        {
-          ultimo_heartbeat_valido:
-            ahora,
-          ultima_comunicacion_valida:
-            ahora,
-          heartbeats_recibidos:
-            Number(
-              realizacion
-                .heartbeats_recibidos ||
-              0
-            ) + 1,
-          heartbeats_esperados:
-            heartbeatsEsperados,
-          heartbeats_perdidos:
-            perdidos
-        }
-      );
-    }
+  const sesion = await obtenerSesionActual(
+    realizacion.ref.id,
+    instanciaId
   );
 
-  return {
-    ok: true
-  };
+  if (!sesion) {
+    throw new Error("SESION_NO_ACTIVA");
+  }
+
+  if (sesion.usuario_id !== uid) {
+    throw new Error("NO_AUTORIZADO");
+  }
+
+  const ahoraTimestamp = ahora();
+
+  await db.runTransaction(async (tx) => {
+    const [sesionSnap, realizacionSnap] = await Promise.all([
+      tx.get(sesion.ref),
+      tx.get(realizacion.ref)
+    ]);
+
+    if (!sesionSnap.exists || !realizacionSnap.exists) {
+      throw new Error("SESION_NO_ENCONTRADA");
+    }
+
+    const sesionActual = {
+      ref: sesion.ref,
+      ...sesionSnap.data()
+    };
+
+    const realizacionActual = {
+      ref: realizacion.ref,
+      ...realizacionSnap.data()
+    };
+
+    if (sesionActual.activa !== true) {
+      throw new Error("SESION_NO_ACTIVA");
+    }
+
+    if (sesionActual.instancia_id !== instanciaId) {
+      throw new Error("SESION_BLOQUEADA");
+    }
+
+    const ultimaComunicacion =
+      timestampMs(sesionActual.ultima_comunicacion_valida) ??
+      timestampMs(sesionActual.ultimo_punto_conteo);
+
+    if (
+      ultimaComunicacion &&
+      ahoraMs() - ultimaComunicacion > MAX_ACTIVE_GAP_MS
+    ) {
+      const valores = calcularNuevoTiempo(
+        sesionActual,
+        realizacionActual,
+        tarea
+      );
+
+      await registrarTiempoSesion(
+        tx,
+        sesionActual,
+        realizacionActual,
+        tarea,
+        valores,
+        ahoraTimestamp
+      );
+
+      tx.update(sesionActual.ref, {
+        activa: false,
+        ultima_comunicacion_valida: ahoraTimestamp,
+        motivo_pausa: "inactividad_comunicacion"
+      });
+
+      throw new Error("SESION_PAUSADA");
+    }
+
+    const valores = calcularNuevoTiempo(
+      sesionActual,
+      realizacionActual,
+      tarea
+    );
+
+    await registrarTiempoSesion(
+      tx,
+      sesionActual,
+      realizacionActual,
+      tarea,
+      valores,
+      ahoraTimestamp
+    );
+
+    tx.update(sesionActual.ref, {
+      ultimo_heartbeat: ahoraTimestamp,
+      ultima_comunicacion_valida: ahoraTimestamp,
+      cantidad_heartbeat: FieldValue.increment(1)
+    });
+
+    tx.update(realizacionActual.ref, {
+      cantidad_heartbeat: FieldValue.increment(1)
+    });
+  });
 }
 
 async function manejarPausa(
   uid,
-  tareaId,
-  instanciaId,
-  motivo = "pausa"
+  tarea,
+  realizacion,
+  instanciaId
 ) {
-  const sesionQuery =
-    await db
-      .collection(
-        "sesiones_tareas"
-      )
-      .where(
-        "usuario_id",
-        "==",
-        uid
-      )
-      .where(
-        "tarea_id",
-        "==",
-        tareaId
-      )
-      .where(
-        "activa",
-        "==",
-        true
-      )
-      .limit(10)
-      .get();
+  const sesion = await obtenerSesionActual(
+    realizacion.ref.id,
+    instanciaId
+  );
 
-  if (
-    sesionQuery.empty
-  ) {
+  if (!sesion) {
     return {
-      ok: true,
-      yaPausada: true
+      realizacion,
+      sesion: null
     };
   }
 
-  let sesionDoc = null;
-
-  for (
-    const doc of sesionQuery.docs
-  ) {
-    if (
-      doc.data()
-        .instancia_id ===
-      instanciaId
-    ) {
-      sesionDoc = doc;
-      break;
-    }
+  if (sesion.usuario_id !== uid) {
+    throw new Error("NO_AUTORIZADO");
   }
 
-  if (!sesionDoc) {
-    throw new Error(
-      "SESION_BLOQUEADA"
+  const ahoraTimestamp = ahora();
+
+  let resultado = null;
+
+  await db.runTransaction(async (tx) => {
+    const [sesionSnap, realizacionSnap] = await Promise.all([
+      tx.get(sesion.ref),
+      tx.get(realizacion.ref)
+    ]);
+
+    if (!sesionSnap.exists || !realizacionSnap.exists) {
+      throw new Error("SESION_NO_ENCONTRADA");
+    }
+
+    const sesionActual = {
+      ref: sesion.ref,
+      ...sesionSnap.data()
+    };
+
+    const realizacionActual = {
+      ref: realizacion.ref,
+      ...realizacionSnap.data()
+    };
+
+    if (sesionActual.activa !== true) {
+      resultado = {
+        realizacion: realizacionActual,
+        sesion: {
+          ...sesionActual,
+          activa: false
+        }
+      };
+      return;
+    }
+
+    if (sesionActual.instancia_id !== instanciaId) {
+      throw new Error("SESION_BLOQUEADA");
+    }
+
+    const valores = calcularNuevoTiempo(
+      sesionActual,
+      realizacionActual,
+      tarea
     );
-  }
 
-  const sesionRef =
-    sesionDoc.ref;
+    await registrarTiempoSesion(
+      tx,
+      sesionActual,
+      realizacionActual,
+      tarea,
+      valores,
+      ahoraTimestamp
+    );
 
-  const ahora =
-    ahoraTimestamp();
+    tx.update(sesionActual.ref, {
+      activa: false,
+      ultima_comunicacion_valida: ahoraTimestamp,
+      ultimo_punto_conteo: ahoraTimestamp,
+      fecha_pausa: ahoraTimestamp
+    });
 
-  const realizacionRef =
-    db
-      .collection(
-        "realizaciones_tareas"
-      )
-      .doc(
-        sesionDoc.data()
-          .realizacion_id
-      );
+    tx.update(realizacionActual.ref, {
+      cantidad_pausas: FieldValue.increment(1)
+    });
 
-  await db.runTransaction(
-    async transaction => {
-      const sesionSnapshot =
-        await transaction.get(
-          sesionRef
-        );
-
-      const realizacionSnapshot =
-        await transaction.get(
-          realizacionRef
-        );
-
-      if (
-        !sesionSnapshot.exists
-      ) {
-        return;
+    resultado = {
+      realizacion: {
+        ...realizacionActual,
+        tiempo_activo_valido:
+          valores.tiempo_activo_valido,
+        tiempo_adicional:
+          valores.tiempo_adicional,
+        cantidad_pausas:
+          Number(realizacionActual.cantidad_pausas || 0) + 1
+      },
+      sesion: {
+        ...sesionActual,
+        activa: false,
+        tiempo_activo_valido:
+          valores.tiempo_activo_valido,
+        tiempo_adicional:
+          valores.tiempo_adicional,
+        fecha_pausa: ahoraTimestamp
       }
+    };
+  });
 
-      if (
-        !realizacionSnapshot.exists
-      ) {
-        throw new Error(
-          "REALIZACION_NO_EXISTE"
-        );
-      }
-
-      const sesion =
-        sesionSnapshot.data();
-
-      const realizacion =
-        realizacionSnapshot.data();
-
-      if (
-        sesion.instancia_id !==
-        instanciaId
-      ) {
-        throw new Error(
-          "SESION_BLOQUEADA"
-        );
-      }
-
-      if (
-        sesion.activa !==
-        true
-      ) {
-        return;
-      }
-
-      if (
-        realizacion.estado !==
-        "pendiente"
-      ) {
-        throw new Error(
-          "REALIZACION_CERRADA"
-        );
-      }
-
-      const vencimiento =
-        timestampMs(
-          realizacion.fecha_vencimiento
-        );
-
-      if (
-        vencimiento !== null &&
-        ahoraMs() >= vencimiento
-      ) {
-        throw new Error(
-          "REALIZACION_VENCIDA"
-        );
-      }
-
-      const calculo =
-        calcularNuevoTiempo(
-          sesion,
-          realizacion,
-          {
-            tiempo_requerido:
-              realizacion.tiempo_requerido
-          },
-          ahora
-        );
-
-      transaction.update(
-        sesionRef,
-        {
-          activa:
-            false,
-          tiempo_activo_valido:
-            calculo.tiempoRequerido,
-          tiempo_adicional:
-            calculo.tiempoAdicional,
-          ultimo_punto_conteo:
-            ahora,
-          ultima_actualizacion:
-            ahora,
-          ultima_comunicacion_valida:
-            ahora,
-          cantidad_pausas:
-            Number(
-              sesion.cantidad_pausas ||
-              0
-            ) + 1,
-          tiempo_requerido_alcanzado:
-            calculo.alcanzado ||
-            sesion.tiempo_requerido_alcanzado ===
-              true,
-          momento_requerido_alcanzado:
-            calculo.alcanzado
-              ? sesion.momento_requerido_alcanzado ||
-                ahora
-              : sesion.momento_requerido_alcanzado ||
-                null
-        }
-      );
-
-      transaction.update(
-        realizacionRef,
-        {
-          tiempo_activo_valido:
-            calculo.tiempoRequerido,
-          tiempo_adicional:
-            calculo.tiempoAdicional,
-          ultima_actualizacion:
-            ahora,
-          cantidad_pausas:
-            Number(
-              realizacion.cantidad_pausas ||
-              0
-            ) + 1,
-          pausas_relevantes:
-            Number(
-              realizacion.pausas_relevantes ||
-              0
-            ) + 1,
-          momento_requerido_alcanzado:
-            calculo.alcanzado
-              ? realizacion.momento_requerido_alcanzado ||
-                ahora
-              : realizacion.momento_requerido_alcanzado ||
-                null,
-          eventos_actividad:
-            FieldValue.arrayUnion({
-              tipo:
-                "pausa",
-              fecha_hora:
-                ahora,
-              motivo:
-                typeof motivo ===
-                  "string"
-                  ? motivo.substring(
-                      0,
-                      50
-                    )
-                  : "pausa"
-            })
-        }
-      );
-    }
-  );
-
-  return {
-    ok: true
-  };
+  return resultado;
 }
 
 async function manejarCompletar(
   uid,
-  usuario,
-  tareaId,
   tarea,
+  realizacion,
   instanciaId
 ) {
-  const sesionQuery =
-    await db
-      .collection(
-        "sesiones_tareas"
-      )
-      .where(
-        "usuario_id",
-        "==",
-        uid
-      )
-      .where(
-        "tarea_id",
-        "==",
-        tareaId
-      )
-      .limit(10)
-      .get();
-
-  if (
-    sesionQuery.empty
-  ) {
-    throw new Error(
-      "SESION_NO_EXISTE"
-    );
+  if (realizacion.usuario_id !== uid) {
+    throw new Error("NO_AUTORIZADO");
   }
 
-  let sesionDoc = null;
+  const vencimientoMs = timestampMs(
+    realizacion.fecha_vencimiento
+  );
 
-  for (
-    const doc of sesionQuery.docs
-  ) {
-    if (
-      doc.data()
-        .instancia_id ===
-      instanciaId
-    ) {
-      sesionDoc = doc;
-      break;
+  if (vencimientoMs && vencimientoMs <= ahoraMs()) {
+    await cerrarRealizacionPorCaducidad(
+      realizacion.ref,
+      realizacion,
+      "vencimiento_7_dias"
+    );
+
+    throw new Error("REALIZACION_VENCIDA");
+  }
+
+  const sesion = await obtenerSesionActual(
+    realizacion.ref.id,
+    instanciaId
+  );
+
+  const ahoraTimestamp = ahora();
+
+  let resultado;
+
+  await db.runTransaction(async (tx) => {
+    const realizacionSnap = await tx.get(realizacion.ref);
+
+    if (!realizacionSnap.exists) {
+      throw new Error("REALIZACION_NO_ENCONTRADA");
     }
-  }
 
-  if (!sesionDoc) {
-    throw new Error(
-      "SESION_BLOQUEADA"
-    );
-  }
+    const realizacionActual = {
+      ref: realizacion.ref,
+      ...realizacionSnap.data()
+    };
 
-  const sesionRef =
-    sesionDoc.ref;
+    if (realizacionActual.estado !== "pendiente") {
+      throw new Error("REALIZACION_NO_DISPONIBLE");
+    }
 
-  const realizacionRef =
-    db
-      .collection(
-        "realizaciones_tareas"
-      )
-      .doc(
-        sesionDoc.data()
-          .realizacion_id
+    let tiempoActivo =
+      Number(realizacionActual.tiempo_activo_valido) || 0;
+
+    let tiempoAdicional =
+      Number(realizacionActual.tiempo_adicional) || 0;
+
+    if (sesion) {
+      const sesionSnap = await tx.get(sesion.ref);
+
+      if (!sesionSnap.exists) {
+        throw new Error("SESION_NO_ENCONTRADA");
+      }
+
+      const sesionActual = {
+        ref: sesion.ref,
+        ...sesionSnap.data()
+      };
+
+      if (
+        sesionActual.instancia_id !== instanciaId
+      ) {
+        throw new Error("SESION_BLOQUEADA");
+      }
+
+      const valores = calcularNuevoTiempo(
+        sesionActual,
+        realizacionActual,
+        tarea
       );
 
-  const historialRef =
-    db
-      .collection(
-        "historial_realizaciones"
-      )
-      .doc(
-        sesionDoc.data()
-          .realizacion_id
-      );
+      tiempoActivo = valores.tiempo_activo_valido;
+      tiempoAdicional = valores.tiempo_adicional;
 
-  const progresoRef =
-    db
-      .collection(
-        "progreso_tareas"
-      )
-      .doc(
-        `${uid}_${tareaId}`
-      );
+      if (
+        tiempoActivo <
+        obtenerTiempoRequeridoMs(tarea)
+      ) {
+        tx.update(sesionActual.ref, {
+          tiempo_activo_valido: tiempoActivo,
+          tiempo_adicional: tiempoAdicional,
+          ultima_comunicacion_valida: ahoraTimestamp,
+          ultimo_punto_conteo: ahoraTimestamp
+        });
 
-  const estadisticaRef =
-    db
-      .collection(
-        "estadisticas_usuario"
-      )
+        tx.update(realizacionActual.ref, {
+          tiempo_activo_valido: tiempoActivo,
+          tiempo_adicional: tiempoAdicional
+        });
+
+        throw new Error("TIEMPO_INSUFICIENTE");
+      }
+
+      tx.update(sesionActual.ref, {
+        activa: false,
+        tiempo_activo_valido: tiempoActivo,
+        tiempo_adicional: tiempoAdicional,
+        fecha_finalizacion: ahoraTimestamp,
+        ultima_comunicacion_valida: ahoraTimestamp,
+        ultimo_punto_conteo: ahoraTimestamp
+      });
+    }
+
+    if (
+      tiempoActivo <
+      obtenerTiempoRequeridoMs(tarea)
+    ) {
+      throw new Error("TIEMPO_INSUFICIENTE");
+    }
+
+    const historialRef = db
+      .collection("historial_realizaciones")
+      .doc();
+
+    tx.update(realizacionActual.ref, {
+      estado: "completada",
+      fecha_cierre: ahoraTimestamp,
+      fecha_completada: ahoraTimestamp,
+      tiempo_activo_valido: tiempoActivo,
+      tiempo_adicional: tiempoAdicional
+    });
+
+    tx.set(historialRef, {
+      tarea_id: tarea.ref.id,
+      usuario_id: uid,
+      email: realizacionActual.email || null,
+      titulo_tarea:
+        realizacionActual.titulo_tarea ||
+        tarea.titulo ||
+        null,
+
+      fecha_inicio:
+        realizacionActual.fecha_inicio || null,
+
+      fecha_vencimiento:
+        realizacionActual.fecha_vencimiento || null,
+
+      fecha_cierre: ahoraTimestamp,
+      fecha_completada: ahoraTimestamp,
+
+      estado_final: "completada",
+
+      tiempo_activo_valido: tiempoActivo,
+      tiempo_adicional: tiempoAdicional
+    });
+
+    const progresoRef = db
+      .collection("progreso_tareas")
+      .doc();
+
+    tx.set(progresoRef, {
+      email: realizacionActual.email || null,
+      fecha_realizada: ahoraTimestamp,
+      minutos_realizados:
+        minutosCompletos(tiempoActivo),
+
+      tarea_id: tarea.ref.id,
+      usuario_id: uid,
+      veces_realizada: 1,
+      titulo_tarea:
+        realizacionActual.titulo_tarea ||
+        tarea.titulo ||
+        null
+    });
+
+    const estadisticasRef = db
+      .collection("estadisticas_usuario")
       .doc(uid);
 
-  const ahora =
-    ahoraTimestamp();
+    const estadisticasSnap =
+      await tx.get(estadisticasRef);
 
-  let resultado = null;
-
-  await db.runTransaction(
-    async transaction => {
-      const realizacionSnapshot =
-        await transaction.get(
-          realizacionRef
-        );
-
-      const sesionSnapshot =
-        await transaction.get(
-          sesionRef
-        );
-
-      const progresoSnapshot =
-        await transaction.get(
-          progresoRef
-        );
-
-      const estadisticaSnapshot =
-        await transaction.get(
-          estadisticaRef
-        );
-
-      if (
-        !realizacionSnapshot.exists
-      ) {
-        throw new Error(
-          "REALIZACION_NO_EXISTE"
-        );
-      }
-
-      if (
-        !sesionSnapshot.exists
-      ) {
-        throw new Error(
-          "SESION_NO_EXISTE"
-        );
-      }
-
-      const realizacion =
-        realizacionSnapshot.data();
-
-      const sesionActual =
-        sesionSnapshot.data();
-
-      if (
-        realizacion.estado !==
-        "pendiente"
-      ) {
-        throw new Error(
-          "REALIZACION_YA_CERRADA"
-        );
-      }
-
-      if (
-        sesionActual.instancia_id !==
-        instanciaId
-      ) {
-        throw new Error(
-          "SESION_BLOQUEADA"
-        );
-      }
-
-      const vencimiento =
-        timestampMs(
-          realizacion.fecha_vencimiento
-        );
-
-      if (
-        vencimiento !== null &&
-        ahoraMs() >= vencimiento
-      ) {
-        throw new Error(
-          "REALIZACION_VENCIDA"
-        );
-      }
-
-      let calculo;
-
-      if (
-        sesionActual.activa ===
-        true
-      ) {
-        calculo =
-          calcularNuevoTiempo(
-            sesionActual,
-            realizacion,
-            tarea,
-            ahora
-          );
-      } else {
-        calculo = {
-          requerido:
-            obtenerTiempoRequeridoMs(
-              tarea
-            ),
-          tiempoRequerido:
-            Math.min(
-              obtenerTiempoRequeridoMs(
-                tarea
-              ),
-              Number(
-                sesionActual
-                  .tiempo_activo_valido ||
-                0
-              )
-            ),
-          tiempoAdicional:
-            Number(
-              sesionActual
-                .tiempo_adicional ??
-              realizacion
-                .tiempo_adicional ??
-              0
-            ),
-          tiempoPendiente:
-            0
-        };
-
-        calculo.alcanzado =
-          calculo.tiempoRequerido >=
-          calculo.requerido;
-      }
-
-      if (
-        calculo.tiempoRequerido <
-        calculo.requerido
-      ) {
-        if (
-          sesionActual.activa ===
-          true
-        ) {
-          transaction.update(
-            sesionRef,
-            {
-              tiempo_activo_valido:
-                calculo.tiempoRequerido,
-              tiempo_adicional:
-                calculo.tiempoAdicional,
-              ultimo_punto_conteo:
-                ahora,
-              ultima_actualizacion:
-                ahora
-            }
-          );
-        }
-
-        transaction.update(
-          realizacionRef,
-          {
-            tiempo_activo_valido:
-              calculo.tiempoRequerido,
-            tiempo_adicional:
-              calculo.tiempoAdicional,
-            ultima_actualizacion:
-              ahora
-          }
-        );
-
-        throw new Error(
-          "TIEMPO_INSUFICIENTE"
-        );
-      }
-
-      const tiempoValido =
-        calculo.tiempoRequerido;
-
-      const tiempoAdicional =
-        calculo.tiempoAdicional;
-
-      const datosRealizacionFinal = {
-        estado:
-          "completada",
-        fecha_fin:
-          ahora,
-        ultima_actualizacion:
-          ahora,
-        tiempo_activo_valido:
-          tiempoValido,
-        tiempo_adicional:
-          tiempoAdicional,
-        momento_requerido_alcanzado:
-          realizacion
-            .momento_requerido_alcanzado ||
-          ahora,
-        motivo_cierre:
-          "Tarea completada"
-      };
-
-      const datosHistorial = {
-        realizacion_id:
-          realizacion.realizacion_id,
-        usuario_id:
-          uid,
-        email:
-          usuario.email || null,
-        tarea_id:
-          tareaId,
-        titulo_tarea:
-          tarea.titulo || "",
-        fase:
-          usuario.fase ||
-          tarea.fase ||
-          null,
-        fecha_inicio:
-          realizacion.fecha_inicio ||
-          null,
-        fecha_fin:
-          ahora,
-        ultima_actualizacion:
-          ahora,
-        fecha_vencimiento:
-          realizacion.fecha_vencimiento ||
-          null,
-        estado:
-          "completada",
-        motivo_cierre:
-          "Tarea completada",
-        tiempo_requerido:
-          calculo.requerido,
-        tiempo_activo_valido:
-          tiempoValido,
-        tiempo_adicional:
-          tiempoAdicional,
-        momento_requerido_alcanzado:
-          realizacion
-            .momento_requerido_alcanzado ||
-          ahora,
-        cantidad_pausas:
-          realizacion.cantidad_pausas ||
-          0,
-        cantidad_reanudaciones:
-          realizacion.cantidad_reanudaciones ||
-          0,
-        pausas_relevantes:
-          realizacion.pausas_relevantes ||
-          0,
-        reanudaciones_relevantes:
-          realizacion.reanudaciones_relevantes ||
-          0,
-        interrupciones_relevantes:
-          realizacion.interrupciones_relevantes ||
-          0,
-        cambios_visibilidad_relevantes:
-          realizacion.cambios_visibilidad_relevantes ||
-          0,
-        heartbeats_esperados:
-          realizacion.heartbeats_esperados ||
-          0,
-        heartbeats_recibidos:
-          realizacion.heartbeats_recibidos ||
-          0,
-        heartbeats_perdidos:
-          realizacion.heartbeats_perdidos ||
-          0,
-        ultimo_heartbeat_valido:
-          realizacion.ultimo_heartbeat_valido ||
-          null,
-        ultima_comunicacion_valida:
-          realizacion.ultima_comunicacion_valida ||
-          null,
-        eventos_actividad:
-          realizacion.eventos_actividad ||
-          [],
-        eventos_tecnicos:
-          realizacion.eventos_tecnicos ||
-          []
-      };
-
-      transaction.set(
-        historialRef,
-        datosHistorial
-      );
-
-      transaction.update(
-        realizacionRef,
-        datosRealizacionFinal
-      );
-
-      transaction.update(
-        sesionRef,
-        {
-          activa:
-            false,
-          tiempo_activo_valido:
-            tiempoValido,
-          tiempo_adicional:
-            tiempoAdicional,
-          ultima_actualizacion:
-            ahora,
-          fecha_completada:
-            ahora
-        }
-      );
-
-      const progresoAnterior =
-        progresoSnapshot.exists
-          ? progresoSnapshot.data()
-          : {};
-
-      const vecesRealizada =
-        Number(
-          progresoAnterior
-            .veces_realizada ||
-          0
-        ) + 1;
-
-      const minutosRealizados =
-        minutosCompletos(
-          tiempoValido
-        );
-
-      transaction.set(
-        progresoRef,
-        {
-          usuario_id:
-            uid,
-          email:
-            usuario.email || null,
-          tarea_id:
-            tareaId,
-          titulo_tarea:
-            tarea.titulo || "",
-          fecha_realizada:
-            ahora,
-          minutos_realizados:
-            Number(
-              progresoAnterior
-                .minutos_realizados ||
-              0
-            ) +
-            minutosRealizados,
-          veces_realizada:
-            vecesRealizada,
-          ultima_realizacion_id:
-            realizacion
-              .realizacion_id
-        },
-        {
-          merge: true
-        }
-      );
-
-      const estadisticasAnteriores =
-        estadisticaSnapshot.exists
-          ? estadisticaSnapshot.data()
-          : {};
-
-      let diasTrabajados =
-        Number(
-          estadisticasAnteriores
-            .dias_trabajados ||
-          0
-        );
+    if (estadisticasSnap.exists) {
+      const estadisticas = estadisticasSnap.data();
 
       const ultimaFecha =
         timestampMs(
-          estadisticasAnteriores
-            .ultima_fecha_trabajo
+          estadisticas.ultima_fecha_trabajo
         );
 
-      const fechaActual =
-        new Date(
-          ahoraMs()
-        );
-
-      const fechaUltima =
-        ultimaFecha
-          ? new Date(
-              ultimaFecha
-            )
-          : null;
+      const fechaActual = new Date();
+      const fechaUltima = ultimaFecha
+        ? new Date(ultimaFecha)
+        : null;
 
       const mismoDia =
         fechaUltima &&
@@ -2447,655 +1199,401 @@ async function manejarCompletar(
         fechaUltima.getUTCDate() ===
           fechaActual.getUTCDate();
 
-      if (!mismoDia) {
-        diasTrabajados +=
-          1;
-      }
+      tx.update(estadisticasRef, {
+        email:
+          estadisticas.email ||
+          realizacionActual.email ||
+          null,
 
-      transaction.set(
-        estadisticaRef,
-        {
-          usuario_id:
-            uid,
-          email:
-            usuario.email || null,
-          tareas_realizadas:
-            Number(
-              estadisticasAnteriores
-                .tareas_realizadas ||
-              0
-            ) + 1,
-          minutos_acumulados:
-            Number(
-              estadisticasAnteriores
-                .minutos_acumulados ||
-              0
-            ) +
-            minutosRealizados,
-          dias_trabajados:
-            diasTrabajados,
-          ultima_fecha_trabajo:
-            ahora
-        },
-        {
-          merge: true
-        }
-      );
+        minutos_acumulados:
+          FieldValue.increment(
+            minutosCompletos(tiempoActivo)
+          ),
 
-      resultado = {
-        minutos_realizados:
-          minutosRealizados,
-        realizacion_id:
-          realizacion
-            .realizacion_id,
-        tiempo_adicional:
-          tiempoAdicional
-      };
+        tareas_realizadas:
+          FieldValue.increment(1),
+
+        dias_trabajados: mismoDia
+          ? Number(estadisticas.dias_trabajados || 0)
+          : FieldValue.increment(1),
+
+        ultima_fecha_trabajo: ahoraTimestamp,
+        usuario_id: uid
+      });
+    } else {
+      tx.set(estadisticasRef, {
+        email: realizacionActual.email || null,
+        minutos_acumulados:
+          minutosCompletos(tiempoActivo),
+        tareas_realizadas: 1,
+        dias_trabajados: 1,
+        ultima_fecha_trabajo: ahoraTimestamp,
+        usuario_id: uid
+      });
     }
-  );
+
+    resultado = {
+      tiempo_activo_valido: tiempoActivo,
+      completada: true
+    };
+  });
 
   return resultado;
 }
 
 async function obtenerEstado(
   uid,
-  tareaId,
+  usuario,
+  tarea,
   instanciaId
 ) {
-  const {
-    datos: usuario
-  } = await obtenerUsuario(
+  if (!faseCoincide(usuario, tarea)) {
+    throw new Error("TAREA_NO_CORRESPONDE");
+  }
+
+  let realizacion = await obtenerRealizacionUsuario(
+    tarea.ref.id,
     uid
   );
 
-  const tareaResultado =
-    await obtenerTarea(
-      tareaId
-    );
-
-  const tarea =
-    tareaResultado.datos;
-
-  validarFase(
-    tarea,
-    usuario
-  );
-
-  const retirada =
-    tareaRetirada(
-      tarea
-    );
-
-  const realizacionQuery =
-    await db
-      .collection(
-        "realizaciones_tareas"
-      )
-      .where(
-        "usuario_id",
-        "==",
-        uid
-      )
-      .where(
-        "tarea_id",
-        "==",
-        tareaId
-      )
-      .where(
-        "estado",
-        "==",
-        "pendiente"
-      )
-      .limit(1)
-      .get();
-
-  const tareaPublica = {
-    id:
-      tareaId,
-    categoria:
-      tarea.categoria || "",
-    titulo:
-      tarea.titulo || "",
-    descripcion:
-      tarea.descripcion || "",
-    tiempo_requerido:
-      Number(
-        tarea.tiempo_requerido ||
-        0
-      ),
-    link_url:
-      tarea.link_url || null
-  };
-
-  if (
-    realizacionQuery.empty
-  ) {
-    if (retirada) {
-      throw new Error(
-        "TAREA_NO_DISPONIBLE"
-      );
-    }
-
-    return {
-      ok: true,
-      tarea:
-        tareaPublica,
-      realizacion:
-        null,
-      sesion:
-        null
-    };
-  }
-
-  const realizacionDoc =
-    realizacionQuery.docs[0];
-
-  const realizacion =
-    realizacionDoc.data();
-
-  const vencimiento =
-    timestampMs(
+  if (realizacion) {
+    const vencimientoMs = timestampMs(
       realizacion.fecha_vencimiento
     );
 
-  if (
-    vencimiento !== null &&
-    ahoraMs() >= vencimiento
-  ) {
-    return {
-      ok: true,
-      tarea:
-        tareaPublica,
-      realizacion:
-        obtenerRealizacionPublica(
-          realizacion
-        ),
-      sesion:
-        null,
-      vencida:
-        true
-    };
+    if (vencimientoMs && vencimientoMs <= ahoraMs()) {
+      await cerrarRealizacionPorCaducidad(
+        realizacion.ref,
+        realizacion,
+        "vencimiento_7_dias"
+      );
+
+      realizacion = null;
+    }
+  }
+
+  if (!realizacion && tareaRetirada(tarea)) {
+    throw new Error("TAREA_NO_DISPONIBLE");
   }
 
   let sesion = null;
+  let calculado = null;
 
-  if (instanciaId) {
-    const sesionQuery =
-      await db
-        .collection(
-          "sesiones_tareas"
-        )
-        .where(
-          "realizacion_id",
-          "==",
-          realizacion.realizacion_id
-        )
-        .where(
-          "activa",
-          "==",
-          true
-        )
-        .limit(1)
-        .get();
+  if (realizacion) {
+    sesion = await obtenerSesionActual(
+      realizacion.ref.id,
+      instanciaId || null
+    );
 
-    if (
-      !sesionQuery.empty
-    ) {
-      sesion =
-        sesionQuery.docs[0]
-          .data();
-
-      if (
-        sesion.instancia_id !==
-        instanciaId
-      ) {
-        throw new Error(
-          "SESION_BLOQUEADA"
-        );
-      }
+    if (sesion) {
+      calculado = calcularNuevoTiempo(
+        sesion,
+        realizacion,
+        tarea
+      );
     }
   }
 
   return {
-    ok: true,
-    tarea:
-      tareaPublica,
-    realizacion:
-      obtenerRealizacionPublica(
-        realizacion
-      ),
-    sesion:
-      sesion
-        ? obtenerSesionPublica(
-            sesion
-          )
-        : null
+    tarea: tareaPublica(tarea),
+    realizacion: realizacion
+      ? realizacionPublica({
+          ...realizacion,
+          ...(calculado
+            ? {
+                tiempo_activo_valido:
+                  calculado.tiempo_activo_valido
+              }
+            : {})
+        })
+      : null,
+
+    sesion: sesion
+      ? sesionPublica(sesion, calculado)
+      : null
   };
 }
 
-module.exports =
-  async function handler(
-    req,
-    res
-  ) {
-    try {
-      if (
-        req.method !== "GET" &&
-        req.method !== "POST"
-      ) {
-        return respuesta(
-          res,
-          405,
-          {
-            error:
-              "Método no permitido."
-          }
-        );
-      }
+function mensajeError(error) {
+  const mensajes = {
+    NO_AUTORIZADO: [
+      401,
+      "No autorizado."
+    ],
 
-      const decoded =
-        await verificarToken(
-          req
-        );
+    USUARIO_NO_ENCONTRADO: [
+      404,
+      "Usuario no encontrado."
+    ],
 
-      const uid =
-        decoded.uid;
+    USUARIO_INACTIVO: [
+      403,
+      "El usuario está inactivo."
+    ],
 
-      const {
-        datos: usuario
-      } =
-        await obtenerUsuario(
-          uid
-        );
+    TAREA_ID_REQUERIDO: [
+      400,
+      "Falta el identificador de la tarea."
+    ],
 
-      if (
-        req.method === "GET"
-      ) {
-        const tareaId =
-          String(
-            req.query?.id ||
-              ""
-          ).trim();
+    TAREA_NO_ENCONTRADA: [
+      404,
+      "La tarea no existe."
+    ],
 
-        const instanciaId =
-          String(
-            req.query
-              ?.instancia_id ||
-              ""
-          ).trim();
+    TAREA_NO_DISPONIBLE: [
+      400,
+      "La tarea no está disponible."
+    ],
 
-        if (!tareaId) {
-          return respuesta(
-            res,
-            400,
-            {
-              error:
-                "No se pudo abrir la tarea."
-            }
-          );
-        }
+    TAREA_NO_CORRESPONDE: [
+      403,
+      "La tarea no corresponde al usuario."
+    ],
 
-        const estado =
-          await obtenerEstado(
-            uid,
-            tareaId,
-            instanciaId
-          );
+    TIEMPO_REQUERIDO_INVALIDO: [
+      400,
+      "El tiempo requerido de la tarea no es válido."
+    ],
 
-        return respuesta(
-          res,
-          200,
-          estado
-        );
-      }
+    INSTANCIA_ID_REQUERIDO: [
+      400,
+      "Falta el identificador de la sesión."
+    ],
 
-      const body =
-        req.body &&
-        typeof req.body ===
-          "object"
-          ? req.body
-          : {};
+    SESION_BLOQUEADA: [
+      409,
+      "La sesión pertenece a otra instancia."
+    ],
 
-      const accion =
-        String(
-          body.accion || ""
-        ).trim();
+    OTRA_TAREA_ACTIVA: [
+      409,
+      "Ya existe otra tarea activa."
+    ],
 
-      const tareaId =
-        String(
-          body.tarea_id || ""
-        ).trim();
+    SESION_NO_ACTIVA: [
+      409,
+      "No hay una sesión activa."
+    ],
 
-      const instanciaId =
-        String(
-          body.instancia_id || ""
-        ).trim();
+    SESION_PAUSADA: [
+      409,
+      "La sesión fue pausada por falta de comunicación."
+    ],
 
-      if (
-        !accion ||
-        !tareaId
-      ) {
-        return respuesta(
-          res,
-          400,
-          {
-            error:
-              "Solicitud inválida."
-          }
-        );
-      }
+    SESION_NO_ENCONTRADA: [
+      404,
+      "No se encontró la sesión."
+    ],
 
-      const tareaResultado =
-        await obtenerTarea(
-          tareaId
-        );
+    REALIZACION_NO_ENCONTRADA: [
+      404,
+      "No se encontró la realización."
+    ],
 
-      const tarea =
-        tareaResultado.datos;
+    REALIZACION_NO_DISPONIBLE: [
+      409,
+      "La realización ya no está disponible."
+    ],
 
-      validarFase(
+    REALIZACION_VENCIDA: [
+      409,
+      "La realización venció."
+    ],
+
+    TIEMPO_INSUFICIENTE: [
+      400,
+      "Todavía no se alcanzó el tiempo requerido."
+    ]
+  };
+
+  const clave =
+    error && error.message
+      ? error.message
+      : "ERROR_INTERNO";
+
+  return (
+    mensajes[clave] || [
+      500,
+      "Ocurrió un error al procesar la tarea."
+    ]
+  );
+}
+
+module.exports = async function handler(req, res) {
+  try {
+    if (req.method !== "GET" && req.method !== "POST") {
+      return respuesta(res, 405, {
+        ok: false,
+        error: "METODO_NO_PERMITIDO"
+      });
+    }
+
+    const decoded = await verificarToken(req);
+    const uid = decoded.uid;
+
+    const usuario = await obtenerUsuario(uid);
+
+    let tareaId;
+    let instanciaId = null;
+    let accion = null;
+
+    if (req.method === "GET") {
+      tareaId = req.query?.id;
+      instanciaId = req.query?.instancia_id || null;
+      accion = "estado";
+    } else {
+      tareaId = req.body?.tarea_id;
+      instanciaId = req.body?.instancia_id || null;
+      accion = req.body?.accion;
+    }
+
+    const tarea = await obtenerTarea(tareaId);
+
+    if (accion === "estado") {
+      const estado = await obtenerEstado(
+        uid,
+        usuario,
         tarea,
-        usuario
+        instanciaId
       );
 
-      if (
-        accion ===
-        "iniciar"
-      ) {
-        const resultado =
-          await manejarInicio(
-            uid,
-            usuario,
-            tareaId,
-            tarea,
-            instanciaId
-          );
+      return respuesta(res, 200, {
+        ok: true,
+        ...estado
+      });
+    }
 
-        return respuesta(
-          res,
-          200,
-          {
-            ok: true,
-            realizacion:
-              obtenerRealizacionPublica(
-                resultado.realizacion
-              ),
-            sesion:
-              obtenerSesionPublica(
-                resultado.sesion
-              )
-          }
-        );
-      }
+    if (!instanciaId) {
+      throw new Error("INSTANCIA_ID_REQUERIDO");
+    }
 
-      if (
-        accion ===
-        "actividad"
-      ) {
-        const tipoActividad =
-          typeof body.tipo_actividad ===
-          "string"
-            ? body.tipo_actividad
-            : "interaccion";
-
-        const resultado =
-          await manejarActividad(
-            uid,
-            tareaId,
-            tarea,
-            instanciaId,
-            tipoActividad
-          );
-
-        return respuesta(
-          res,
-          200,
-          resultado
-        );
-      }
-
-      if (
-        accion ===
-        "heartbeat"
-      ) {
-        const resultado =
-          await manejarHeartbeat(
-            uid,
-            tareaId,
-            instanciaId
-          );
-
-        return respuesta(
-          res,
-          200,
-          resultado
-        );
-      }
-
-      if (
-        accion ===
-        "pausar"
-      ) {
-        const motivo =
-          typeof body.motivo ===
-          "string"
-            ? body.motivo
-            : "pausa";
-
-        const resultado =
-          await manejarPausa(
-            uid,
-            tareaId,
-            instanciaId,
-            motivo
-          );
-
-        return respuesta(
-          res,
-          200,
-          resultado
-        );
-      }
-
-      if (
-        accion ===
-        "completar"
-      ) {
-        const resultado =
-          await manejarCompletar(
-            uid,
-            usuario,
-            tareaId,
-            tarea,
-            instanciaId
-          );
-
-        return respuesta(
-          res,
-          200,
-          {
-            ok: true,
-            completada:
-              true,
-            minutos_realizados:
-              resultado
-                .minutos_realizados,
-            tiempo_adicional:
-              resultado
-                .tiempo_adicional
-          }
-        );
-      }
-
-      if (
-        accion ===
-        "estado"
-      ) {
-        const estado =
-          await obtenerEstado(
-            uid,
-            tareaId,
-            instanciaId
-          );
-
-        return respuesta(
-          res,
-          200,
-          estado
-        );
-      }
-
-      return respuesta(
-        res,
-        400,
-        {
-          error:
-            "Acción no válida."
-        }
+    if (accion === "iniciar") {
+      const resultado = await manejarInicio(
+        uid,
+        usuario,
+        tarea,
+        instanciaId
       );
-    } catch (error) {
-      const codigo =
-        error?.message || "";
 
-      if (
-        codigo ===
-          "NO_AUTORIZADO" ||
-        codigo ===
-          "auth/id-token-expired" ||
-        codigo ===
-          "auth/argument-error"
-      ) {
-        return respuesta(
-          res,
-          401,
-          {
-            error:
-              "La sesión no es válida."
-          }
-        );
-      }
+      return respuesta(res, 200, {
+        ok: true,
+        tarea: tareaPublica(tarea),
+        realizacion:
+          realizacionPublica(resultado.realizacion),
+        sesion: sesionPublica(
+          resultado.sesion
+        )
+      });
+    }
 
-      if (
-        codigo ===
-          "USUARIO_INACTIVO" ||
-        codigo ===
-          "USUARIO_NO_EXISTE"
-      ) {
-        return respuesta(
-          res,
-          403,
-          {
-            error:
-              "No se puede acceder a esta tarea."
-          }
-        );
-      }
+    const realizacion =
+      await obtenerRealizacionUsuario(
+        tarea.ref.id,
+        uid
+      );
 
-      if (
-        codigo ===
-          "TAREA_NO_DISPONIBLE" ||
-        codigo ===
-          "TAREA_NO_EXISTE" ||
-        codigo ===
-          "REALIZACION_CERRADA" ||
-        codigo ===
-          "REALIZACION_YA_CERRADA" ||
-        codigo ===
-          "REALIZACION_VENCIDA"
-      ) {
-        return respuesta(
-          res,
-          403,
-          {
-            error:
-              "Esta tarea ya no está disponible."
-          }
-        );
-      }
-
-      if (
-        codigo ===
-        "SESION_BLOQUEADA"
-      ) {
-        return respuesta(
-          res,
-          409,
-          {
-            error:
-              "La tarea ya está abierta en otra ventana."
-          }
-        );
-      }
-
-      if (
-        codigo ===
-        "OTRA_TAREA_ACTIVA"
-      ) {
-        return respuesta(
-          res,
-          409,
-          {
-            error:
-              "Ya tienes otra tarea activa."
-          }
-        );
-      }
-
-      if (
-        codigo ===
-          "SESION_NO_ACTIVA" ||
-        codigo ===
-          "SESION_PAUSADA"
-      ) {
-        return respuesta(
-          res,
-          409,
-          {
-            error:
-              "La sesión de la tarea está pausada."
-          }
-        );
-      }
-
-      if (
-        codigo ===
-        "TIEMPO_INSUFICIENTE"
-      ) {
-        return respuesta(
-          res,
-          400,
-          {
-            error:
-              "Todavía no se alcanzó el tiempo requerido."
-          }
-        );
-      }
-
-      if (
-        codigo ===
-          "TAREA_INVALIDA" ||
-        codigo ===
-          "TIEMPO_INVALIDO" ||
-        codigo ===
-          "INSTANCIA_INVALIDA"
-      ) {
-        return respuesta(
-          res,
-          400,
-          {
-            error:
-              "La solicitud no es válida."
-          }
-        );
-      }
-
-      return respuesta(
-        res,
-        500,
-        {
-          error:
-            "No se pudo procesar la tarea."
-        }
+    if (!realizacion) {
+      throw new Error(
+        "REALIZACION_NO_DISPONIBLE"
       );
     }
-  };
+
+    const vencimientoMs = timestampMs(
+      realizacion.fecha_vencimiento
+    );
+
+    if (
+      vencimientoMs &&
+      vencimientoMs <= ahoraMs()
+    ) {
+      await cerrarRealizacionPorCaducidad(
+        realizacion.ref,
+        realizacion,
+        "vencimiento_7_dias"
+      );
+
+      throw new Error(
+        "REALIZACION_VENCIDA"
+      );
+    }
+
+    if (accion === "actividad") {
+      await manejarActividad(
+        uid,
+        tarea,
+        realizacion,
+        instanciaId
+      );
+
+      return respuesta(res, 200, {
+        ok: true
+      });
+    }
+
+    if (accion === "heartbeat") {
+      await manejarHeartbeat(
+        uid,
+        tarea,
+        realizacion,
+        instanciaId
+      );
+
+      return respuesta(res, 200, {
+        ok: true
+      });
+    }
+
+    if (accion === "pausar") {
+      const resultado = await manejarPausa(
+        uid,
+        tarea,
+        realizacion,
+        instanciaId
+      );
+
+      return respuesta(res, 200, {
+        ok: true,
+        realizacion:
+          realizacionPublica(
+            resultado.realizacion
+          ),
+        sesion: sesionPublica(
+          resultado.sesion
+        )
+      });
+    }
+
+    if (accion === "completar") {
+      const resultado =
+        await manejarCompletar(
+          uid,
+          tarea,
+          realizacion,
+          instanciaId
+        );
+
+      return respuesta(res, 200, {
+        ok: true,
+        completada: true,
+        tiempo_activo_valido:
+          resultado.tiempo_activo_valido
+      });
+    }
+
+    return respuesta(res, 400, {
+      ok: false,
+      error: "ACCION_NO_VALIDA"
+    });
+  } catch (error) {
+    const [status, mensaje] =
+      mensajeError(error);
+
+    return respuesta(res, status, {
+      ok: false,
+      error:
+        error?.message || "ERROR_INTERNO",
+      mensaje
+    });
+  }
+};
