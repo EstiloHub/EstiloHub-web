@@ -19,8 +19,8 @@ const { FieldValue, Timestamp } = admin.firestore;
 
 const MAX_ACTIVE_GAP_MS = 23000;
 const ACTIVITY_WINDOW_MS = 30000;
-const HEARTBEAT_INTERVAL_EXPECTED_MS = 10000;
-const DURACION_REALIZACION_MS = 7 * 24 * 60 * 60 * 1000;
+const DURACION_REALIZACION_MS =
+  7 * 24 * 60 * 60 * 1000;
 
 function respuesta(res, status, datos) {
   return res.status(status).json(datos);
@@ -56,10 +56,6 @@ function minutosCompletos(ms) {
   return Math.floor(Math.max(0, ms) / 60000);
 }
 
-function generarId() {
-  return `${Date.now()}_${Math.random().toString(36).slice(2, 12)}`;
-}
-
 function obtenerTiempoRequeridoMs(tarea) {
   const minutos = Number(tarea?.tiempo_requerido);
 
@@ -73,21 +69,29 @@ function obtenerTiempoRequeridoMs(tarea) {
 function faseCoincide(usuario, tarea) {
   if (!usuario || !tarea) return false;
 
-  if (usuario.fase === undefined || usuario.fase === null) {
+  if (
+    usuario.fase === undefined ||
+    usuario.fase === null
+  ) {
     return Number(tarea.fase) === 1;
   }
 
-  return String(usuario.fase) === String(tarea.fase);
+  return (
+    String(usuario.fase) ===
+    String(tarea.fase)
+  );
 }
 
 async function verificarToken(req) {
-  const authorization = req.headers.authorization || "";
+  const authorization =
+    req.headers.authorization || "";
 
   if (!authorization.startsWith("Bearer ")) {
     throw new Error("NO_AUTORIZADO");
   }
 
-  const token = authorization.substring(7).trim();
+  const token =
+    authorization.substring(7).trim();
 
   if (!token) {
     throw new Error("NO_AUTORIZADO");
@@ -121,7 +125,9 @@ async function obtenerTarea(tareaId) {
     throw new Error("TAREA_ID_REQUERIDO");
   }
 
-  const ref = db.collection("tareas").doc(tareaId);
+  const ref =
+    db.collection("tareas").doc(tareaId);
+
   const snap = await ref.get();
 
   if (!snap.exists) {
@@ -139,7 +145,10 @@ function tareaRetirada(tarea) {
 }
 
 function tareaDisponibleParaNuevaRealizacion(tarea) {
-  return tarea.activa === true && !tareaRetirada(tarea);
+  return (
+    tarea.activa === true &&
+    !tareaRetirada(tarea)
+  );
 }
 
 function tareaPublica(tarea) {
@@ -150,7 +159,8 @@ function tareaPublica(tarea) {
     categoria: tarea.categoria || "",
     fase: tarea.fase ?? null,
     link_url: tarea.link_url || "",
-    tiempo_requerido: Number(tarea.tiempo_requerido) || 0
+    tiempo_requerido:
+      Number(tarea.tiempo_requerido) || 0
   };
 }
 
@@ -161,14 +171,22 @@ function realizacionPublica(realizacion) {
     id: realizacion.ref.id,
     tarea_id: realizacion.tarea_id,
     usuario_id: realizacion.usuario_id,
-    fecha_inicio: realizacion.fecha_inicio || null,
-    fecha_vencimiento: realizacion.fecha_vencimiento || null,
+    fecha_inicio:
+      realizacion.fecha_inicio || null,
+    fecha_vencimiento:
+      realizacion.fecha_vencimiento || null,
     estado: realizacion.estado || null,
-    tiempo_activo_valido: Number(realizacion.tiempo_activo_valido) || 0
+    tiempo_activo_valido:
+      Number(
+        realizacion.tiempo_activo_valido
+      ) || 0
   };
 }
 
-function sesionPublica(sesion, tiempoCalculado = null) {
+function sesionPublica(
+  sesion,
+  tiempoCalculado = null
+) {
   if (!sesion) return null;
 
   const tiempoActivo =
@@ -178,15 +196,21 @@ function sesionPublica(sesion, tiempoCalculado = null) {
 
   return {
     activa: sesion.activa === true,
-    instancia_id: sesion.instancia_id || null,
+    instancia_id:
+      sesion.instancia_id || null,
     tiempo_activo_valido: tiempoActivo,
     tiempo_requerido_alcanzado:
-      tiempoActivo >= Number(sesion.tiempo_requerido_ms || 0),
-    bloqueada: sesion.bloqueada === true
+      tiempoActivo >=
+      Number(sesion.tiempo_requerido_ms || 0),
+    bloqueada:
+      sesion.bloqueada === true
   };
 }
 
-async function obtenerRealizacionUsuario(tareaId, uid) {
+async function obtenerRealizacionUsuario(
+  tareaId,
+  uid
+) {
   const snap = await db
     .collection("realizaciones_tareas")
     .where("tarea_id", "==", tareaId)
@@ -205,7 +229,11 @@ async function obtenerRealizacionUsuario(tareaId, uid) {
   };
 }
 
-async function cerrarRealizacionPorCaducidad(ref, realizacion, motivo) {
+async function cerrarRealizacionPorCaducidad(
+  ref,
+  realizacion,
+  motivo
+) {
   const ahoraTimestamp = ahora();
 
   await db.runTransaction(async (tx) => {
@@ -215,9 +243,13 @@ async function cerrarRealizacionPorCaducidad(ref, realizacion, motivo) {
 
     const actual = actualSnap.data();
 
-    if (actual.estado !== "pendiente") return;
+    if (actual.estado !== "pendiente") {
+      return;
+    }
 
-    const historialRef = db.collection("historial_realizaciones").doc();
+    const historialRef =
+      db.collection("historial_realizaciones")
+        .doc();
 
     tx.update(ref, {
       estado: "vencida",
@@ -229,27 +261,48 @@ async function cerrarRealizacionPorCaducidad(ref, realizacion, motivo) {
       tarea_id: actual.tarea_id,
       usuario_id: actual.usuario_id,
       email: actual.email || null,
-      titulo_tarea: actual.titulo_tarea || null,
-      fecha_inicio: actual.fecha_inicio || null,
-      fecha_vencimiento: actual.fecha_vencimiento || null,
+      titulo_tarea:
+        actual.titulo_tarea || null,
+      fecha_inicio:
+        actual.fecha_inicio || null,
+      fecha_vencimiento:
+        actual.fecha_vencimiento || null,
       fecha_cierre: ahoraTimestamp,
       motivo_cierre: motivo,
       estado_final: "vencida",
-      tiempo_activo_valido: Number(actual.tiempo_activo_valido) || 0,
-      tiempo_adicional: Number(actual.tiempo_adicional) || 0
+      tiempo_activo_valido:
+        Number(
+          actual.tiempo_activo_valido
+        ) || 0,
+      tiempo_adicional:
+        Number(actual.tiempo_adicional) || 0
     });
   });
 
   return null;
 }
 
-async function obtenerOCrearRealizacion(tarea, usuario, uid) {
-  let realizacion = await obtenerRealizacionUsuario(tarea.ref.id, uid);
+async function obtenerOCrearRealizacion(
+  tarea,
+  usuario,
+  uid
+) {
+  let realizacion =
+    await obtenerRealizacionUsuario(
+      tarea.ref.id,
+      uid
+    );
 
   if (realizacion) {
-    const vencimientoMs = timestampMs(realizacion.fecha_vencimiento);
+    const vencimientoMs =
+      timestampMs(
+        realizacion.fecha_vencimiento
+      );
 
-    if (vencimientoMs && vencimientoMs <= ahoraMs()) {
+    if (
+      vencimientoMs &&
+      vencimientoMs <= ahoraMs()
+    ) {
       await cerrarRealizacionPorCaducidad(
         realizacion.ref,
         realizacion,
@@ -264,28 +317,45 @@ async function obtenerOCrearRealizacion(tarea, usuario, uid) {
     return realizacion;
   }
 
-  if (!tareaDisponibleParaNuevaRealizacion(tarea)) {
-    throw new Error("TAREA_NO_DISPONIBLE");
+  if (
+    !tareaDisponibleParaNuevaRealizacion(
+      tarea
+    )
+  ) {
+    throw new Error(
+      "TAREA_NO_DISPONIBLE"
+    );
   }
 
   if (!faseCoincide(usuario, tarea)) {
-    throw new Error("TAREA_NO_CORRESPONDE");
+    throw new Error(
+      "TAREA_NO_CORRESPONDE"
+    );
   }
 
   const fechaInicio = ahora();
-  const fechaVencimiento = Timestamp.fromMillis(
-    fechaInicio.toMillis() + DURACION_REALIZACION_MS
-  );
 
-  const ref = db.collection("realizaciones_tareas").doc();
+  const fechaVencimiento =
+    Timestamp.fromMillis(
+      fechaInicio.toMillis() +
+        DURACION_REALIZACION_MS
+    );
+
+  const ref =
+    db.collection("realizaciones_tareas")
+      .doc();
 
   const datos = {
     tarea_id: tarea.ref.id,
     usuario_id: uid,
     email: usuario.email || null,
-    titulo_tarea: tarea.titulo || null,
+    titulo_tarea:
+      tarea.titulo || null,
+
     fecha_inicio: fechaInicio,
-    fecha_vencimiento: fechaVencimiento,
+    fecha_vencimiento:
+      fechaVencimiento,
+
     estado: "pendiente",
 
     tiempo_activo_valido: 0,
@@ -305,7 +375,9 @@ async function obtenerOCrearRealizacion(tarea, usuario, uid) {
   };
 }
 
-async function obtenerSesionActivaUsuario(uid) {
+async function obtenerSesionActivaUsuario(
+  uid
+) {
   const snap = await db
     .collection("sesiones_tareas")
     .where("usuario_id", "==", uid)
@@ -322,15 +394,26 @@ async function obtenerSesionActivaUsuario(uid) {
     };
 
     const ultimaComunicacion =
-      timestampMs(sesion.ultima_comunicacion_valida) ??
-      timestampMs(sesion.ultimo_punto_conteo) ??
-      timestampMs(sesion.fecha_inicio);
+      timestampMs(
+        sesion.ultima_comunicacion_valida
+      ) ??
+      timestampMs(
+        sesion.ultimo_punto_conteo
+      ) ??
+      timestampMs(
+        sesion.fecha_inicio
+      );
 
     if (
       ultimaComunicacion &&
-      ahoraMs() - ultimaComunicacion > MAX_ACTIVE_GAP_MS
+      ahoraMs() -
+        ultimaComunicacion >
+        MAX_ACTIVE_GAP_MS
     ) {
-      await cerrarSesionPorInactividad(sesion);
+      await cerrarSesionPorInactividad(
+        sesion
+      );
+
       continue;
     }
 
@@ -340,10 +423,16 @@ async function obtenerSesionActivaUsuario(uid) {
   return null;
 }
 
-async function obtenerSesionDeRealizacion(realizacionId) {
+async function obtenerSesionDeRealizacion(
+  realizacionId
+) {
   const snap = await db
     .collection("sesiones_tareas")
-    .where("realizacion_id", "==", realizacionId)
+    .where(
+      "realizacion_id",
+      "==",
+      realizacionId
+    )
     .where("activa", "==", true)
     .limit(1)
     .get();
@@ -358,156 +447,242 @@ async function obtenerSesionDeRealizacion(realizacionId) {
   };
 }
 
-function tiempoContableHastaAhora(sesion, ahoraActualMs = ahoraMs()) {
-  if (!sesion || sesion.activa !== true) return 0;
+function tiempoContableHastaAhora(
+  sesion,
+  ahoraActualMs = ahoraMs()
+) {
+  if (!sesion || sesion.activa !== true) {
+    return 0;
+  }
 
   const ultimoPunto =
-    timestampMs(sesion.ultimo_punto_conteo) ??
-    timestampMs(sesion.fecha_inicio);
+    timestampMs(
+      sesion.ultimo_punto_conteo
+    ) ??
+    timestampMs(
+      sesion.fecha_inicio
+    );
 
   const ultimaComunicacion =
-    timestampMs(sesion.ultima_comunicacion_valida) ??
+    timestampMs(
+      sesion.ultima_comunicacion_valida
+    ) ??
     ultimoPunto;
 
-  if (!ultimoPunto || !ultimaComunicacion) return 0;
+  if (
+    !ultimoPunto ||
+    !ultimaComunicacion
+  ) {
+    return 0;
+  }
 
-  const desdePunto = Math.max(0, ahoraActualMs - ultimoPunto);
+  const desdePunto = Math.max(
+    0,
+    ahoraActualMs - ultimoPunto
+  );
+
   const desdeComunicacion = Math.max(
     0,
-    ahoraActualMs - ultimaComunicacion
+    ahoraActualMs -
+      ultimaComunicacion
   );
 
-  const limiteComunicacion = Math.min(
-    desdeComunicacion,
-    MAX_ACTIVE_GAP_MS
-  );
+  const limiteComunicacion =
+    Math.min(
+      desdeComunicacion,
+      MAX_ACTIVE_GAP_MS
+    );
 
-  const limiteActividad = Math.min(
-    desdePunto,
-    ACTIVITY_WINDOW_MS
-  );
+  const limiteActividad =
+    Math.min(
+      desdePunto,
+      ACTIVITY_WINDOW_MS
+    );
 
-  return Math.min(limiteComunicacion, limiteActividad);
+  return Math.min(
+    limiteComunicacion,
+    limiteActividad
+  );
 }
 
-function calcularNuevoTiempo(sesion, realizacion, tarea) {
-  const requeridoMs = obtenerTiempoRequeridoMs(tarea);
+function calcularNuevoTiempo(
+  sesion,
+  realizacion,
+  tarea
+) {
+  const requeridoMs =
+    obtenerTiempoRequeridoMs(tarea);
 
   const activoActual = Math.max(
     0,
-    Number(sesion.tiempo_activo_valido) ||
-      Number(realizacion.tiempo_activo_valido) ||
+    Number(
+      sesion.tiempo_activo_valido
+    ) ||
+      Number(
+        realizacion.tiempo_activo_valido
+      ) ||
       0
   );
 
   const adicionalActual = Math.max(
     0,
-    Number(sesion.tiempo_adicional) ||
-      Number(realizacion.tiempo_adicional) ||
+    Number(
+      sesion.tiempo_adicional
+    ) ||
+      Number(
+        realizacion.tiempo_adicional
+      ) ||
       0
   );
 
-  const pendiente = tiempoContableHastaAhora(sesion);
+  const pendiente =
+    tiempoContableHastaAhora(
+      sesion
+    );
 
-  const faltanteRequerido = Math.max(
-    0,
-    requeridoMs - activoActual
-  );
+  const faltanteRequerido =
+    Math.max(
+      0,
+      requeridoMs - activoActual
+    );
 
-  const paraRequerido = Math.min(
-    pendiente,
-    faltanteRequerido
-  );
+  const paraRequerido =
+    Math.min(
+      pendiente,
+      faltanteRequerido
+    );
 
-  const restante = Math.max(
-    0,
-    pendiente - paraRequerido
-  );
+  const restante =
+    Math.max(
+      0,
+      pendiente - paraRequerido
+    );
 
-  const nuevoActivo = activoActual + paraRequerido;
-  const nuevoAdicional = adicionalActual + restante;
+  const nuevoActivo =
+    activoActual + paraRequerido;
+
+  const nuevoAdicional =
+    adicionalActual + restante;
 
   return {
     requerido_ms: requeridoMs,
-    tiempo_activo_valido: nuevoActivo,
-    tiempo_adicional: nuevoAdicional,
-    tiempo_requerido_alcanzado: nuevoActivo >= requeridoMs
+    tiempo_activo_valido:
+      nuevoActivo,
+    tiempo_adicional:
+      nuevoAdicional,
+    tiempo_requerido_alcanzado:
+      nuevoActivo >= requeridoMs
   };
 }
 
-async function registrarTiempoSesion(
+function registrarTiempoSesion(
   tx,
   sesion,
   realizacion,
-  tarea,
   valores,
   ahoraTimestamp
 ) {
   tx.update(sesion.ref, {
-    tiempo_activo_valido: valores.tiempo_activo_valido,
-    tiempo_adicional: valores.tiempo_adicional,
-    ultimo_punto_conteo: ahoraTimestamp
+    tiempo_activo_valido:
+      valores.tiempo_activo_valido,
+    tiempo_adicional:
+      valores.tiempo_adicional,
+    ultimo_punto_conteo:
+      ahoraTimestamp
   });
 
   tx.update(realizacion.ref, {
-    tiempo_activo_valido: valores.tiempo_activo_valido,
-    tiempo_adicional: valores.tiempo_adicional
+    tiempo_activo_valido:
+      valores.tiempo_activo_valido,
+    tiempo_adicional:
+      valores.tiempo_adicional
   });
 }
 
-async function cerrarSesionPorInactividad(sesion) {
-  const realizacionRef = db
-    .collection("realizaciones_tareas")
-    .doc(sesion.realizacion_id);
+async function cerrarSesionPorInactividad(
+  sesion
+) {
+  const realizacionRef =
+    db.collection("realizaciones_tareas")
+      .doc(sesion.realizacion_id);
 
   await db.runTransaction(async (tx) => {
-    const [sesionSnap, realizacionSnap] = await Promise.all([
-      tx.get(sesion.ref),
-      tx.get(realizacionRef)
-    ]);
+    const sesionSnap =
+      await tx.get(sesion.ref);
 
-    if (!sesionSnap.exists || !realizacionSnap.exists) return;
+    const realizacionSnap =
+      await tx.get(realizacionRef);
 
-    const sesionActual = sesionSnap.data();
+    if (
+      !sesionSnap.exists ||
+      !realizacionSnap.exists
+    ) {
+      return;
+    }
+
+    const sesionActual = {
+      ref: sesion.ref,
+      ...sesionSnap.data()
+    };
+
     const realizacion = {
       ref: realizacionRef,
       ...realizacionSnap.data()
     };
 
-    if (sesionActual.activa !== true) return;
+    if (sesionActual.activa !== true) {
+      return;
+    }
 
     const tareaFicticia = {
-      tiempo_requerido: sesionActual.tiempo_requerido_minutos
+      tiempo_requerido:
+        sesionActual
+          .tiempo_requerido_minutos
     };
 
-    const valores = calcularNuevoTiempo(
-      sesionActual,
-      realizacion,
-      tareaFicticia
-    );
+    const valores =
+      calcularNuevoTiempo(
+        sesionActual,
+        realizacion,
+        tareaFicticia
+      );
 
     const ahoraTimestamp = ahora();
 
     tx.update(sesion.ref, {
       activa: false,
-      tiempo_activo_valido: valores.tiempo_activo_valido,
-      tiempo_adicional: valores.tiempo_adicional,
-      ultima_comunicacion_valida: ahoraTimestamp,
-      ultimo_punto_conteo: ahoraTimestamp,
-      motivo_pausa: "inactividad_comunicacion"
+      tiempo_activo_valido:
+        valores.tiempo_activo_valido,
+      tiempo_adicional:
+        valores.tiempo_adicional,
+      ultima_comunicacion_valida:
+        ahoraTimestamp,
+      ultimo_punto_conteo:
+        ahoraTimestamp,
+      motivo_pausa:
+        "inactividad_comunicacion"
     });
 
     tx.update(realizacionRef, {
-      tiempo_activo_valido: valores.tiempo_activo_valido,
-      tiempo_adicional: valores.tiempo_adicional
+      tiempo_activo_valido:
+        valores.tiempo_activo_valido,
+      tiempo_adicional:
+        valores.tiempo_adicional
     });
   });
 }
 
-async function obtenerSesionActual(realizacionId, instanciaId) {
+async function obtenerSesionActual(
+  realizacionId,
+  instanciaId
+) {
   const snap = await db
     .collection("sesiones_tareas")
-    .where("realizacion_id", "==", realizacionId)
+    .where(
+      "realizacion_id",
+      "==",
+      realizacionId
+    )
     .where("activa", "==", true)
     .limit(1)
     .get();
@@ -522,51 +697,75 @@ async function obtenerSesionActual(realizacionId, instanciaId) {
   };
 
   const ultimaComunicacion =
-    timestampMs(sesion.ultima_comunicacion_valida) ??
-    timestampMs(sesion.ultimo_punto_conteo) ??
-    timestampMs(sesion.fecha_inicio);
+    timestampMs(
+      sesion.ultima_comunicacion_valida
+    ) ??
+    timestampMs(
+      sesion.ultimo_punto_conteo
+    ) ??
+    timestampMs(
+      sesion.fecha_inicio
+    );
 
   if (
     ultimaComunicacion &&
-    ahoraMs() - ultimaComunicacion > MAX_ACTIVE_GAP_MS
+    ahoraMs() -
+      ultimaComunicacion >
+      MAX_ACTIVE_GAP_MS
   ) {
-    await cerrarSesionPorInactividad(sesion);
+    await cerrarSesionPorInactividad(
+      sesion
+    );
+
     return null;
   }
 
-  if (instanciaId && sesion.instancia_id !== instanciaId) {
-    throw new Error("SESION_BLOQUEADA");
+  if (
+    instanciaId &&
+    sesion.instancia_id !== instanciaId
+  ) {
+    throw new Error(
+      "SESION_BLOQUEADA"
+    );
   }
 
   return sesion;
 }
 
-async function manejarInicio(uid, usuario, tarea, instanciaId) {
+async function manejarInicio(
+  uid,
+  usuario,
+  tarea,
+  instanciaId
+) {
   if (!instanciaId) {
-    throw new Error("INSTANCIA_ID_REQUERIDO");
+    throw new Error(
+      "INSTANCIA_ID_REQUERIDO"
+    );
   }
 
   if (!faseCoincide(usuario, tarea)) {
-    throw new Error("TAREA_NO_CORRESPONDE");
+    throw new Error(
+      "TAREA_NO_CORRESPONDE"
+    );
   }
 
-  const otraSesion = await obtenerSesionActivaUsuario(uid);
-
-  if (otraSesion) {
-    throw new Error("OTRA_TAREA_ACTIVA");
-  }
-
-  let realizacion = await obtenerRealizacionUsuario(
-    tarea.ref.id,
-    uid
-  );
-
-  if (realizacion) {
-    const vencimientoMs = timestampMs(
-      realizacion.fecha_vencimiento
+  let realizacion =
+    await obtenerRealizacionUsuario(
+      tarea.ref.id,
+      uid
     );
 
-    if (vencimientoMs && vencimientoMs <= ahoraMs()) {
+  if (realizacion) {
+    const vencimientoMs =
+      timestampMs(
+        realizacion.fecha_vencimiento
+      );
+
+    if (
+      vencimientoMs &&
+      vencimientoMs <= ahoraMs()
+    ) {
       await cerrarRealizacionPorCaducidad(
         realizacion.ref,
         realizacion,
@@ -578,17 +777,19 @@ async function manejarInicio(uid, usuario, tarea, instanciaId) {
   }
 
   if (!realizacion) {
-    realizacion = await obtenerOCrearRealizacion(
-      tarea,
-      usuario,
-      uid
-    );
+    realizacion =
+      await obtenerOCrearRealizacion(
+        tarea,
+        usuario,
+        uid
+      );
   }
 
-  const sesionExistente = await obtenerSesionActual(
-    realizacion.ref.id,
-    instanciaId
-  );
+  const sesionExistente =
+    await obtenerSesionActual(
+      realizacion.ref.id,
+      instanciaId
+    );
 
   if (sesionExistente) {
     return {
@@ -597,71 +798,102 @@ async function manejarInicio(uid, usuario, tarea, instanciaId) {
     };
   }
 
-  const requeridoMs = obtenerTiempoRequeridoMs(tarea);
+  const otraSesion =
+    await obtenerSesionActivaUsuario(uid);
+
+  if (
+    otraSesion &&
+    otraSesion.realizacion_id !==
+      realizacion.ref.id
+  ) {
+    throw new Error(
+      "OTRA_TAREA_ACTIVA"
+    );
+  }
+
+  const requeridoMs =
+    obtenerTiempoRequeridoMs(tarea);
+
   const ahoraTimestamp = ahora();
 
-  const sesionRef = db
-    .collection("sesiones_tareas")
-    .doc();
+  const sesionRef =
+    db.collection("sesiones_tareas")
+      .doc();
 
   const fueReanudacion =
-    Number(realizacion.cantidad_pausas || 0) > 0;
+    Number(
+      realizacion.cantidad_pausas || 0
+    ) > 0;
 
   const datosSesion = {
     tarea_id: tarea.ref.id,
-    realizacion_id: realizacion.ref.id,
+    realizacion_id:
+      realizacion.ref.id,
     usuario_id: uid,
 
     instancia_id: instanciaId,
 
     activa: true,
 
-    fecha_inicio: ahoraTimestamp,
-    ultima_comunicacion_valida: ahoraTimestamp,
-    ultimo_punto_conteo: ahoraTimestamp,
-    ultimo_heartbeat: ahoraTimestamp,
-    ultima_actividad: ahoraTimestamp,
+    fecha_inicio:
+      ahoraTimestamp,
+    ultima_comunicacion_valida:
+      ahoraTimestamp,
+    ultimo_punto_conteo:
+      ahoraTimestamp,
+    ultimo_heartbeat:
+      ahoraTimestamp,
+    ultima_actividad:
+      ahoraTimestamp,
 
-    tiempo_requerido_ms: requeridoMs,
-    tiempo_requerido_minutos: Number(tarea.tiempo_requerido),
+    tiempo_requerido_ms:
+      requeridoMs,
+    tiempo_requerido_minutos:
+      Number(tarea.tiempo_requerido),
 
     tiempo_activo_valido:
-      Number(realizacion.tiempo_activo_valido) || 0,
+      Number(
+        realizacion.tiempo_activo_valido
+      ) || 0,
 
     tiempo_adicional:
-      Number(realizacion.tiempo_adicional) || 0,
+      Number(
+        realizacion.tiempo_adicional
+      ) || 0,
 
     cantidad_heartbeat: 0,
     cantidad_actividades: 0,
 
-    cantidad_reanudaciones: fueReanudacion ? 1 : 0
+    cantidad_reanudaciones:
+      fueReanudacion ? 1 : 0
   };
 
   await db.runTransaction(async (tx) => {
     tx.set(sesionRef, datosSesion);
 
-    const cambios = {};
-
     if (fueReanudacion) {
-      cambios.cantidad_reanudaciones =
-        FieldValue.increment(1);
-    }
-
-    if (Object.keys(cambios).length > 0) {
-      tx.update(realizacion.ref, cambios);
+      tx.update(realizacion.ref, {
+        cantidad_reanudaciones:
+          FieldValue.increment(1)
+      });
     }
   });
 
   return {
     realizacion: {
       ...realizacion,
+
       ...(fueReanudacion
         ? {
             cantidad_reanudaciones:
-              Number(realizacion.cantidad_reanudaciones || 0) + 1
+              Number(
+                realizacion
+                  .cantidad_reanudaciones || 0
+              ) + 1
           }
         : {})
     },
+
     sesion: {
       ref: sesionRef,
       ...datosSesion
@@ -675,13 +907,16 @@ async function manejarActividad(
   realizacion,
   instanciaId
 ) {
-  const sesion = await obtenerSesionActual(
-    realizacion.ref.id,
-    instanciaId
-  );
+  const sesion =
+    await obtenerSesionActual(
+      realizacion.ref.id,
+      instanciaId
+    );
 
   if (!sesion) {
-    throw new Error("SESION_NO_ACTIVA");
+    throw new Error(
+      "SESION_NO_ACTIVA"
+    );
   }
 
   if (sesion.usuario_id !== uid) {
@@ -691,13 +926,19 @@ async function manejarActividad(
   const ahoraTimestamp = ahora();
 
   await db.runTransaction(async (tx) => {
-    const [sesionSnap, realizacionSnap] = await Promise.all([
-      tx.get(sesion.ref),
-      tx.get(realizacion.ref)
-    ]);
+    const sesionSnap =
+      await tx.get(sesion.ref);
 
-    if (!sesionSnap.exists || !realizacionSnap.exists) {
-      throw new Error("SESION_NO_ENCONTRADA");
+    const realizacionSnap =
+      await tx.get(realizacion.ref);
+
+    if (
+      !sesionSnap.exists ||
+      !realizacionSnap.exists
+    ) {
+      throw new Error(
+        "SESION_NO_ENCONTRADA"
+      );
     }
 
     const sesionActual = {
@@ -711,68 +952,91 @@ async function manejarActividad(
     };
 
     if (sesionActual.activa !== true) {
-      throw new Error("SESION_NO_ACTIVA");
+      throw new Error(
+        "SESION_NO_ACTIVA"
+      );
     }
 
-    if (sesionActual.instancia_id !== instanciaId) {
-      throw new Error("SESION_BLOQUEADA");
+    if (
+      sesionActual.instancia_id !==
+      instanciaId
+    ) {
+      throw new Error(
+        "SESION_BLOQUEADA"
+      );
     }
 
     const ultimaComunicacion =
-      timestampMs(sesionActual.ultima_comunicacion_valida) ??
-      timestampMs(sesionActual.ultimo_punto_conteo);
+      timestampMs(
+        sesionActual
+          .ultima_comunicacion_valida
+      ) ??
+      timestampMs(
+        sesionActual
+          .ultimo_punto_conteo
+      );
 
     if (
       ultimaComunicacion &&
-      ahoraMs() - ultimaComunicacion > MAX_ACTIVE_GAP_MS
+      ahoraMs() -
+        ultimaComunicacion >
+        MAX_ACTIVE_GAP_MS
     ) {
-      const valores = calcularNuevoTiempo(
-        sesionActual,
-        realizacionActual,
-        tarea
-      );
+      const valores =
+        calcularNuevoTiempo(
+          sesionActual,
+          realizacionActual,
+          tarea
+        );
 
-      await registrarTiempoSesion(
+      registrarTiempoSesion(
         tx,
         sesionActual,
         realizacionActual,
-        tarea,
         valores,
         ahoraTimestamp
       );
 
       tx.update(sesionActual.ref, {
         activa: false,
-        ultima_comunicacion_valida: ahoraTimestamp,
-        motivo_pausa: "inactividad_comunicacion"
+        ultima_comunicacion_valida:
+          ahoraTimestamp,
+        motivo_pausa:
+          "inactividad_comunicacion"
       });
 
-      throw new Error("SESION_PAUSADA");
+      throw new Error(
+        "SESION_PAUSADA"
+      );
     }
 
-    const valores = calcularNuevoTiempo(
-      sesionActual,
-      realizacionActual,
-      tarea
-    );
+    const valores =
+      calcularNuevoTiempo(
+        sesionActual,
+        realizacionActual,
+        tarea
+      );
 
-    await registrarTiempoSesion(
+    registrarTiempoSesion(
       tx,
       sesionActual,
       realizacionActual,
-      tarea,
       valores,
       ahoraTimestamp
     );
 
     tx.update(sesionActual.ref, {
-      ultima_actividad: ahoraTimestamp,
-      ultima_comunicacion_valida: ahoraTimestamp,
-      cantidad_actividades: FieldValue.increment(1)
+      ultima_actividad:
+        ahoraTimestamp,
+      ultima_comunicacion_valida:
+        ahoraTimestamp,
+      cantidad_actividades:
+        FieldValue.increment(1)
     });
 
     tx.update(realizacionActual.ref, {
-      cantidad_actividades: FieldValue.increment(1)
+      cantidad_actividades:
+        FieldValue.increment(1)
     });
   });
 }
@@ -783,13 +1047,16 @@ async function manejarHeartbeat(
   realizacion,
   instanciaId
 ) {
-  const sesion = await obtenerSesionActual(
-    realizacion.ref.id,
-    instanciaId
-  );
+  const sesion =
+    await obtenerSesionActual(
+      realizacion.ref.id,
+      instanciaId
+    );
 
   if (!sesion) {
-    throw new Error("SESION_NO_ACTIVA");
+    throw new Error(
+      "SESION_NO_ACTIVA"
+    );
   }
 
   if (sesion.usuario_id !== uid) {
@@ -799,13 +1066,19 @@ async function manejarHeartbeat(
   const ahoraTimestamp = ahora();
 
   await db.runTransaction(async (tx) => {
-    const [sesionSnap, realizacionSnap] = await Promise.all([
-      tx.get(sesion.ref),
-      tx.get(realizacion.ref)
-    ]);
+    const sesionSnap =
+      await tx.get(sesion.ref);
 
-    if (!sesionSnap.exists || !realizacionSnap.exists) {
-      throw new Error("SESION_NO_ENCONTRADA");
+    const realizacionSnap =
+      await tx.get(realizacion.ref);
+
+    if (
+      !sesionSnap.exists ||
+      !realizacionSnap.exists
+    ) {
+      throw new Error(
+        "SESION_NO_ENCONTRADA"
+      );
     }
 
     const sesionActual = {
@@ -819,68 +1092,91 @@ async function manejarHeartbeat(
     };
 
     if (sesionActual.activa !== true) {
-      throw new Error("SESION_NO_ACTIVA");
+      throw new Error(
+        "SESION_NO_ACTIVA"
+      );
     }
 
-    if (sesionActual.instancia_id !== instanciaId) {
-      throw new Error("SESION_BLOQUEADA");
+    if (
+      sesionActual.instancia_id !==
+      instanciaId
+    ) {
+      throw new Error(
+        "SESION_BLOQUEADA"
+      );
     }
 
     const ultimaComunicacion =
-      timestampMs(sesionActual.ultima_comunicacion_valida) ??
-      timestampMs(sesionActual.ultimo_punto_conteo);
+      timestampMs(
+        sesionActual
+          .ultima_comunicacion_valida
+      ) ??
+      timestampMs(
+        sesionActual
+          .ultimo_punto_conteo
+      );
 
     if (
       ultimaComunicacion &&
-      ahoraMs() - ultimaComunicacion > MAX_ACTIVE_GAP_MS
+      ahoraMs() -
+        ultimaComunicacion >
+        MAX_ACTIVE_GAP_MS
     ) {
-      const valores = calcularNuevoTiempo(
-        sesionActual,
-        realizacionActual,
-        tarea
-      );
+      const valores =
+        calcularNuevoTiempo(
+          sesionActual,
+          realizacionActual,
+          tarea
+        );
 
-      await registrarTiempoSesion(
+      registrarTiempoSesion(
         tx,
         sesionActual,
         realizacionActual,
-        tarea,
         valores,
         ahoraTimestamp
       );
 
       tx.update(sesionActual.ref, {
         activa: false,
-        ultima_comunicacion_valida: ahoraTimestamp,
-        motivo_pausa: "inactividad_comunicacion"
+        ultima_comunicacion_valida:
+          ahoraTimestamp,
+        motivo_pausa:
+          "inactividad_comunicacion"
       });
 
-      throw new Error("SESION_PAUSADA");
+      throw new Error(
+        "SESION_PAUSADA"
+      );
     }
 
-    const valores = calcularNuevoTiempo(
-      sesionActual,
-      realizacionActual,
-      tarea
-    );
+    const valores =
+      calcularNuevoTiempo(
+        sesionActual,
+        realizacionActual,
+        tarea
+      );
 
-    await registrarTiempoSesion(
+    registrarTiempoSesion(
       tx,
       sesionActual,
       realizacionActual,
-      tarea,
       valores,
       ahoraTimestamp
     );
 
     tx.update(sesionActual.ref, {
-      ultimo_heartbeat: ahoraTimestamp,
-      ultima_comunicacion_valida: ahoraTimestamp,
-      cantidad_heartbeat: FieldValue.increment(1)
+      ultimo_heartbeat:
+        ahoraTimestamp,
+      ultima_comunicacion_valida:
+        ahoraTimestamp,
+      cantidad_heartbeat:
+        FieldValue.increment(1)
     });
 
     tx.update(realizacionActual.ref, {
-      cantidad_heartbeat: FieldValue.increment(1)
+      cantidad_heartbeat:
+        FieldValue.increment(1)
     });
   });
 }
@@ -891,10 +1187,11 @@ async function manejarPausa(
   realizacion,
   instanciaId
 ) {
-  const sesion = await obtenerSesionActual(
-    realizacion.ref.id,
-    instanciaId
-  );
+  const sesion =
+    await obtenerSesionActual(
+      realizacion.ref.id,
+      instanciaId
+    );
 
   if (!sesion) {
     return {
@@ -912,13 +1209,19 @@ async function manejarPausa(
   let resultado = null;
 
   await db.runTransaction(async (tx) => {
-    const [sesionSnap, realizacionSnap] = await Promise.all([
-      tx.get(sesion.ref),
-      tx.get(realizacion.ref)
-    ]);
+    const sesionSnap =
+      await tx.get(sesion.ref);
 
-    if (!sesionSnap.exists || !realizacionSnap.exists) {
-      throw new Error("SESION_NO_ENCONTRADA");
+    const realizacionSnap =
+      await tx.get(realizacion.ref);
+
+    if (
+      !sesionSnap.exists ||
+      !realizacionSnap.exists
+    ) {
+      throw new Error(
+        "SESION_NO_ENCONTRADA"
+      );
     }
 
     const sesionActual = {
@@ -933,43 +1236,54 @@ async function manejarPausa(
 
     if (sesionActual.activa !== true) {
       resultado = {
-        realizacion: realizacionActual,
+        realizacion:
+          realizacionActual,
         sesion: {
           ...sesionActual,
           activa: false
         }
       };
+
       return;
     }
 
-    if (sesionActual.instancia_id !== instanciaId) {
-      throw new Error("SESION_BLOQUEADA");
+    if (
+      sesionActual.instancia_id !==
+      instanciaId
+    ) {
+      throw new Error(
+        "SESION_BLOQUEADA"
+      );
     }
 
-    const valores = calcularNuevoTiempo(
-      sesionActual,
-      realizacionActual,
-      tarea
-    );
+    const valores =
+      calcularNuevoTiempo(
+        sesionActual,
+        realizacionActual,
+        tarea
+      );
 
-    await registrarTiempoSesion(
+    registrarTiempoSesion(
       tx,
       sesionActual,
       realizacionActual,
-      tarea,
       valores,
       ahoraTimestamp
     );
 
     tx.update(sesionActual.ref, {
       activa: false,
-      ultima_comunicacion_valida: ahoraTimestamp,
-      ultimo_punto_conteo: ahoraTimestamp,
-      fecha_pausa: ahoraTimestamp
+      ultima_comunicacion_valida:
+        ahoraTimestamp,
+      ultimo_punto_conteo:
+        ahoraTimestamp,
+      fecha_pausa:
+        ahoraTimestamp
     });
 
     tx.update(realizacionActual.ref, {
-      cantidad_pausas: FieldValue.increment(1)
+      cantidad_pausas:
+        FieldValue.increment(1)
     });
 
     resultado = {
@@ -980,8 +1294,12 @@ async function manejarPausa(
         tiempo_adicional:
           valores.tiempo_adicional,
         cantidad_pausas:
-          Number(realizacionActual.cantidad_pausas || 0) + 1
+          Number(
+            realizacionActual
+              .cantidad_pausas || 0
+          ) + 1
       },
+
       sesion: {
         ...sesionActual,
         activa: false,
@@ -989,7 +1307,8 @@ async function manejarPausa(
           valores.tiempo_activo_valido,
         tiempo_adicional:
           valores.tiempo_adicional,
-        fecha_pausa: ahoraTimestamp
+        fecha_pausa:
+          ahoraTimestamp
       }
     };
   });
@@ -1007,34 +1326,44 @@ async function manejarCompletar(
     throw new Error("NO_AUTORIZADO");
   }
 
-  const vencimientoMs = timestampMs(
-    realizacion.fecha_vencimiento
-  );
+  const vencimientoMs =
+    timestampMs(
+      realizacion.fecha_vencimiento
+    );
 
-  if (vencimientoMs && vencimientoMs <= ahoraMs()) {
+  if (
+    vencimientoMs &&
+    vencimientoMs <= ahoraMs()
+  ) {
     await cerrarRealizacionPorCaducidad(
       realizacion.ref,
       realizacion,
       "vencimiento_7_dias"
     );
 
-    throw new Error("REALIZACION_VENCIDA");
+    throw new Error(
+      "REALIZACION_VENCIDA"
+    );
   }
 
-  const sesion = await obtenerSesionActual(
-    realizacion.ref.id,
-    instanciaId
-  );
+  const sesion =
+    await obtenerSesionActual(
+      realizacion.ref.id,
+      instanciaId
+    );
 
   const ahoraTimestamp = ahora();
 
-  let resultado;
+  let resultado = null;
 
   await db.runTransaction(async (tx) => {
-    const realizacionSnap = await tx.get(realizacion.ref);
+    const realizacionSnap =
+      await tx.get(realizacion.ref);
 
     if (!realizacionSnap.exists) {
-      throw new Error("REALIZACION_NO_ENCONTRADA");
+      throw new Error(
+        "REALIZACION_NO_ENCONTRADA"
+      );
     }
 
     const realizacionActual = {
@@ -1042,21 +1371,35 @@ async function manejarCompletar(
       ...realizacionSnap.data()
     };
 
-    if (realizacionActual.estado !== "pendiente") {
-      throw new Error("REALIZACION_NO_DISPONIBLE");
+    if (
+      realizacionActual.estado !==
+      "pendiente"
+    ) {
+      throw new Error(
+        "REALIZACION_NO_DISPONIBLE"
+      );
     }
 
     let tiempoActivo =
-      Number(realizacionActual.tiempo_activo_valido) || 0;
+      Number(
+        realizacionActual
+          .tiempo_activo_valido
+      ) || 0;
 
     let tiempoAdicional =
-      Number(realizacionActual.tiempo_adicional) || 0;
+      Number(
+        realizacionActual
+          .tiempo_adicional
+      ) || 0;
 
     if (sesion) {
-      const sesionSnap = await tx.get(sesion.ref);
+      const sesionSnap =
+        await tx.get(sesion.ref);
 
       if (!sesionSnap.exists) {
-        throw new Error("SESION_NO_ENCONTRADA");
+        throw new Error(
+          "SESION_NO_ENCONTRADA"
+        );
       }
 
       const sesionActual = {
@@ -1065,46 +1408,66 @@ async function manejarCompletar(
       };
 
       if (
-        sesionActual.instancia_id !== instanciaId
+        sesionActual.instancia_id !==
+        instanciaId
       ) {
-        throw new Error("SESION_BLOQUEADA");
+        throw new Error(
+          "SESION_BLOQUEADA"
+        );
       }
 
-      const valores = calcularNuevoTiempo(
-        sesionActual,
-        realizacionActual,
-        tarea
-      );
+      if (sesionActual.activa !== true) {
+        throw new Error(
+          "SESION_NO_ACTIVA"
+        );
+      }
 
-      tiempoActivo = valores.tiempo_activo_valido;
-      tiempoAdicional = valores.tiempo_adicional;
+      const valores =
+        calcularNuevoTiempo(
+          sesionActual,
+          realizacionActual,
+          tarea
+        );
+
+      tiempoActivo =
+        valores.tiempo_activo_valido;
+
+      tiempoAdicional =
+        valores.tiempo_adicional;
 
       if (
         tiempoActivo <
         obtenerTiempoRequeridoMs(tarea)
       ) {
-        tx.update(sesionActual.ref, {
-          tiempo_activo_valido: tiempoActivo,
-          tiempo_adicional: tiempoAdicional,
-          ultima_comunicacion_valida: ahoraTimestamp,
-          ultimo_punto_conteo: ahoraTimestamp
-        });
+        registrarTiempoSesion(
+          tx,
+          sesionActual,
+          realizacionActual,
+          valores,
+          ahoraTimestamp
+        );
 
-        tx.update(realizacionActual.ref, {
-          tiempo_activo_valido: tiempoActivo,
-          tiempo_adicional: tiempoAdicional
-        });
+        resultado = {
+          completada: false,
+          tiempo_activo_valido:
+            tiempoActivo
+        };
 
-        throw new Error("TIEMPO_INSUFICIENTE");
+        return;
       }
 
       tx.update(sesionActual.ref, {
         activa: false,
-        tiempo_activo_valido: tiempoActivo,
-        tiempo_adicional: tiempoAdicional,
-        fecha_finalizacion: ahoraTimestamp,
-        ultima_comunicacion_valida: ahoraTimestamp,
-        ultimo_punto_conteo: ahoraTimestamp
+        tiempo_activo_valido:
+          tiempoActivo,
+        tiempo_adicional:
+          tiempoAdicional,
+        fecha_finalizacion:
+          ahoraTimestamp,
+        ultima_comunicacion_valida:
+          ahoraTimestamp,
+        ultimo_punto_conteo:
+          ahoraTimestamp
       });
     }
 
@@ -1112,83 +1475,125 @@ async function manejarCompletar(
       tiempoActivo <
       obtenerTiempoRequeridoMs(tarea)
     ) {
-      throw new Error("TIEMPO_INSUFICIENTE");
+      resultado = {
+        completada: false,
+        tiempo_activo_valido:
+          tiempoActivo
+      };
+
+      return;
     }
 
-    const historialRef = db
-      .collection("historial_realizaciones")
-      .doc();
+    const historialRef =
+      db.collection(
+        "historial_realizaciones"
+      ).doc();
 
     tx.update(realizacionActual.ref, {
       estado: "completada",
-      fecha_cierre: ahoraTimestamp,
-      fecha_completada: ahoraTimestamp,
-      tiempo_activo_valido: tiempoActivo,
-      tiempo_adicional: tiempoAdicional
+      fecha_cierre:
+        ahoraTimestamp,
+      fecha_completada:
+        ahoraTimestamp,
+      tiempo_activo_valido:
+        tiempoActivo,
+      tiempo_adicional:
+        tiempoAdicional
     });
 
     tx.set(historialRef, {
       tarea_id: tarea.ref.id,
       usuario_id: uid,
-      email: realizacionActual.email || null,
+      email:
+        realizacionActual.email ||
+        null,
+
       titulo_tarea:
         realizacionActual.titulo_tarea ||
         tarea.titulo ||
         null,
 
       fecha_inicio:
-        realizacionActual.fecha_inicio || null,
+        realizacionActual.fecha_inicio ||
+        null,
 
       fecha_vencimiento:
-        realizacionActual.fecha_vencimiento || null,
+        realizacionActual
+          .fecha_vencimiento ||
+        null,
 
-      fecha_cierre: ahoraTimestamp,
-      fecha_completada: ahoraTimestamp,
+      fecha_cierre:
+        ahoraTimestamp,
 
-      estado_final: "completada",
+      fecha_completada:
+        ahoraTimestamp,
 
-      tiempo_activo_valido: tiempoActivo,
-      tiempo_adicional: tiempoAdicional
+      estado_final:
+        "completada",
+
+      tiempo_activo_valido:
+        tiempoActivo,
+
+      tiempo_adicional:
+        tiempoAdicional
     });
 
-    const progresoRef = db
-      .collection("progreso_tareas")
-      .doc();
+    const progresoRef =
+      db.collection(
+        "progreso_tareas"
+      ).doc();
 
     tx.set(progresoRef, {
-      email: realizacionActual.email || null,
-      fecha_realizada: ahoraTimestamp,
+      email:
+        realizacionActual.email ||
+        null,
+
+      fecha_realizada:
+        ahoraTimestamp,
+
       minutos_realizados:
-        minutosCompletos(tiempoActivo),
+        minutosCompletos(
+          tiempoActivo
+        ),
 
       tarea_id: tarea.ref.id,
       usuario_id: uid,
       veces_realizada: 1,
+
       titulo_tarea:
-        realizacionActual.titulo_tarea ||
+        realizacionActual
+          .titulo_tarea ||
         tarea.titulo ||
         null
     });
 
-    const estadisticasRef = db
-      .collection("estadisticas_usuario")
-      .doc(uid);
+    const estadisticasRef =
+      db.collection(
+        "estadisticas_usuario"
+      ).doc(uid);
 
     const estadisticasSnap =
-      await tx.get(estadisticasRef);
+      await tx.get(
+        estadisticasRef
+      );
 
     if (estadisticasSnap.exists) {
-      const estadisticas = estadisticasSnap.data();
+      const estadisticas =
+        estadisticasSnap.data();
 
       const ultimaFecha =
         timestampMs(
-          estadisticas.ultima_fecha_trabajo
+          estadisticas
+            .ultima_fecha_trabajo
         );
 
-      const fechaActual = new Date();
-      const fechaUltima = ultimaFecha
-        ? new Date(ultimaFecha)
-        : null;
+      const fechaActual =
+        new Date();
+
+      const fechaUltima =
+        ultimaFecha
+          ? new Date(ultimaFecha)
+          : null;
 
       const mismoDia =
         fechaUltima &&
@@ -1207,36 +1612,63 @@ async function manejarCompletar(
 
         minutos_acumulados:
           FieldValue.increment(
-            minutosCompletos(tiempoActivo)
+            minutosCompletos(
+              tiempoActivo
+            )
           ),
 
         tareas_realizadas:
           FieldValue.increment(1),
 
-        dias_trabajados: mismoDia
-          ? Number(estadisticas.dias_trabajados || 0)
-          : FieldValue.increment(1),
+        dias_trabajados:
+          mismoDia
+            ? Number(
+                estadisticas
+                  .dias_trabajados || 0
+              )
+            : FieldValue.increment(1),
 
-        ultima_fecha_trabajo: ahoraTimestamp,
+        ultima_fecha_trabajo:
+          ahoraTimestamp,
+
         usuario_id: uid
       });
     } else {
       tx.set(estadisticasRef, {
-        email: realizacionActual.email || null,
+        email:
+          realizacionActual.email ||
+          null,
+
         minutos_acumulados:
-          minutosCompletos(tiempoActivo),
+          minutosCompletos(
+            tiempoActivo
+          ),
+
         tareas_realizadas: 1,
         dias_trabajados: 1,
-        ultima_fecha_trabajo: ahoraTimestamp,
+
+        ultima_fecha_trabajo:
+          ahoraTimestamp,
+
         usuario_id: uid
       });
     }
 
     resultado = {
-      tiempo_activo_valido: tiempoActivo,
-      completada: true
+      completada: true,
+      tiempo_activo_valido:
+        tiempoActivo
     };
   });
+
+  if (
+    resultado &&
+    resultado.completada === false
+  ) {
+    throw new Error(
+      "TIEMPO_INSUFICIENTE"
+    );
+  }
 
   return resultado;
 }
@@ -1248,20 +1680,27 @@ async function obtenerEstado(
   instanciaId
 ) {
   if (!faseCoincide(usuario, tarea)) {
-    throw new Error("TAREA_NO_CORRESPONDE");
+    throw new Error(
+      "TAREA_NO_CORRESPONDE"
+    );
   }
 
-  let realizacion = await obtenerRealizacionUsuario(
-    tarea.ref.id,
-    uid
-  );
-
-  if (realizacion) {
-    const vencimientoMs = timestampMs(
-      realizacion.fecha_vencimiento
+  let realizacion =
+    await obtenerRealizacionUsuario(
+      tarea.ref.id,
+      uid
     );
 
-    if (vencimientoMs && vencimientoMs <= ahoraMs()) {
+  if (realizacion) {
+    const vencimientoMs =
+      timestampMs(
+        realizacion.fecha_vencimiento
+      );
+
+    if (
+      vencimientoMs &&
+      vencimientoMs <= ahoraMs()
+    ) {
       await cerrarRealizacionPorCaducidad(
         realizacion.ref,
         realizacion,
@@ -1272,44 +1711,57 @@ async function obtenerEstado(
     }
   }
 
-  if (!realizacion && tareaRetirada(tarea)) {
-    throw new Error("TAREA_NO_DISPONIBLE");
+  if (
+    !realizacion &&
+    tareaRetirada(tarea)
+  ) {
+    throw new Error(
+      "TAREA_NO_DISPONIBLE"
+    );
   }
 
   let sesion = null;
   let calculado = null;
 
   if (realizacion) {
-    sesion = await obtenerSesionActual(
-      realizacion.ref.id,
-      instanciaId || null
-    );
+    sesion =
+      await obtenerSesionActual(
+        realizacion.ref.id,
+        instanciaId || null
+      );
 
     if (sesion) {
-      calculado = calcularNuevoTiempo(
-        sesion,
-        realizacion,
-        tarea
-      );
+      calculado =
+        calcularNuevoTiempo(
+          sesion,
+          realizacion,
+          tarea
+        );
     }
   }
 
   return {
     tarea: tareaPublica(tarea),
+
     realizacion: realizacion
       ? realizacionPublica({
           ...realizacion,
+
           ...(calculado
             ? {
                 tiempo_activo_valido:
-                  calculado.tiempo_activo_valido
+                  calculado
+                    .tiempo_activo_valido
               }
             : {})
         })
       : null,
 
     sesion: sesion
-      ? sesionPublica(sesion, calculado)
+      ? sesionPublica(
+          sesion,
+          calculado
+        )
       : null
   };
 }
@@ -1420,19 +1872,28 @@ function mensajeError(error) {
   );
 }
 
-module.exports = async function handler(req, res) {
+module.exports = async function handler(
+  req,
+  res
+) {
   try {
-    if (req.method !== "GET" && req.method !== "POST") {
+    if (
+      req.method !== "GET" &&
+      req.method !== "POST"
+    ) {
       return respuesta(res, 405, {
         ok: false,
         error: "METODO_NO_PERMITIDO"
       });
     }
 
-    const decoded = await verificarToken(req);
+    const decoded =
+      await verificarToken(req);
+
     const uid = decoded.uid;
 
-    const usuario = await obtenerUsuario(uid);
+    const usuario =
+      await obtenerUsuario(uid);
 
     let tareaId;
     let instanciaId = null;
@@ -1440,23 +1901,34 @@ module.exports = async function handler(req, res) {
 
     if (req.method === "GET") {
       tareaId = req.query?.id;
-      instanciaId = req.query?.instancia_id || null;
+      instanciaId =
+        req.query?.instancia_id ||
+        null;
+
       accion = "estado";
     } else {
-      tareaId = req.body?.tarea_id;
-      instanciaId = req.body?.instancia_id || null;
-      accion = req.body?.accion;
+      tareaId =
+        req.body?.tarea_id;
+
+      instanciaId =
+        req.body?.instancia_id ||
+        null;
+
+      accion =
+        req.body?.accion;
     }
 
-    const tarea = await obtenerTarea(tareaId);
+    const tarea =
+      await obtenerTarea(tareaId);
 
     if (accion === "estado") {
-      const estado = await obtenerEstado(
-        uid,
-        usuario,
-        tarea,
-        instanciaId
-      );
+      const estado =
+        await obtenerEstado(
+          uid,
+          usuario,
+          tarea,
+          instanciaId
+        );
 
       return respuesta(res, 200, {
         ok: true,
@@ -1465,25 +1937,35 @@ module.exports = async function handler(req, res) {
     }
 
     if (!instanciaId) {
-      throw new Error("INSTANCIA_ID_REQUERIDO");
+      throw new Error(
+        "INSTANCIA_ID_REQUERIDO"
+      );
     }
 
     if (accion === "iniciar") {
-      const resultado = await manejarInicio(
-        uid,
-        usuario,
-        tarea,
-        instanciaId
-      );
+      const resultado =
+        await manejarInicio(
+          uid,
+          usuario,
+          tarea,
+          instanciaId
+        );
 
       return respuesta(res, 200, {
         ok: true,
-        tarea: tareaPublica(tarea),
+
+        tarea:
+          tareaPublica(tarea),
+
         realizacion:
-          realizacionPublica(resultado.realizacion),
-        sesion: sesionPublica(
-          resultado.sesion
-        )
+          realizacionPublica(
+            resultado.realizacion
+          ),
+
+        sesion:
+          sesionPublica(
+            resultado.sesion
+          )
       });
     }
 
@@ -1499,9 +1981,10 @@ module.exports = async function handler(req, res) {
       );
     }
 
-    const vencimientoMs = timestampMs(
-      realizacion.fecha_vencimiento
-    );
+    const vencimientoMs =
+      timestampMs(
+        realizacion.fecha_vencimiento
+      );
 
     if (
       vencimientoMs &&
@@ -1545,22 +2028,26 @@ module.exports = async function handler(req, res) {
     }
 
     if (accion === "pausar") {
-      const resultado = await manejarPausa(
-        uid,
-        tarea,
-        realizacion,
-        instanciaId
-      );
+      const resultado =
+        await manejarPausa(
+          uid,
+          tarea,
+          realizacion,
+          instanciaId
+        );
 
       return respuesta(res, 200, {
         ok: true,
+
         realizacion:
           realizacionPublica(
             resultado.realizacion
           ),
-        sesion: sesionPublica(
-          resultado.sesion
-        )
+
+        sesion:
+          sesionPublica(
+            resultado.sesion
+          )
       });
     }
 
@@ -1577,7 +2064,8 @@ module.exports = async function handler(req, res) {
         ok: true,
         completada: true,
         tiempo_activo_valido:
-          resultado.tiempo_activo_valido
+          resultado
+            .tiempo_activo_valido
       });
     }
 
@@ -1592,7 +2080,8 @@ module.exports = async function handler(req, res) {
     return respuesta(res, status, {
       ok: false,
       error:
-        error?.message || "ERROR_INTERNO",
+        error?.message ||
+        "ERROR_INTERNO",
       mensaje
     });
   }
