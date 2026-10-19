@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+  <title>Tarea - Estilo Hub</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f4f8fc;
+      color: #1f2937;
+    }
+
+    .contenedor {
+      width: 100%;
+      max-width: 700px;
+      margin: 0 auto;
+      padding: 20px 16px 40px;
+    }
+
+    .tarjeta {
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 22px;
+      box-shadow:
+        0 4px 18px rgba(0, 0, 0, 0.08);
+    }
+
+    h1 {
+      margin: 0 0 18px;
+      font-size: 24px;
+      line-height: 1.3;
+      color: #1e5fa7;
+    }
+
+    .tiempo {
+      font-size: 26px;
+      font-weight: bold;
+      color: #1769aa;
+      margin: 16px 0 20px;
+      text-align: center;
+    }
+
+    .contenido {
+      line-height: 1.6;
+      margin-bottom: 20px;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    .acciones {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    button {
+      width: 100%;
+      border: none;
+      border-radius: 10px;
+      padding: 13px 16px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      background: #1769aa;
+      color: #ffffff;
+      display: none;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .mensaje {
+      margin-top: 16px;
+      padding: 12px;
+      border-radius: 8px;
+      background: #fff4e5;
+      color: #7a4b00;
+      display: none;
+    }
+
+    .error {
+      background: #fdecec;
+      color: #9b1c1c;
+    }
+
+    .exito {
+      background: #eaf8ef;
+      color: #176b36;
+    }
+
+    @media (max-width: 480px) {
+      .contenedor {
+        padding: 14px 12px 30px;
+      }
+
+      .tarjeta {
+        padding: 18px;
+      }
+
+      h1 {
+        font-size: 21px;
+      }
+
+      .tiempo {
+        font-size: 22px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="contenedor">
+    <div class="tarjeta">
+
+      <h1 id="tituloTarea">
+        Cargando tarea...
+      </h1>
+
+      <div
+        id="indicadorTiempo"
+        class="tiempo"
+      >
+        Tiempo realizado: 00:00 / 00:00
+      </div>
+
+      <div
+        id="descripcionTarea"
+        class="contenido"
+      ></div>
+
+      <div
+        id="acciones"
+        class="acciones"
+      >
+        <button
+          id="completarBtn"
+        >
+          Completar
+        </button>
+      </div>
+
+      <div
+        id="mensaje"
+        class="mensaje"
+      ></div>
+
+    </div>
+  </div>
+
+  <script type="module">
+    import {
+      auth
+    } from "./firebase.js";
+
+    import {
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+
+    const tareaId =
+      new URLSearchParams(
+        window.location.search
+      ).get("id");
+
+    const tituloTarea =
+      document.getElementById(
+        "tituloTarea"
+      );
+
+    const indicadorTiempo =
+      document.getElementById(
+        "indicadorTiempo"
+      );
+
+    const descripcionTarea =
+      document.getElementById(
+        "descripcionTarea"
+      );
+
+    const mensaje =
+      document.getElementById(
+        "mensaje"
+      );
+
+    const completarBtn =
+      document.getElementById(
+        "completarBtn"
+      );
+
+    let usuarioActual = null;
+
+    let tarea = null;
+    let realizacion = null;
+    let sesion = null;
+
+    let tiempoActivoValido = 0;
+    let tiempoRequerido = 0;
+
+    let tiempoVisualBase = 0;
+    let actividadValidaHasta = 0;
+
+    let corriendo = false;
+    let completada = false;
+
+    let intervaloVisual = null;
+    let intervaloHeartbeat = null;
+
+    let ultimoEnvioActividad = 0;
+    let enviandoActividad = false;
+    let enviandoCompletar = false;
+
+    let paginaCerrandose = false;
+    let paginaListaParaInteractuar = false;
+    let datosCargados = false;
+    let tareaIniciada = false;
+
+    const ACTIVITY_WINDOW_MS = 30000;
+    const ACTIVIDAD_INTERVALO_MS = 10000;
+    const HEARTBEAT_INTERVALO_MS = 10000;
+
+    function formatearTiempo(ms) {
+      const totalSegundos =
+        Math.floor(
+          Math.max(0, ms) / 1000
+        );
+
+      const horas =
+        Math.floor(
+          totalSegundos / 3600
+        );
+
+      const minutos =
+        Math.floor(
+          (totalSegundos % 3600) / 60
+        );
+
+      const segundos =
+        totalSegundos % 60;
+
+      const hh =
+        String(horas)
+          .padStart(2, "0");
+
+      const mm =
+        String(minutos)
+          .padStart(2, "0");
+
+      const ss =
+        String(segundos)
+          .padStart(2, "0");
+
+      if (horas > 0) {
+        return `${hh}:${mm}:${ss}`;
+      }
+
+      return `${mm}:${ss}`;
+    }
+
+    function mostrarMensaje(
+      texto,
+      tipo = ""
+    ) {
+      mensaje.textContent = texto;
+      mensaje.className = "mensaje";
+
+      if (tipo) {
+        mensaje.classList.add(tipo);
+      }
+
+      mensaje.style.display = "block";
+    }
+
+    function ocultarMensaje() {
+      mensaje.style.display = "none";
+      mensaje.textContent = "";
+    }
+
+    function detenerIntervalos() {
+      if (intervaloVisual) {
+        clearInterval(intervaloVisual);
+        intervaloVisual = null;
+      }
+
+      if (intervaloHeartbeat) {
+        clearInterval(
+          intervaloHeartbeat
+        );
+        intervaloHeartbeat = null;
+      }
+    }
+
+    function tiempoVisualActual() {
+      if (
+        !corriendo ||
+        !actividadValidaHasta
+      ) {
+        return tiempoVisualBase;
+      }
+
+      const limite =
+        Math.min(
+          Date.now(),
+          actividadValidaHasta
+        );
+
+      const incremento =
+        Math.max(
+          0,
+          limite -
+            tiempoVisualBaseMomento
+        );
+
+      return Math.min(
+        tiempoVisualBase +
+          incremento,
+        tiempoRequerido
+      );
+    }
+
+    let tiempoVisualBaseMomento =
+      Date.now();
+
+    function actualizarTiempoVisual() {
+      if (completada) {
+        indicadorTiempo.textContent =
+          `Tiempo realizado: ${formatearTiempo(
+            tiempoRequerido
+          )} / ${formatearTiempo(
+            tiempoRequerido
+          )}`;
+
+        completarBtn.style.display = "block";
+        completarBtn.disabled = true;
+
+        return;
+      }
+
+      const tiempo =
+        tiempoVisualActual();
+
+      const tiempoLimitado =
+        Math.min(
+          tiempo,
+          tiempoRequerido
+        );
+
+      indicadorTiempo.textContent =
+        `Tiempo realizado: ${formatearTiempo(
+          tiempoLimitado
+        )} / ${formatearTiempo(
+          tiempoRequerido
+        )}`;
+
+      if (
+        tiempo >= tiempoRequerido
+      ) {
+        completarBtn.style.display = "block";
+        completarBtn.disabled = false;
+        return;
+      } else {
+        completarBtn.style.display = "none";
+      }
+    }
+
+    function iniciarIntervaloVisual() {
+      if (intervaloVisual) {
+        clearInterval(
+          intervaloVisual
+        );
+      }
+
+      intervaloVisual =
+        setInterval(
+          actualizarTiempoVisual,
+          250
+        );
+
+      actualizarTiempoVisual();
+    }
+
+    function iniciarHeartbeat() {
+      if (intervaloHeartbeat) {
+        clearInterval(
+          intervaloHeartbeat
+        );
+      }
+
+      intervaloHeartbeat =
+        setInterval(
+          async () => {
+            if (
+              !corriendo ||
+              paginaCerrandose
+            ) {
+              return;
+            }
+
+            await enviarHeartbeat();
+          },
+          HEARTBEAT_INTERVALO_MS
+        );
+    }
+
+    async function obtenerToken() {
+      if (!usuarioActual) {
+        throw new Error(
+          "No hay un usuario autenticado."
+        );
+      }
+
+      return usuarioActual.getIdToken();
+    }
+
+    async function enviarHeartbeat() {
+      try {
+        const token =
+          await obtenerToken();
+
+        await fetch(
+          "/api/tarea",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type":
+                "application/json",
+              "Authorization":
+                `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              tarea_id: tareaId,
+              accion: "heartbeat"
+            })
+          }
+        );
+      } catch (error) {
+        // Error de red silencioso
+      }
+    }
+
+    async function enviarActividad() {
+      if (
+        enviandoActividad ||
+        !usuarioActual ||
+        !tarea ||
+        completada
+      ) {
+        return;
+      }
+
+      enviandoActividad = true;
+
+      try {
+        const token =
+          await obtenerToken();
+
+        const respuesta =
+          await fetch(
+            "/api/tarea",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type":
+                  "application/json",
+                "Authorization":
+                  `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                tarea_id: tareaId,
+                accion: "actividad"
+              })
+            }
+          );
+
+        const resultado =
+          await respuesta.json();
+
+        if (
+          !respuesta.ok ||
+          !resultado.ok
+        ) {
+          manejarErrorServidor(
+            resultado
+          );
+
+          return;
+        }
+
+        const nuevoTiempo =
+          Number(
+            resultado
+              .tiempo_activo_valido
+          ) || 0;
+
+        tiempoActivoValido =
+          nuevoTiempo;
+
+        tiempoVisualBase =
+          nuevoTiempo;
+
+        tiempoVisualBaseMomento =
+          Date.now();
+
+        actividadValidaHasta =
+          Date.now() +
+          ACTIVITY_WINDOW_MS;
+
+        corriendo = true;
+
+        actualizarTiempoVisual();
+      } catch (error) {
+        // Error de red manejado
+      } finally {
+        enviandoActividad = false;
+      }
+    }
+
+    function registrarActividadUsuario() {
+      if (
+        paginaCerrandose ||
+        completada ||
+        !tarea ||
+        !paginaListaParaInteractuar
+      ) {
+        return;
+      }
+
+      const ahoraMs =
+        Date.now();
+
+      if (
+        ahoraMs -
+          ultimoEnvioActividad <
+          ACTIVIDAD_INTERVALO_MS
+      ) {
+        return;
+      }
+
+      ultimoEnvioActividad =
+        ahoraMs;
+
+      enviarActividad();
+    }
+
+    async function enviarPausa() {
+      if (!usuarioActual || !tarea || completada) {
+        return;
+      }
+
+      try {
+        const token = await obtenerToken();
+
+        await fetch(
+          "/api/tarea",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              tarea_id: tareaId,
+              accion: "pausa"
+            }),
+            keepalive: true
+          }
+        );
+      } catch (error) {
+        // Error de red en pausa
+      }
+    }
+
+    function manejarErrorServidor(
+      resultado
+    ) {
+      const codigo =
+        resultado?.error || "";
+
+      if (
+        codigo ===
+        "SESION_NO_ACTIVA"
+      ) {
+        corriendo = false;
+        actividadValidaHasta = 0;
+        return;
+      }
+
+      if (
+        codigo ===
+        "REALIZACION_VENCIDA"
+      ) {
+        corriendo = false;
+        completada = true;
+
+        detenerIntervalos();
+
+        completarBtn.style.display = "block";
+        completarBtn.disabled = true;
+
+        mostrarMensaje(
+          "La tarea ya no está disponible.",
+          "error"
+        );
+
+        return;
+      }
+    }
+
+    async function intentarIniciarTareaSiEstaLista() {
+      if (
+        !paginaListaParaInteractuar ||
+        !datosCargados ||
+        !usuarioActual ||
+        !tarea ||
+        tareaIniciada ||
+        completada
+      ) {
+        return;
+      }
+
+      if (
+        realizacion &&
+        tiempoActivoValido >= tiempoRequerido
+      ) {
+        tareaIniciada = true;
+        actualizarTiempoVisual();
+        return;
+      }
+
+      tareaIniciada = true;
+      await iniciarTareaAutomaticamente();
+    }
+
+    async function iniciarTareaAutomaticamente() {
+      try {
+        const token =
+          await obtenerToken();
+
+        const respuesta =
+          await fetch(
+            "/api/tarea",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type":
+                  "application/json",
+                "Authorization":
+                  `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                tarea_id: tareaId,
+                accion: "iniciar"
+              })
+            }
+          );
+
+        const resultado =
+          await respuesta.json();
+
+        if (
+          !respuesta.ok ||
+          !resultado.ok
+        ) {
+          throw new Error(
+            resultado.mensaje ||
+            resultado.error ||
+            "No se pudo iniciar la tarea."
+          );
+        }
+
+        realizacion =
+          resultado.realizacion ||
+          realizacion;
+
+        sesion =
+          resultado.sesion ||
+          null;
+
+        tiempoActivoValido =
+          Number(
+            realizacion
+              ?.tiempo_activo_valido
+          ) || 0;
+
+        tiempoVisualBase =
+          tiempoActivoValido;
+
+        tiempoVisualBaseMomento =
+          Date.now();
+
+        corriendo = true;
+
+        actividadValidaHasta =
+          Date.now() +
+          ACTIVITY_WINDOW_MS;
+
+        iniciarIntervaloVisual();
+        iniciarHeartbeat();
+
+        actualizarTiempoVisual();
+      } catch (error) {
+        tareaIniciada = false;
+
+        mostrarMensaje(
+          error.message ||
+          "No se pudo iniciar la tarea.",
+          "error"
+        );
+      }
+    }
+
+    async function completarTarea() {
+      if (
+        enviandoCompletar ||
+        completada
+      ) {
+        return;
+      }
+
+      enviandoCompletar = true;
+      completarBtn.disabled = true;
+
+      try {
+        const token =
+          await obtenerToken();
+
+        const respuesta =
+          await fetch(
+            "/api/tarea",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type":
+                  "application/json",
+                "Authorization":
+                  `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                tarea_id: tareaId,
+                accion: "completar"
+              })
+            }
+          );
+
+        const resultado =
+          await respuesta.json();
+
+        if (
+          !respuesta.ok ||
+          !resultado.ok
+        ) {
+          throw new Error(
+            resultado.mensaje ||
+            resultado.error ||
+            "No se pudo completar la tarea."
+          );
+        }
+
+        completada = true;
+        corriendo = false;
+
+        tiempoActivoValido =
+          Number(
+            resultado
+              .tiempo_activo_valido
+          ) || tiempoActivoValido;
+
+        tiempoVisualBase =
+          tiempoActivoValido;
+
+        actividadValidaHasta = 0;
+
+        detenerIntervalos();
+
+        actualizarTiempoVisual();
+
+        mostrarMensaje(
+          "¡Tarea completada correctamente!",
+          "exito"
+        );
+
+        setTimeout(() => {
+          window.location.href = "inicio.html";
+        }, 1500);
+      } catch (error) {
+        completarBtn.disabled =
+          tiempoVisualActual() <
+          tiempoRequerido;
+
+        mostrarMensaje(
+          error.message ||
+          "No se pudo completar la tarea.",
+          "error"
+        );
+      } finally {
+        enviandoCompletar = false;
+      }
+    }
+
+    async function cargarTarea() {
+      ocultarMensaje();
+
+      try {
+        const token =
+          await obtenerToken();
+
+        const url =
+          `/api/tarea?id=${encodeURIComponent(
+            tareaId
+          )}`;
+
+        const respuesta =
+          await fetch(
+            url,
+            {
+              method: "GET",
+              headers: {
+                "Authorization":
+                  `Bearer ${token}`
+              }
+            }
+          );
+
+        const resultado =
+          await respuesta.json();
+
+        if (
+          !respuesta.ok ||
+          !resultado.ok
+        ) {
+          throw new Error(
+            resultado.mensaje ||
+            resultado.error ||
+            "No se pudo cargar la tarea."
+          );
+        }
+
+        tarea =
+          resultado.tarea;
+
+        realizacion =
+          resultado.realizacion;
+
+        sesion =
+          resultado.sesion;
+
+        tituloTarea.textContent =
+          tarea.titulo ||
+          "Tarea";
+
+        descripcionTarea.textContent =
+          tarea.descripcion ||
+          "";
+
+        tiempoRequerido =
+          Number(
+            tarea.tiempo_requerido
+          ) * 60000;
+
+        tiempoActivoValido =
+          Number(
+            realizacion
+              ?.tiempo_activo_valido
+          ) || 0;
+
+        tiempoVisualBase =
+          tiempoActivoValido;
+
+        tiempoVisualBaseMomento =
+          Date.now();
+
+        actualizarTiempoVisual();
+
+        datosCargados = true;
+
+        await intentarIniciarTareaSiEstaLista();
+
+      } catch (error) {
+        mostrarMensaje(
+          error.message ||
+          "No se pudo cargar la tarea.",
+          "error"
+        );
+
+        completarBtn.style.display = "block";
+        completarBtn.disabled = true;
+      }
+    }
+
+    completarBtn.addEventListener(
+      "click",
+      completarTarea
+    );
+
+    document.addEventListener(
+      "click",
+      registrarActividadUsuario,
+      {
+        passive: true
+      }
+    );
+
+    document.addEventListener(
+      "pointerdown",
+      registrarActividadUsuario,
+      {
+        passive: true
+      }
+    );
+
+    document.addEventListener(
+      "touchstart",
+      registrarActividadUsuario,
+      {
+        passive: true
+      }
+    );
+
+    document.addEventListener(
+      "scroll",
+      registrarActividadUsuario,
+      {
+        passive: true
+      }
+    );
+
+    document.addEventListener(
+      "keydown",
+      registrarActividadUsuario
+    );
+
+    document.addEventListener(
+      "input",
+      registrarActividadUsuario
+    );
+
+    document.addEventListener(
+      "visibilitychange",
+      () => {
+        if (
+          document.hidden
+        ) {
+          corriendo = false;
+          actividadValidaHasta = 0;
+          detenerIntervalos();
+          enviarPausa();
+        } else if (
+          !completada &&
+          tarea &&
+          paginaListaParaInteractuar
+        ) {
+          registrarActividadUsuario();
+        }
+      }
+    );
+
+    window.addEventListener(
+      "online",
+      () => {
+        if (
+          !paginaCerrandose &&
+          !completada &&
+          paginaListaParaInteractuar
+        ) {
+          registrarActividadUsuario();
+        }
+      }
+    );
+
+    window.addEventListener(
+      "offline",
+      () => {
+        if (!completada) {
+          corriendo = false;
+          actividadValidaHasta = 0;
+          detenerIntervalos();
+          enviarPausa();
+        }
+      }
+    );
+
+    window.addEventListener(
+      "pagehide",
+      () => {
+        paginaCerrandose = true;
+        corriendo = false;
+        detenerIntervalos();
+        enviarPausa();
+      }
+    );
+
+    window.addEventListener(
+      "load",
+      async () => {
+        paginaListaParaInteractuar = true;
+        await intentarIniciarTareaSiEstaLista();
+      }
+    );
+
+    if (document.readyState === "complete") {
+      paginaListaParaInteractuar = true;
+    }
+
+    onAuthStateChanged(
+      auth,
+      async (user) => {
+        if (!user) {
+          window.location.href =
+            "login.html";
+
+          return;
+        }
+
+        usuarioActual = user;
+
+        if (!tareaId) {
+          mostrarMensaje(
+            "No se indicó una tarea.",
+            "error"
+          );
+
+          return;
+        }
+
+        await cargarTarea();
+      }
+    );
+  </script>
+</body>
+  </html￼Enter
