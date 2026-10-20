@@ -66,6 +66,19 @@ function obtenerTiempoRequeridoMs(tarea) {
   return Math.floor(minutos * 60000);
 }
 
+function normalizarFase(valor) {
+  const fase = String(valor ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/^fase\s*/, "");
+
+  if (!/^\d+$/.test(fase)) {
+    return null;
+  }
+
+  return Number(fase);
+}
+
 function faseCoincide(usuario, tarea) {
   if (!usuario || !tarea) return false;
 
@@ -73,16 +86,21 @@ function faseCoincide(usuario, tarea) {
     usuario.fase === undefined ||
     usuario.fase === null
   ) {
-    return Number(tarea.fase) === 1;
+    return normalizarFase(tarea.fase) === 1;
   }
 
-  return (
-    String(usuario.fase) ===
-    String(tarea.fase)
-  );
-}
+  const faseUsuario =
+    normalizarFase(usuario.fase);
 
-async function verificarToken(req) {
+  const faseTarea =
+    normalizarFase(tarea.fase);
+
+  return (
+    faseUsuario !== null &&
+    faseTarea !== null &&
+    faseUsuario === faseTarea
+  );
+  }
   const authorization =
     req.headers.authorization || "";
 
@@ -733,7 +751,10 @@ async function manejarInicio(
       null,
 
     actividad_valida_hasta:
-      ahoraTimestamp,
+      Timestamp.fromMillis(
+      ahoraTimestamp.toMillis() +
+        ACTIVITY_WINDOW_MS
+    ),
 
     ultimo_punto_conteo:
       ahoraTimestamp,
