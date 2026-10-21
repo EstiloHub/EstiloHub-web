@@ -101,6 +101,8 @@ function faseCoincide(usuario, tarea) {
     faseUsuario === faseTarea
   );
   }
+
+  async function verificarToken(req) {
   const authorization =
     req.headers.authorization || "";
 
