@@ -1,12 +1,22 @@
-const admin = require("firebase-admin");
+const { getApps, initializeApp, cert } = require("firebase-admin/app");
+const { getAuth } = require("firebase-admin/auth");
+const { getFirestore, FieldValue, Timestamp } = require("firebase-admin/firestore");
 
-if (!admin.apps.length) {
+function getFirebaseAdmin() {
+  if (getApps().length) {
+    return getApps()[0];
+  }
+
   const privateKey = process.env.FIREBASE_PRIVATE_KEY
-    ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n")
+    ? process.env.FIREBASE_PRIVATE_KEY
+        .replace(/^"|"$/g, "")
+        .replace(/\\n/g, "\n")
+        .replace(/\\r/g, "")
+        .trim()
     : undefined;
 
-  admin.initializeApp({
-    credential: admin.credential.cert({
+  return initializeApp({
+    credential: cert({
       projectId: process.env.FIREBASE_PROJECT_ID,
       clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
       privateKey
@@ -14,8 +24,9 @@ if (!admin.apps.length) {
   });
 }
 
-const db = admin.firestore();
-const { FieldValue, Timestamp } = admin.firestore;
+const app = getFirebaseAdmin();
+const db = getFirestore(app);
+const auth = getAuth(app);
 
 const ACTIVITY_WINDOW_MS = 30000;
 const HEARTBEAT_INTERVAL_MS = 10000;
@@ -117,7 +128,7 @@ function faseCoincide(usuario, tarea) {
     throw new Error("NO_AUTORIZADO");
   }
 
-  return admin.auth().verifyIdToken(token);
+return auth.verifyIdToken(token);
 }
 
 async function obtenerUsuario(uid) {
