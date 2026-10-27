@@ -370,53 +370,21 @@
     let tiempoVisualBaseMomento =
       Date.now();
 
-    function actualizarTiempoVisual() {
-      if (completada) {
-        tiempoValidoElemento.textContent =
-          formatearTiempo(
-            tiempoRequerido
-          );
+function actualizarTiempoVisual() {
+const tiempo = completada
+? tiempoRequerido
+: tiempoVisualActual();
 
-        completarBtn.disabled = true;
-
-        return;
-      }
-
-      const tiempo =
-        tiempoVisualActual();
-
-      tiempoValidoElemento.textContent =
-        formatearTiempo(
-          Math.min(
-            tiempo,
-            tiempoRequerido
-          )
-        );
-
-      if (
-        tiempo >= tiempoRequerido
-      ) {
-        completarBtn.disabled = false;
-
-        establecerEstado(
-          "Tiempo requerido alcanzado. Ya puedes completar la tarea."
-        );
-
-        return;
-      }
-
-      if (corriendo) {
-        establecerEstado(
-          "Tarea en curso."
-        );
-      } else {
-        establecerEstado(
-          "Esperando actividad."
-        );
-      }
+  tiempoValidoElemento.textContent =
+    formatearTiempo(
+      Math.min(
+        tiempo,
+        tiempoRequerido
+      )
+    );
     }
-
-    function iniciarIntervaloVisual() {
+   
+  function iniciarIntervaloVisual() {
       if (intervaloVisual) {
         clearInterval(
           intervaloVisual
