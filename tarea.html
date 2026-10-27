@@ -60,11 +60,7 @@
     }
 
     .estado {
-      padding: 10px 12px;
-      border-radius: 8px;
-      background: #eef6ff;
-      color: #185a91;
-      margin-bottom: 18px;
+      display: none;
     }
 
     .contenido {
@@ -177,12 +173,11 @@
       >
         <button
           id="completarBtn"
+          hidden
           disabled
-        >
-          Completar
-        </button>
-      </div>
-
+     >
+         Completar
+       </button>
       <div
         id="mensaje"
         class="mensaje"
@@ -584,9 +579,15 @@
 
         corriendo = true;
 
-        completarBtn.disabled =
-          nuevoTiempo <
-          tiempoRequerido;
+         if (
+          nuevoTiempo >= tiempoRequerido
+        ) {
+          completarBtn.hidden = false;
+          completarBtn.disabled = false;
+        } else {
+          completarBtn.hidden = true;
+          completarBtn.disabled = true;
+        }
 
         actualizarTiempoVisual();
       } catch (error) {
@@ -941,12 +942,9 @@
           tiempoActivoValido >=
             tiempoRequerido
         ) {
-          establecerEstado(
-            "Tiempo requerido alcanzado. Ya puedes completar la tarea."
-          );
-
-          completarBtn.disabled =
-            false;
+      
+          completarBtn.hidden = false;
+          completarBtn.disabled = false;
 
           return;
         }
