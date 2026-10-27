@@ -370,18 +370,14 @@
     let tiempoVisualBaseMomento =
       Date.now();
 
-function actualizarTiempoVisual() {
-const tiempo = completada
-? tiempoRequerido
-: tiempoVisualActual();
-
-  tiempoValidoElemento.textContent =
-    formatearTiempo(
-      Math.min(
-        tiempo,
-        tiempoRequerido
-      )
-    );
+    function actualizarTiempoVisual() {
+      tiempoValidoElemento.textContent =
+        formatearTiempo(
+          Math.min(
+            tiempoActivoValido,
+            tiempoRequerido
+          )
+        );
     }
    
   function iniciarIntervaloVisual() {
@@ -806,9 +802,9 @@ const tiempo = completada
           "exito"
         );
       } catch (error) {
-        completarBtn.disabled =
-          tiempoVisualActual() <
-          tiempoRequerido;
+       
+        completarBtn.hidden = true;
+        completarBtn.disabled = true;
 
         mostrarMensaje(
           error.message ||
