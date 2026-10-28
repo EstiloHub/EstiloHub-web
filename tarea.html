@@ -167,7 +167,7 @@
         class="contenido"
       ></div>
 
-      <div
+    <div
         id="acciones"
         class="acciones"
       >
@@ -175,17 +175,18 @@
           id="completarBtn"
           hidden
           disabled
-     >
-         Completar
-       </button>
+        >
+          Completar
+        </button>
+      </div>
+
       <div
         id="mensaje"
         class="mensaje"
       ></div>
-
     </div>
   </div>
-
+  
   <script type="module">
     import {
       auth
@@ -321,6 +322,18 @@
       mensaje.textContent = "";
     }
 
+     async function leerRespuestaJSON(respuesta) {
+      const texto = await respuesta.text();
+
+    try {
+        return JSON.parse(texto);
+      } catch {
+        throw new Error(
+          "El servidor devolvió una respuesta no válida. Intentá nuevamente más tarde."
+        );
+      }
+    }
+
     function establecerEstado(texto) {
       estadoTarea.textContent = texto;
     }
@@ -453,8 +466,8 @@
           );
 
         const resultado =
-          await respuesta.json();
-
+          await leerRespuestaJSON(respuesta);
+        
         if (
           !respuesta.ok ||
           !resultado.ok
@@ -507,9 +520,9 @@
               })
             }
           );
-
+       
         const resultado =
-          await respuesta.json();
+          await leerRespuestaJSON(respuesta);
 
         if (
           !respuesta.ok ||
@@ -554,13 +567,17 @@
         }
 
         actualizarTiempoVisual();
-      } catch (error) {
+             
+    } catch (error) {
+        completarBtn.hidden = true;
+        completarBtn.disabled = true;
+
         establecerEstado(
           "Esperando conexión..."
         );
       } finally {
         enviandoActividad = false;
-      }
+    }
     }
 
     function registrarActividadUsuario() {
@@ -600,8 +617,11 @@
         "SESION_NO_ACTIVA"
       ) {
         corriendo = false;
-        actividadValidaHasta = 0;
-
+        actividadValidaHasta = 0
+      
+        completarBtn.hidden = true;
+        completarBtn.disabled = true;
+        
         establecerEstado(
           "Esperando actividad..."
         );
@@ -616,8 +636,8 @@
         corriendo = false;
         completada = true;
 
-        detenerIntervalos();
-
+        detenerIntervalos() 
+        completarBtn.hidden = true;
         completarBtn.disabled = true;
 
         establecerEstado(
@@ -661,9 +681,9 @@
               })
             }
           );
-
-        const resultado =
-          await respuesta.json();
+        
+      const resultado =
+          await leerRespuestaJSON(respuesta);
 
         if (
           !respuesta.ok ||
@@ -756,18 +776,23 @@
           );
 
         const resultado =
-          await respuesta.json();
+          await leerRespuestaJSON(respuesta);
 
-        if (
+      if (
           !respuesta.ok ||
-          !resultado.ok
+          !resultado.ok ||
+          resultado.completada !== true
         ) {
           throw new Error(
             resultado.mensaje ||
-            resultado.error ||
-            "No se pudo completar la tarea."
+            (
+              resultado.completada === false
+                ? "Todavía no se alcanzó el tiempo requerido."
+                : resultado.error ||
+                  "No se pudo completar la tarea."
+            )
           );
-        }
+    }
 
         completada = true;
         corriendo = false;
@@ -841,7 +866,7 @@
           );
 
         const resultado =
-          await respuesta.json();
+          await leerRespuestaJSON(respuesta);
 
         if (
           !respuesta.ok ||
@@ -985,7 +1010,9 @@
         ) {
           corriendo = false;
           actividadValidaHasta = 0;
-
+          completarBtn.hidden = true;
+          completarBtn.disabled = true;
+          
           establecerEstado(
             "Esperando actividad..."
           );
@@ -1010,6 +1037,7 @@
           );
 
           registrarActividadUsuario();
+          
         }
       }
     );
@@ -1020,7 +1048,9 @@
         if (!completada) {
           corriendo = false;
           actividadValidaHasta = 0;
-
+          completarBtn.hidden = true;
+          completarBtn.disabled = true;
+          
           establecerEstado(
             "Esperando conexión..."
           );
