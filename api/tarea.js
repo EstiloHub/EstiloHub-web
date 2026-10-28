@@ -1118,6 +1118,16 @@ async function manejarCompletar(
       return;
     }
 
+    const estadisticasRef =
+      db.collection(
+        "estadisticas_usuario"
+      ).doc(uid);
+
+    const estadisticasSnap =
+      await tx.get(
+        estadisticasRef
+      );
+    
     const historialRef =
       db.collection(
         "historial_realizaciones"
@@ -1208,16 +1218,6 @@ async function manejarCompletar(
         tarea.titulo ||
         null
     });
-
-    const estadisticasRef =
-      db.collection(
-        "estadisticas_usuario"
-      ).doc(uid);
-
-    const estadisticasSnap =
-      await tx.get(
-        estadisticasRef
-      );
 
     const fechaArgentina =
       obtenerFechaArgentina();
