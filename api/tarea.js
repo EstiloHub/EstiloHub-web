@@ -1024,6 +1024,16 @@ async function manejarCompletar(
       );
     }
 
+    const estadisticasRef =
+      db.collection(
+        "estadisticas_usuario"
+      ).doc(uid);
+
+    const estadisticasSnap =
+      await tx.get(
+        estadisticasRef
+      );
+
     let tiempoActivo =
       Number(
         realizacionActual
@@ -1117,16 +1127,6 @@ async function manejarCompletar(
 
       return;
     }
-
-    const estadisticasRef =
-      db.collection(
-        "estadisticas_usuario"
-      ).doc(uid);
-
-    const estadisticasSnap =
-      await tx.get(
-        estadisticasRef
-      );
     
     const historialRef =
       db.collection(
