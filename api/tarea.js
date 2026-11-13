@@ -285,7 +285,6 @@ function sesionPublica(
   };
     }
 
-
 function obtenerBloqueoUsuarioRef(uid) {
   if (
     typeof uid !== "string" ||
@@ -534,9 +533,7 @@ async function obtenerOCrearRealizacion(
   }
 
   if (
-    !tareaDisponibleParaNuevaRealizacion(
-      tarea
-    )
+    !tareaDisponibleParaNuevaRealizacion(tarea)
   ) {
     throw new Error("TAREA_NO_DISPONIBLE");
   }
@@ -545,6 +542,12 @@ async function obtenerOCrearRealizacion(
     throw new Error("TAREA_NO_CORRESPONDE");
   }
 
+  const bloqueoRef =
+    obtenerBloqueoRealizacionRef(
+      uid,
+      tarea.ref.id
+    );
+
   const nuevaRef = db
     .collection("realizaciones_tareas")
     .doc();
@@ -552,7 +555,14 @@ async function obtenerOCrearRealizacion(
   let resultado = null;
 
   await db.runTransaction(async (tx) => {
-    const tareaSnap = await tx.get(tarea.ref);
+    // Este documento determinista serializa
+    // las creaciones simultáneas de esta tarea
+    // para el mismo usuario.
+    const bloqueoSnap =
+      await tx.get(bloqueoRef);
+
+    const tareaSnap =
+      await tx.get(tarea.ref);
 
     if (!tareaSnap.exists) {
       throw new Error("TAREA_NO_DISPONIBLE");
@@ -637,9 +647,7 @@ async function obtenerOCrearRealizacion(
         throw new Error("TAREA_YA_REALIZADA");
       }
 
-      if (
-        anteriores[0].estado !== "completada"
-      ) {
+      if (anteriores[0].estado !== "completada") {
         throw new Error(
           "REALIZACION_ANTERIOR_NO_COMPLETADA"
         );
@@ -700,6 +708,19 @@ async function obtenerOCrearRealizacion(
     };
 
     tx.create(nuevaRef, datos);
+
+    // Se actualiza el documento determinista dentro
+    // de la misma transacción que crea la realización.
+    tx.set(bloqueoRef, {
+      ...(bloqueoSnap.exists
+        ? bloqueoSnap.data()
+        : {}),
+
+      usuario_id: uid,
+      tarea_id: tareaActual.ref.id,
+      ultima_realizacion_id: nuevaRef.id,
+      ultima_creacion_realizacion: fechaInicio
+    });
 
     resultado = {
       ...datos,
