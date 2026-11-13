@@ -2397,31 +2397,65 @@ module.exports = async function handler(
       tareaNoEncontrada = true;
     }
 
-    // Si la tarea fue eliminada, permitir continuar
-    // únicamente cuando exista una realización pendiente.
-    let realizacion = null;
+    // Buscar primero una realización pendiente,
+    // independientemente de que la tarea siga existiendo.
+    let realizacion =
+      await obtenerRealizacionUsuario(
+        tareaId,
+        uid
+      );
 
-    if (tareaNoEncontrada) {
-      if (accion === "iniciar") {
-        throw new Error(
-          "TAREA_NO_ENCONTRADA"
-        );
-      }
+    if (tareaNoEncontrada && !realizacion) {
+      throw new Error(
+        "TAREA_NO_ENCONTRADA"
+      );
+    }
 
-      realizacion =
-        await obtenerRealizacionUsuario(
-          tareaId,
-          uid
-        );
+    // Si existe una realización pendiente, respetar
+    // siempre los datos guardados al momento de iniciarla.
+    if (realizacion) {
+      tarea = {
+        ...(tarea || {}),
 
-      if (!realizacion) {
-        throw new Error(
-          "TAREA_NO_ENCONTRADA"
-        );
-      }
+        ref: db.collection("tareas").doc(tareaId),
 
-      // Recuperar los datos guardados al iniciar
-      // la realización, sin depender de la tarea eliminada.
+        titulo:
+          realizacion.titulo_tarea ||
+          tarea?.titulo ||
+          "",
+
+        descripcion:
+          realizacion.descripcion_tarea ||
+          tarea?.descripcion ||
+          "",
+
+        categoria:
+          realizacion.categoria_tarea ||
+          tarea?.categoria ||
+          "",
+
+        fase:
+          realizacion.fase_tarea ??
+          tarea?.fase ??
+          null,
+
+        link_url:
+          realizacion.link_url_tarea ||
+          tarea?.link_url ||
+          "",
+
+        tiempo_requerido:
+          realizacion.tiempo_requerido_minutos ??
+          tarea?.tiempo_requerido ??
+          0,
+
+        retirada: false
+      };
+    }
+    
+
+    // Recuperar los datos guardados al iniciar
+    // la realización, sin depender de la tarea eliminada.
       tarea = {
         ref: db.collection("tareas").doc(tareaId),
 
