@@ -609,6 +609,15 @@ async function obtenerOCrearRealizacion(
       titulo_tarea:
         tareaActual.titulo || null,
 
+      descripcion_tarea:
+        tareaActual.descripcion || null,
+
+      categoria_tarea:
+        tareaActual.categoria || null,
+
+      link_url_tarea:
+        tareaActual.link_url || null,
+
       fecha_inicio: fechaInicio,
       fecha_vencimiento: fechaVencimiento,
 
