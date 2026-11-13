@@ -2456,34 +2456,6 @@ module.exports = async function handler(
     if (!tarea) {
       throw new Error("TAREA_NO_ENCONTRADA");
     }
-    
-    // Recuperar los datos guardados al iniciar
-    // la realización, sin depender de la tarea eliminada.
-      tarea = {
-        ref: db.collection("tareas").doc(tareaId),
-
-        titulo:
-          realizacion.titulo_tarea || "",
-
-        descripcion:
-          realizacion.descripcion_tarea || "",
-
-        categoria:
-          realizacion.categoria_tarea || "",
-
-        fase:
-          realizacion.fase_tarea ?? null,
-
-        link_url:
-          realizacion.link_url_tarea || "",
-
-        tiempo_requerido:
-          realizacion.tiempo_requerido_minutos ||
-          0,
-
-        retirada: false
-      };
-    }
 
     if (accion === "estado") {
       const estado =
