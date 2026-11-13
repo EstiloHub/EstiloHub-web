@@ -2410,7 +2410,7 @@ module.exports = async function handler(
         "TAREA_NO_ENCONTRADA"
       );
     }
-
+    
     // Si existe una realización pendiente, respetar
     // siempre los datos guardados al momento de iniciarla.
     if (realizacion) {
@@ -2452,8 +2452,11 @@ module.exports = async function handler(
         retirada: false
       };
     }
-    
 
+    if (!tarea) {
+      throw new Error("TAREA_NO_ENCONTRADA");
+    }
+    
     // Recuperar los datos guardados al iniciar
     // la realización, sin depender de la tarea eliminada.
       tarea = {
