@@ -285,6 +285,62 @@ function sesionPublica(
   };
     }
 
+
+function obtenerBloqueoUsuarioRef(uid) {
+  if (
+    typeof uid !== "string" ||
+    !uid.trim() ||
+    uid.includes("/")
+  ) {
+    throw new Error("NO_AUTORIZADO");
+  }
+
+  return db
+    .collection("bloqueos_tareas")
+    .doc(uid);
+}
+
+function obtenerBloqueoRealizacionRef(
+  uid,
+  tareaId
+) {
+  if (
+    typeof uid !== "string" ||
+    !uid.trim() ||
+    uid.includes("/") ||
+    typeof tareaId !== "string" ||
+    !tareaId.trim() ||
+    tareaId.includes("/")
+  ) {
+    throw new Error("NO_AUTORIZADO");
+  }
+
+  return obtenerBloqueoUsuarioRef(uid)
+    .collection("realizaciones")
+    .doc(tareaId);
+}
+
+function obtenerDiaTrabajadoRef(
+  uid,
+  fechaArgentina
+) {
+  if (
+    typeof uid !== "string" ||
+    !uid.trim() ||
+    uid.includes("/") ||
+    typeof fechaArgentina !== "string" ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(fechaArgentina)
+  ) {
+    throw new Error("NO_AUTORIZADO");
+  }
+
+  return db
+    .collection("dias_trabajados_usuario")
+    .doc(uid)
+    .collection("fechas")
+    .doc(fechaArgentina);
+}
+
 async function obtenerRealizacionUsuario(
   tareaId,
   uid
