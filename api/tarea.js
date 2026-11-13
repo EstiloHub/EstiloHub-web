@@ -1603,10 +1603,6 @@ async function manejarHeartbeat(
     });
   });
   }
-  
-        
-        
-        
     
 async function manejarCompletar(
   uid,
@@ -2065,3 +2061,529 @@ async function manejarCompletar(
   return resultado;
 }       
           
+function obtenerFechaArgentina(
+  fechaMs = ahoraMs()
+) {
+  return new Intl.DateTimeFormat(
+    "en-CA",
+    {
+      timeZone: "America/Argentina/Buenos_Aires",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit"
+    }
+  ).format(
+    new Date(fechaMs)
+  );
+}
+
+async function obtenerEstado(
+  uid,
+  usuario,
+  tarea
+) {
+  let realizacion =
+    await obtenerRealizacionUsuario(
+      tarea.ref.id,
+      uid
+    );
+
+  // Primero se busca una realización pendiente.
+  // Los cambios posteriores de fase o disponibilidad
+  // no deben impedir que pueda continuar.
+  if (realizacion) {
+    const vencimientoMs =
+      timestampMs(
+        realizacion.fecha_vencimiento
+      );
+
+    if (
+      vencimientoMs &&
+      vencimientoMs <= ahoraMs()
+    ) {
+      await cerrarRealizacionPorCaducidad(
+        realizacion.ref,
+        "vencimiento_7_dias"
+      );
+
+      realizacion = null;
+    }
+  }
+
+  // La fase solo se comprueba cuando no existe
+  // una realización pendiente que pueda continuar.
+  if (!realizacion) {
+    if (!faseCoincide(usuario, tarea)) {
+      throw new Error(
+        "TAREA_NO_CORRESPONDE"
+      );
+    }
+
+    if (tareaRetirada(tarea)) {
+      throw new Error(
+        "TAREA_NO_DISPONIBLE"
+      );
+    }
+  }
+
+  let sesion = null;
+  let calculado = null;
+
+  if (realizacion) {
+    sesion =
+      await obtenerSesionActual(
+        realizacion.ref.id
+      );
+
+    if (sesion) {
+      if (
+        sesion.usuario_id !== uid ||
+        sesion.realizacion_id !==
+          realizacion.ref.id ||
+        sesion.tarea_id !==
+          realizacion.tarea_id
+      ) {
+        throw new Error(
+          "RELACION_SESION_INVALIDA"
+        );
+      }
+
+      calculado =
+        calcularNuevoTiempo(
+          sesion,
+          realizacion,
+          tarea
+        );
+    }
+  }
+
+  return {
+    tarea: tareaPublica(tarea),
+
+    realizacion: realizacion
+      ? realizacionPublica({
+          ...realizacion,
+
+          ...(calculado
+            ? {
+                tiempo_activo_valido:
+                  calculado.tiempo_activo_valido,
+
+                tiempo_adicional:
+                  calculado.tiempo_adicional
+              }
+            : {})
+        })
+      : null,
+
+    sesion: sesion
+      ? sesionPublica(
+          sesion,
+          calculado
+        )
+      : null
+  };
+}
+
+function mensajeError(error) {
+  const mensajes = {
+    NO_AUTORIZADO: [
+      401,
+      "No autorizado."
+    ],
+
+    USUARIO_NO_ENCONTRADO: [
+      404,
+      "Usuario no encontrado."
+    ],
+
+    USUARIO_INACTIVO: [
+      403,
+      "El usuario está inactivo."
+    ],
+
+    TAREA_ID_REQUERIDO: [
+      400,
+      "Falta el identificador de la tarea."
+    ],
+
+    TAREA_ID_INVALIDO: [
+      400,
+      "El identificador de la tarea no es válido."
+    ],
+
+    TAREA_NO_ENCONTRADA: [
+      404,
+      "La tarea no existe."
+    ],
+
+    TAREA_NO_DISPONIBLE: [
+      400,
+      "La tarea no está disponible."
+    ],
+
+    TAREA_NO_CORRESPONDE: [
+      403,
+      "La tarea no corresponde al usuario."
+    ],
+
+    TAREA_YA_REALIZADA: [
+      409,
+      "Esta tarea ya fue realizada y no admite otra realización."
+    ],
+
+    REALIZACION_ANTERIOR_NO_COMPLETADA: [
+      409,
+      "Debés completar la realización anterior antes de iniciar otra."
+    ],
+
+    REALIZACIONES_DUPLICADAS: [
+      409,
+      "Se detectaron realizaciones duplicadas. Se requiere revisión."
+    ],
+
+    TIEMPO_REQUERIDO_INVALIDO: [
+      400,
+      "El tiempo requerido de la tarea no es válido."
+    ],
+
+    OTRA_TAREA_ACTIVA: [
+      409,
+      "Ya existe otra tarea activa."
+    ],
+
+    SESION_NO_ACTIVA: [
+      409,
+      "La tarea no está activa."
+    ],
+
+    SESION_NO_ENCONTRADA: [
+      404,
+      "No se encontró la sesión."
+    ],
+
+    SESIONES_ACTIVAS_DUPLICADAS: [
+      409,
+      "Se detectaron sesiones activas duplicadas. Se requiere revisión."
+    ],
+
+    RELACION_SESION_INVALIDA: [
+      409,
+      "La sesión no coincide con la realización correspondiente."
+    ],
+
+    REALIZACION_NO_ENCONTRADA: [
+      404,
+      "No se encontró la realización."
+    ],
+
+    REALIZACION_NO_DISPONIBLE: [
+      409,
+      "La realización ya no está disponible."
+    ],
+
+    REALIZACION_VENCIDA: [
+      409,
+      "La realización venció."
+    ],
+
+    TIEMPO_INSUFICIENTE: [
+      400,
+      "Todavía no se alcanzó el tiempo requerido."
+    ],
+
+    ERROR_INTERNO: [
+      500,
+      "Ocurrió un error al procesar la tarea."
+    ]
+  };
+
+  const clave =
+    error && typeof error.message === "string"
+      ? error.message
+      : "ERROR_INTERNO";
+
+  return (
+    mensajes[clave] || [
+      500,
+      "Ocurrió un error al procesar la tarea."
+    ]
+  );
+}
+
+module.exports = async function handler(
+  req,
+  res
+) {
+  try {
+    if (
+      req.method !== "GET" &&
+      req.method !== "POST"
+    ) {
+      return respuesta(res, 405, {
+        ok: false,
+        error: "METODO_NO_PERMITIDO"
+      });
+    }
+
+    const decoded =
+      await verificarToken(req);
+
+    const uid = decoded.uid;
+
+    const usuario =
+      await obtenerUsuario(uid);
+
+    const tareaId =
+      req.method === "GET"
+        ? req.query?.id
+        : req.body?.tarea_id;
+
+    const accion =
+      req.method === "GET"
+        ? "estado"
+        : req.body?.accion;
+
+    // Validar la acción antes de consultar Firestore.
+    const accionesPermitidas = [
+      "estado",
+      "iniciar",
+      "actividad",
+      "heartbeat",
+      "completar"
+    ];
+
+    if (
+      !accionesPermitidas.includes(accion)
+    ) {
+      return respuesta(res, 400, {
+        ok: false,
+        error: "ACCION_NO_VALIDA"
+      });
+    }
+
+    if (
+      typeof tareaId !== "string" ||
+      !tareaId.trim() ||
+      tareaId.includes("/")
+    ) {
+      throw new Error(
+        "TAREA_ID_INVALIDO"
+      );
+    }
+
+    let tarea = null;
+    let tareaNoEncontrada = false;
+
+    try {
+      tarea = await obtenerTarea(tareaId);
+    } catch (error) {
+      if (
+        error.message !==
+        "TAREA_NO_ENCONTRADA"
+      ) {
+        throw error;
+      }
+
+      tareaNoEncontrada = true;
+    }
+
+    // Si la tarea fue eliminada, permitir continuar
+    // únicamente cuando exista una realización pendiente.
+    let realizacion = null;
+
+    if (tareaNoEncontrada) {
+      if (accion === "iniciar") {
+        throw new Error(
+          "TAREA_NO_ENCONTRADA"
+        );
+      }
+
+      realizacion =
+        await obtenerRealizacionUsuario(
+          tareaId,
+          uid
+        );
+
+      if (!realizacion) {
+        throw new Error(
+          "TAREA_NO_ENCONTRADA"
+        );
+      }
+
+      // Recuperar los datos guardados al iniciar
+      // la realización, sin depender de la tarea eliminada.
+      tarea = {
+        ref: db.collection("tareas").doc(tareaId),
+
+        titulo:
+          realizacion.titulo_tarea || "",
+
+        descripcion:
+          realizacion.descripcion_tarea || "",
+
+        categoria:
+          realizacion.categoria_tarea || "",
+
+        fase:
+          realizacion.fase_tarea ?? null,
+
+        link_url:
+          realizacion.link_url_tarea || "",
+
+        tiempo_requerido:
+          realizacion.tiempo_requerido_minutos ||
+          0,
+
+        retirada: false
+      };
+    }
+
+    if (accion === "estado") {
+      const estado =
+        await obtenerEstado(
+          uid,
+          usuario,
+          tarea
+        );
+
+      return respuesta(res, 200, {
+        ok: true,
+        ...estado
+      });
+    }
+
+    if (accion === "iniciar") {
+      const resultado =
+        await manejarInicio(
+          uid,
+          usuario,
+          tarea
+        );
+
+      return respuesta(res, 200, {
+        ok: true,
+
+        tarea:
+          tareaPublica(tarea),
+
+        realizacion:
+          realizacionPublica(
+            resultado.realizacion
+          ),
+
+        sesion:
+          sesionPublica(
+            resultado.sesion
+          )
+      });
+    }
+
+    if (!realizacion) {
+      realizacion =
+        await obtenerRealizacionUsuario(
+          tarea.ref.id,
+          uid
+        );
+    }
+
+    if (!realizacion) {
+      throw new Error(
+        "REALIZACION_NO_DISPONIBLE"
+      );
+    }
+
+    if (
+      realizacion.usuario_id !== uid ||
+      realizacion.tarea_id !== tarea.ref.id
+    ) {
+      throw new Error("NO_AUTORIZADO");
+    }
+
+    const vencimientoMs =
+      timestampMs(
+        realizacion.fecha_vencimiento
+      );
+
+    if (
+      vencimientoMs &&
+      vencimientoMs <= ahoraMs()
+    ) {
+      await cerrarRealizacionPorCaducidad(
+        realizacion.ref,
+        "vencimiento_7_dias"
+      );
+
+      throw new Error(
+        "REALIZACION_VENCIDA"
+      );
+    }
+
+    if (accion === "actividad") {
+      const resultado =
+        await manejarActividad(
+          uid,
+          tarea,
+          realizacion
+        );
+
+      return respuesta(res, 200, {
+        ok: true,
+
+        tiempo_activo_valido:
+          resultado.tiempo_activo_valido,
+
+        tiempo_adicional:
+          resultado.tiempo_adicional
+      });
+    }
+
+    if (accion === "heartbeat") {
+      await manejarHeartbeat(
+        uid,
+        realizacion
+      );
+
+      return respuesta(res, 200, {
+        ok: true
+      });
+    }
+
+    if (accion === "completar") {
+      const resultado =
+        await manejarCompletar(
+          uid,
+          tarea,
+          realizacion
+        );
+
+      return respuesta(res, 200, {
+        ok: true,
+
+        completada:
+          resultado.completada,
+
+        tiempo_activo_valido:
+          resultado.tiempo_activo_valido,
+
+        tiempo_adicional:
+          resultado.tiempo_adicional
+      });
+    }
+
+  } catch (error) {
+    const [status, mensaje] =
+      mensajeError(error);
+
+    const codigoSeguro =
+      status >= 500
+        ? "ERROR_INTERNO"
+        : error?.message || "ERROR_INTERNO";
+
+    return respuesta(res, status, {
+      ok: false,
+      error: codigoSeguro,
+      mensaje
+    });
+  }
+};
