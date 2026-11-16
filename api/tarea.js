@@ -1138,85 +1138,6 @@ async function obtenerSesionActual(realizacionId) {
   return sesionesValidas[0] || null;
 }
 
-async function manejarInicio(
-  uid,
-  usuario,
-  tarea
-) {
-  let realizacion =
-    await obtenerRealizacionUsuario(
-      tarea.ref.id,
-      uid
-    );
-
-  // Si existe una realización pendiente, se respeta
-  // aunque la tarea haya cambiado de fase o estado.
-  if (realizacion) {
-    const vencimientoMs =
-      timestampMs(
-        realizacion.fecha_vencimiento
-      );
-
-    if (
-      vencimientoMs &&
-      vencimientoMs <= ahoraMs()
-    ) {
-      await cerrarRealizacionPorCaducidad(
-        realizacion.ref,
-        "vencimiento_7_dias"
-      );
-
-      realizacion = null;
-    }
-  }
-
-  // La validación de fase y disponibilidad para una
-  // realización nueva se realiza dentro de esta función.
-  if (!realizacion) {
-    realizacion =
-      await obtenerOCrearRealizacion(
-        tarea,
-        usuario,
-        uid
-      );
-  }
-
-  // Limpiar sesiones vencidas del usuario antes
-  // de comprobar si puede iniciar otra.
-  const otraSesion =
-    await obtenerSesionActivaUsuario(uid);
-
-  if (
-    otraSesion &&
-    otraSesion.realizacion_id !==
-      realizacion.ref.id
-  ) {
-    throw new Error(
-      "OTRA_TAREA_ACTIVA"
-    );
-  }
-
-  // Si ya existe una sesión válida de esta realización,
-  // se devuelve en lugar de crear otra.
-  const sesionExistente =
-    await obtenerSesionActual(
-      realizacion.ref.id
-    );
-
-  if (sesionExistente) {
-    if (sesionExistente.usuario_id !== uid) {
-      throw new Error("NO_AUTORIZADO");
-    }
-
-    return {
-      realizacion,
-      sesion: sesionExistente
-    };
-  }
-
-  const sesionRef =
-    db.collection("sesiones_tareas")
-      .doc();
 
   const resultado =
     await db.runTransaction(async (tx) => {
@@ -1330,12 +1251,216 @@ async function manejarInicio(
           ? minutosGuardados
           : Number(tarea.tiempo_requerido);
 
+async function manejarInicio(
+  uid,
+  usuario,
+  tarea
+) {
+  let realizacion =
+    await obtenerRealizacionUsuario(
+      tarea.ref.id,
+      uid
+    );
+
+  if (realizacion) {
+    const vencimientoMs =
+      timestampMs(
+        realizacion.fecha_vencimiento
+      );
+
+    if (
+      vencimientoMs &&
+      vencimientoMs <= ahoraMs()
+    ) {
+      await cerrarRealizacionPorCaducidad(
+        realizacion.ref,
+        "vencimiento_7_dias"
+      );
+
+      realizacion = null;
+    }
+  }
+
+  if (!realizacion) {
+    realizacion =
+      await obtenerOCrearRealizacion(
+        tarea,
+        usuario,
+        uid
+      );
+  }
+
+  const bloqueoRef =
+    obtenerBloqueoUsuarioRef(uid);
+
+  const sesionRef =
+    db.collection("sesiones_tareas").doc();
+
+  const resultado =
+    await db.runTransaction(async (tx) => {
+      // Todas las lecturas se realizan antes de escribir.
+      const bloqueoSnap =
+        await tx.get(bloqueoRef);
+
+      const realizacionSnap =
+        await tx.get(realizacion.ref);
+
+      const sesionesQuery =
+        db.collection("sesiones_tareas")
+          .where("usuario_id", "==", uid)
+          .where("activa", "==", true);
+
+      const sesionesSnap =
+        await tx.get(sesionesQuery);
+
+      if (!realizacionSnap.exists) {
+        throw new Error(
+          "REALIZACION_NO_ENCONTRADA"
+        );
+      }
+
+      const realizacionActual = {
+        ref: realizacion.ref,
+        ...realizacionSnap.data()
+      };
+
+      if (
+        realizacionActual.usuario_id !== uid
+      ) {
+        throw new Error("NO_AUTORIZADO");
+      }
+
+      if (
+        realizacionActual.estado !== "pendiente"
+      ) {
+        throw new Error(
+          "REALIZACION_NO_DISPONIBLE"
+        );
+      }
+
       const ahoraTimestamp = ahora();
+      const ahoraActualMs =
+        ahoraTimestamp.toMillis();
+
+      const sesionesActivas =
+        sesionesSnap.docs.map((doc) => ({
+          ref: doc.ref,
+          ...doc.data()
+        }));
+
+      const sesionesVigentes =
+        sesionesActivas.filter((sesion) => {
+          const hasta = timestampMs(
+            sesion.actividad_valida_hasta
+          );
+
+          return hasta && hasta > ahoraActualMs;
+        });
+
+      if (sesionesVigentes.length > 1) {
+        throw new Error(
+          "SESIONES_ACTIVAS_DUPLICADAS"
+        );
+      }
+
+      const bloqueo =
+        bloqueoSnap.exists
+          ? bloqueoSnap.data()
+          : null;
+
+      if (sesionesVigentes.length === 1) {
+        const existente =
+          sesionesVigentes[0];
+
+        if (
+          existente.realizacion_id !==
+          realizacion.ref.id
+        ) {
+          throw new Error(
+            "OTRA_TAREA_ACTIVA"
+          );
+        }
+
+        if (
+          existente.tarea_id !==
+            realizacionActual.tarea_id ||
+          existente.usuario_id !== uid
+        ) {
+          throw new Error(
+            "RELACION_SESION_INVALIDA"
+          );
+        }
+
+        // Recuperar el bloqueo si la sesión es anterior
+        // a la implementación de este mecanismo.
+        tx.set(bloqueoRef, {
+          ...(bloqueo || {}),
+          usuario_id: uid,
+          tarea_id: existente.tarea_id,
+          realizacion_id:
+            existente.realizacion_id,
+          sesion_id: existente.ref.id,
+          actividad_valida_hasta:
+            existente.actividad_valida_hasta,
+          actualizado_en: ahoraTimestamp
+        });
+
+        return {
+          realizacion: realizacionActual,
+          sesion: existente
+        };
+      }
+
+      // No hay sesiones vigentes. Las sesiones antiguas
+      // vencidas se cierran antes de crear otra.
+      const sesionesObsoletas =
+        sesionesActivas.filter((sesion) => {
+          const hasta = timestampMs(
+            sesion.actividad_valida_hasta
+          );
+
+          return !hasta || hasta <= ahoraActualMs;
+        });
+
+      for (const obsoleta of sesionesObsoletas) {
+        tx.update(obsoleta.ref, {
+          activa: false,
+          fecha_finalizacion: ahoraTimestamp,
+          actividad_valida_hasta: ahoraTimestamp,
+          ultimo_punto_conteo: ahoraTimestamp
+        });
+      }
+
+      const requeridoGuardado =
+        Number(
+          realizacionActual.tiempo_requerido_ms
+        );
+
+      const requeridoMs =
+        Number.isFinite(requeridoGuardado) &&
+        requeridoGuardado > 0
+          ? requeridoGuardado
+          : obtenerTiempoRequeridoMs(tarea);
+
+      const minutosGuardados =
+        Number(
+          realizacionActual.tiempo_requerido_minutos
+        );
+
+      const requeridoMinutos =
+        Number.isFinite(minutosGuardados) &&
+        minutosGuardados > 0
+          ? minutosGuardados
+          : Number(tarea.tiempo_requerido);
+
+      const actividadHasta =
+        Timestamp.fromMillis(
+          ahoraActualMs + ACTIVITY_WINDOW_MS
+        );
 
       const datosSesion = {
-        tarea_id: realizacion.ref.id
-          ? realizacionActual.tarea_id
-          : tarea.ref.id,
+        tarea_id:
+          realizacionActual.tarea_id,
 
         realizacion_id:
           realizacion.ref.id,
@@ -1344,16 +1469,12 @@ async function manejarInicio(
 
         activa: true,
 
-        fecha_inicio:
-          ahoraTimestamp,
+        fecha_inicio: ahoraTimestamp,
 
         ultima_actividad: null,
 
         actividad_valida_hasta:
-          Timestamp.fromMillis(
-            ahoraTimestamp.toMillis() +
-              ACTIVITY_WINDOW_MS
-          ),
+          actividadHasta,
 
         ultimo_punto_conteo:
           ahoraTimestamp,
@@ -1387,10 +1508,19 @@ async function manejarInicio(
         cantidad_actividades: 0
       };
 
-      tx.create(
-        sesionRef,
-        datosSesion
-      );
+      tx.create(sesionRef, datosSesion);
+
+      tx.set(bloqueoRef, {
+        usuario_id: uid,
+        tarea_id:
+          realizacionActual.tarea_id,
+        realizacion_id:
+          realizacion.ref.id,
+        sesion_id: sesionRef.id,
+        actividad_valida_hasta:
+          actividadHasta,
+        actualizado_en: ahoraTimestamp
+      });
 
       return {
         realizacion: realizacionActual,
@@ -1402,8 +1532,7 @@ async function manejarInicio(
     });
 
   return resultado;
-    }    
-
+}
 
 async function manejarActividad(
   uid,
