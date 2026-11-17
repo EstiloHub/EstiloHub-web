@@ -1333,6 +1333,51 @@ async function obtenerSesionActual(realizacionId) {
   return sesionesValidas[0] || null;
 }
 
+async function obtenerEstado(uid, usuario, tarea) {
+  let realizacion =
+    await obtenerRealizacionUsuario(
+      tarea.ref.id,
+      uid
+    );
+
+  if (realizacion) {
+    const vencimientoMs =
+      timestampMs(
+        realizacion.fecha_vencimiento
+      );
+
+    if (
+      vencimientoMs &&
+      vencimientoMs <= ahoraMs()
+    ) {
+      await cerrarRealizacionPorCaducidad(
+        realizacion.ref,
+        "vencimiento_7_dias"
+      );
+
+      realizacion = null;
+    }
+  }
+
+  let sesion = null;
+
+  if (realizacion) {
+    sesion = await obtenerSesionActual(
+      realizacion.ref.id
+    );
+  }
+
+  return {
+    tarea: tareaPublica(tarea),
+
+    realizacion:
+      realizacionPublica(realizacion),
+
+    sesion:
+      sesionPublica(sesion)
+  };
+    }
+
 async function manejarInicio(
   uid,
   usuario,
