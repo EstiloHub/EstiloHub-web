@@ -45,6 +45,28 @@ function ahoraMs() {
   return Date.now();
 }
 
+function obtenerFechaArgentina() {
+  const partes = new Intl.DateTimeFormat(
+    "en-CA",
+    {
+      timeZone: "America/Argentina/Buenos_Aires",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit"
+    }
+  ).formatToParts(new Date());
+
+  const valores = {};
+
+  for (const parte of partes) {
+    if (parte.type !== "literal") {
+      valores[parte.type] = parte.value;
+    }
+  }
+
+  return `${valores.year}-${valores.month}-${valores.day}`;
+}
+
 function timestampMs(valor) {
   if (!valor) return null;
 
@@ -283,7 +305,7 @@ function sesionPublica(
       tiempoRequeridoSeguro > 0 &&
       tiempoActivoSeguro >= tiempoRequeridoSeguro
   };
-    }
+}
 
 function obtenerBloqueoUsuarioRef(uid) {
   if (
@@ -1310,119 +1332,6 @@ async function obtenerSesionActual(realizacionId) {
 
   return sesionesValidas[0] || null;
 }
-
-
-  const resultado =
-    await db.runTransaction(async (tx) => {
-      const realizacionSnap =
-        await tx.get(realizacion.ref);
-
-      if (!realizacionSnap.exists) {
-        throw new Error(
-          "REALIZACION_NO_ENCONTRADA"
-        );
-      }
-
-      const realizacionActual = {
-        ref: realizacion.ref,
-        ...realizacionSnap.data()
-      };
-
-      if (
-        realizacionActual.usuario_id !== uid
-      ) {
-        throw new Error("NO_AUTORIZADO");
-      }
-
-      if (
-        realizacionActual.estado !== "pendiente"
-      ) {
-        throw new Error(
-          "REALIZACION_NO_DISPONIBLE"
-        );
-      }
-
-      // Consultar todas las sesiones activas del usuario
-      // dentro de la misma transacción.
-      const sesionesUsuarioQuery =
-        db.collection("sesiones_tareas")
-          .where("usuario_id", "==", uid)
-          .where("activa", "==", true);
-
-      const sesionesUsuarioSnap =
-        await tx.get(sesionesUsuarioQuery);
-
-      const sesionesActivas =
-        sesionesUsuarioSnap.docs;
-
-      const sesionesDeRealizacion =
-        sesionesActivas.filter(
-          (doc) =>
-            doc.data().realizacion_id ===
-            realizacion.ref.id
-        );
-
-      if (sesionesDeRealizacion.length > 1) {
-        throw new Error(
-          "SESIONES_ACTIVAS_DUPLICADAS"
-        );
-      }
-
-      if (sesionesDeRealizacion.length === 1) {
-        const doc = sesionesDeRealizacion[0];
-
-        const sesionActual = {
-          ref: doc.ref,
-          ...doc.data()
-        };
-
-        const actividadHasta =
-          timestampMs(
-            sesionActual.actividad_valida_hasta
-          );
-
-        if (
-          actividadHasta &&
-          actividadHasta > ahoraMs()
-        ) {
-          return {
-            realizacion: realizacionActual,
-            sesion: sesionActual
-          };
-        }
-
-        throw new Error(
-          "SESION_NO_ACTIVA"
-        );
-      }
-
-      if (sesionesActivas.length > 0) {
-        throw new Error(
-          "OTRA_TAREA_ACTIVA"
-        );
-      }
-
-      const requeridoGuardado =
-        Number(
-          realizacionActual.tiempo_requerido_ms
-        );
-
-      const requeridoMs =
-        Number.isFinite(requeridoGuardado) &&
-        requeridoGuardado > 0
-          ? requeridoGuardado
-          : obtenerTiempoRequeridoMs(tarea);
-
-      const minutosGuardados =
-        Number(
-          realizacionActual.tiempo_requerido_minutos
-        );
-
-      const requeridoMinutos =
-        Number.isFinite(minutosGuardados) &&
-        minutosGuardados > 0
-          ? minutosGuardados
-          : Number(tarea.tiempo_requerido);
 
 async function manejarInicio(
   uid,
