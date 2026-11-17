@@ -420,7 +420,17 @@ async function cerrarRealizacionPorCaducidad(
     if (actual.estado !== "pendiente") {
       return;
     }
+    
+    const vencimientoMs =
+      timestampMs(actual.fecha_vencimiento);
 
+    if (
+      !vencimientoMs ||
+      vencimientoMs > ahoraTimestamp.toMillis()
+    ) {
+      return;
+    }
+    
     const sesionesQuery = db
       .collection("sesiones_tareas")
       .where("realizacion_id", "==", ref.id)
@@ -755,8 +765,16 @@ async function obtenerOCrearRealizacion(
           );
         });
 
+    const primeraRealizacion =
+      anteriores.length > 0
+        ? anteriores[anteriores.length - 1]
+        : null;
+
     const repetible =
-      tareaActual.repetible === true;
+      primeraRealizacion &&
+      typeof primeraRealizacion.repetible === "boolean"
+        ? primeraRealizacion.repetible
+        : tareaActual.repetible === true;
 
     if (anteriores.length > 0) {
       if (!repetible) {
@@ -1522,9 +1540,29 @@ async function manejarInicio(
           );
         }
 
-        // Recuperar el bloqueo si la sesión es anterior
-        // a la implementación de este mecanismo.
-        tx.set(bloqueoRef, {
+         if (bloqueo) {
+          if (
+            bloqueo.usuario_id !== uid ||
+            bloqueo.sesion_id !== existente.ref.id ||
+            bloqueo.realizacion_id !== realizacion.ref.id ||
+            bloqueo.tarea_id !== existente.tarea_id
+          ) {
+            throw new Error(
+              "BLOQUEO_SESION_INVALIDO"
+            );
+          }
+        } else {
+          tx.set(bloqueoRef, {
+            usuario_id: uid,
+            tarea_id: existente.tarea_id,
+            realizacion_id:
+              existente.realizacion_id,
+            sesion_id: existente.ref.id,
+            actividad_valida_hasta:
+              existente.actividad_valida_hasta,
+            actualizado_en: ahoraTimestamp
+          });
+            }
           ...(bloqueo || {}),
           usuario_id: uid,
           tarea_id: existente.tarea_id,
@@ -1860,7 +1898,7 @@ async function manejarActividad(
   });
 
   return resultado;
-    }
+}
                           
 async function manejarHeartbeat(
   uid,
@@ -2010,7 +2048,7 @@ async function manejarHeartbeat(
         FieldValue.increment(1)
     });
   });
-      }
+}
         
 async function manejarCompletar(
   uid,
@@ -2755,45 +2793,71 @@ module.exports = async function handler(
     
     // Si existe una realización pendiente, respetar
     // siempre los datos guardados al momento de iniciarla.
-    if (realizacion) {
+        if (realizacion) {
+      const obtenerSnapshot = (
+        campoRealizacion,
+        campoTarea,
+        valorPredeterminado = ""
+      ) => {
+        if (
+          Object.prototype.hasOwnProperty.call(
+            realizacion,
+            campoRealizacion
+          )
+        ) {
+          return realizacion[campoRealizacion];
+        }
+
+        return tarea?.[campoTarea] ??
+          valorPredeterminado;
+      };
+
       tarea = {
         ...(tarea || {}),
 
         ref: db.collection("tareas").doc(tareaId),
 
         titulo:
-          realizacion.titulo_tarea ||
-          tarea?.titulo ||
-          "",
+          obtenerSnapshot(
+            "titulo_tarea",
+            "titulo"
+          ),
 
         descripcion:
-          realizacion.descripcion_tarea ||
-          tarea?.descripcion ||
-          "",
+          obtenerSnapshot(
+            "descripcion_tarea",
+            "descripcion"
+          ),
 
         categoria:
-          realizacion.categoria_tarea ||
-          tarea?.categoria ||
-          "",
+          obtenerSnapshot(
+            "categoria_tarea",
+            "categoria"
+          ),
 
         fase:
-          realizacion.fase_tarea ??
-          tarea?.fase ??
-          null,
+          obtenerSnapshot(
+            "fase_tarea",
+            "fase",
+            null
+          ),
 
         link_url:
-          realizacion.link_url_tarea ||
-          tarea?.link_url ||
-          "",
+          obtenerSnapshot(
+            "link_url_tarea",
+            "link_url"
+          ),
 
         tiempo_requerido:
-          realizacion.tiempo_requerido_minutos ??
-          tarea?.tiempo_requerido ??
-          0,
+          obtenerSnapshot(
+            "tiempo_requerido_minutos",
+            "tiempo_requerido",
+            0
+          ),
 
         retirada: false
       };
-    }
+      }
 
     if (!tarea) {
       throw new Error("TAREA_NO_ENCONTRADA");
