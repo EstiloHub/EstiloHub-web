@@ -513,116 +513,124 @@ async function cerrarRealizacionPorCaducidad(
       .collection("historial_realizaciones")
       .doc(ref.id);
 
-    // Todas las lecturas terminaron.
-    // A partir de aquí se realizan las escrituras.
+ // Todas las lecturas terminaron.
+ // A partir de aquí se realizan las escrituras.
 
-    for (const sesion of sesiones) {
-      tx.update(sesion.ref, {
-        activa: false,
+for (const sesion of sesiones) {
+tx.update(sesion.ref, {
+activa: false,
 
-        tiempo_activo_valido:
-          tiempoActivo,
+    tiempo_activo_valido:
+      tiempoActivo,
 
-        tiempo_adicional:
-          tiempoAdicional,
+    tiempo_adicional:
+      tiempoAdicional,
 
-        fecha_finalizacion:
-          ahoraTimestamp,
+    fecha_finalizacion:
+      ahoraTimestamp,
 
-        actividad_valida_hasta:
-          ahoraTimestamp,
+    actividad_valida_hasta:
+      ahoraTimestamp,
 
-        ultimo_punto_conteo:
-          ahoraTimestamp
-      });
+    ultimo_punto_conteo:
+      ahoraTimestamp
+  });
 
-      // Liberar solo el bloqueo de esta sesión.
-      if (
-        bloqueoSnap.exists &&
-        bloqueoSnap.data().sesion_id ===
-          sesion.ref.id
-      ) {
-        tx.delete(bloqueoRef);
-      }
-    }
-    
-    if (
-      sesiones.length === 0 &&
-      bloqueoSnap.exists &&
-      bloqueoSnap.data().realizacion_id === ref.id
-    ) {
-      tx.update(bloqueoRef, {
-        sesion_id: null,
-        realizacion_id: null,
-        tarea_id: null,
-        actividad_valida_hasta: null,
-        actualizado_en: ahoraTimestamp
-      });
-    }
-    
-    tx.update(ref, {
-      estado: "vencida",
+  // Liberar solo el bloqueo correspondiente a esta sesión.
+  if (
+    bloqueoSnap.exists &&
+    bloqueoSnap.data().usuario_id === actual.usuario_id &&
+    bloqueoSnap.data().sesion_id === sesion.ref.id &&
+    bloqueoSnap.data().realizacion_id === ref.id &&
+    bloqueoSnap.data().tarea_id === actual.tarea_id
+  ) {
+    tx.delete(bloqueoRef);
+  }
+}
 
-      fecha_cierre:
-        ahoraTimestamp,
-
-      motivo_cierre: motivo,
-
-      tiempo_activo_valido:
-        tiempoActivo,
-
-      tiempo_adicional:
-        tiempoAdicional
-    });
-
-    tx.set(historialRef, {
-      tarea_id: actual.tarea_id,
-
-      realizacion_id: ref.id,
-
-      usuario_id: actual.usuario_id,
-
-      email: actual.email || null,
-
-      titulo_tarea:
-        actual.titulo_tarea || null,
-
-      descripcion_tarea:
-        actual.descripcion_tarea || null,
-
-      categoria_tarea:
-        actual.categoria_tarea || null,
-
-      link_url_tarea:
-        actual.link_url_tarea || null,
-
-      fecha_inicio:
-        actual.fecha_inicio || null,
-
-      fecha_vencimiento:
-        actual.fecha_vencimiento || null,
-
-      fecha_cierre:
-        ahoraTimestamp,
-
-      motivo_cierre: motivo,
-
-      estado_final: "vencida",
-
-      tiempo_requerido_ms:
-        actual.tiempo_requerido_ms || null,
-
-      tiempo_activo_valido:
-        tiempoActivo,
-
-      tiempo_adicional:
-        tiempoAdicional,
-
-      tiempo_total:
-        tiempoActivo + tiempoAdicional
-    });
+// Si no hay sesión, liberar el bloqueo solo si pertenece a esta realización.
+if (
+  sesiones.length === 0 &&
+  bloqueoSnap.exists &&
+  bloqueoSnap.data().usuario_id === actual.usuario_id &&
+  bloqueoSnap.data().realizacion_id === ref.id &&
+  bloqueoSnap.data().tarea_id === actual.tarea_id
+) {
+  tx.update(bloqueoRef, {
+    sesion_id: null,
+    realizacion_id: null,
+    tarea_id: null,
+    actividad_valida_hasta: null,
+    actualizado_en: ahoraTimestamp
   });
 }
+
+// Cerrar siempre la realización vencida y guardar su historial.
+tx.update(ref, {
+  estado: "vencida",
+
+  fecha_cierre:
+    ahoraTimestamp,
+
+  motivo_cierre: motivo,
+
+  tiempo_activo_valido:
+    tiempoActivo,
+
+  tiempo_adicional:
+    tiempoAdicional
+});
+
+tx.set(historialRef, {
+  tarea_id: actual.tarea_id,
+
+  realizacion_id: ref.id,
+
+  usuario_id: actual.usuario_id,
+
+  email: actual.email || null,
+
+  titulo_tarea:
+    actual.titulo_tarea || null,
+
+  descripcion_tarea:
+    actual.descripcion_tarea || null,
+
+  categoria_tarea:
+    actual.categoria_tarea || null,
+
+  link_url_tarea:
+    actual.link_url_tarea || null,
+
+  fecha_inicio:
+    actual.fecha_inicio || null,
+
+  fecha_vencimiento:
+    actual.fecha_vencimiento || null,
+
+  fecha_cierre:
+    ahoraTimestamp,
+
+  motivo_cierre: motivo,
+
+  estado_final: "vencida",
+
+  tiempo_requerido_ms:
+    actual.tiempo_requerido_ms || null,
+
+  tiempo_activo_valido:
+    tiempoActivo,
+
+  tiempo_adicional:
+    tiempoAdicional,
+
+  tiempo_total:
+    tiempoActivo + tiempoAdicional
+});
+
+  }); // Cierra db.runTransaction()
+
+} // Cierra cerrarRealizacionPorCaducidad()
 
 async function obtenerOCrearRealizacion(
   tarea,
@@ -1394,7 +1402,7 @@ async function obtenerEstado(uid, usuario, tarea) {
     sesion:
       sesionPublica(sesion)
   };
-    }
+}
 
 async function manejarInicio(
   uid,
@@ -1517,7 +1525,7 @@ async function manejarInicio(
           ? bloqueoSnap.data()
           : null;
 
-      if (sesionesVigentes.length === 1) {
+       if (sesionesVigentes.length === 1) {
         const existente =
           sesionesVigentes[0];
 
@@ -1540,7 +1548,7 @@ async function manejarInicio(
           );
         }
 
-         if (bloqueo) {
+        if (bloqueo) {
           if (
             bloqueo.usuario_id !== uid ||
             bloqueo.sesion_id !== existente.ref.id ||
@@ -1555,30 +1563,19 @@ async function manejarInicio(
           tx.set(bloqueoRef, {
             usuario_id: uid,
             tarea_id: existente.tarea_id,
-            realizacion_id:
-              existente.realizacion_id,
+            realizacion_id: existente.realizacion_id,
             sesion_id: existente.ref.id,
             actividad_valida_hasta:
               existente.actividad_valida_hasta,
             actualizado_en: ahoraTimestamp
           });
-            }
-          ...(bloqueo || {}),
-          usuario_id: uid,
-          tarea_id: existente.tarea_id,
-          realizacion_id:
-            existente.realizacion_id,
-          sesion_id: existente.ref.id,
-          actividad_valida_hasta:
-            existente.actividad_valida_hasta,
-          actualizado_en: ahoraTimestamp
-        });
+        }
 
         return {
           realizacion: realizacionActual,
           sesion: existente
         };
-      }
+           }
 
       // Las sesiones vencidas deben cerrarse previamente
       // mediante obtenerSesionActivaUsuario(), que guarda
