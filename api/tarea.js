@@ -424,12 +424,15 @@ async function cerrarRealizacionPorCaducidad(
     const vencimientoMs =
       timestampMs(actual.fecha_vencimiento);
 
-    if (
-      !vencimientoMs ||
-      vencimientoMs > ahoraTimestamp.toMillis()
-    ) {
-      return;
-    }
+    if (!Number.isFinite(vencimientoMs)) {
+  throw new Error("FECHA_VENCIMIENTO_INVALIDA");
+}
+
+if (
+  vencimientoMs > ahoraTimestamp.toMillis()
+) {
+  return;
+}
     
     const sesionesQuery = db
       .collection("sesiones_tareas")
@@ -649,10 +652,11 @@ async function obtenerOCrearRealizacion(
         realizacion.fecha_vencimiento
       );
 
-    if (
-      vencimientoMs &&
-      vencimientoMs <= ahoraMs()
-    ) {
+    if (!Number.isFinite(vencimientoMs)) {
+      throw new Error("FECHA_VENCIMIENTO_INVALIDA");
+    }
+
+    if (vencimientoMs <= ahoraMs()) {
       await cerrarRealizacionPorCaducidad(
         realizacion.ref,
         "vencimiento_7_dias"
@@ -745,13 +749,13 @@ async function obtenerOCrearRealizacion(
       const vencimientoMs =
         timestampMs(datos.fecha_vencimiento);
 
-      if (
-        vencimientoMs &&
-        vencimientoMs <= ahoraMs()
-      ) {
-        throw new Error("REALIZACION_VENCIDA");
-      }
+      if (!Number.isFinite(vencimientoMs)) {
+  throw new Error("FECHA_VENCIMIENTO_INVALIDA");
+}
 
+if (vencimientoMs <= ahoraMs()) {
+  throw new Error("REALIZACION_VENCIDA");
+}
       resultado = {
         ...datos,
         ref: doc.ref
