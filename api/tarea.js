@@ -321,6 +321,34 @@ function obtenerBloqueoUsuarioRef(uid) {
     .doc(uid);
 }
 
+function bloqueoCoincideConSesion(
+  bloqueo,
+  sesion
+) {
+  return Boolean(
+    bloqueo &&
+    sesion &&
+    bloqueo.usuario_id === sesion.usuario_id &&
+    bloqueo.sesion_id === sesion.ref.id &&
+    bloqueo.realizacion_id === sesion.realizacion_id &&
+    bloqueo.tarea_id === sesion.tarea_id
+  );
+}
+
+function liberarBloqueoSesion(
+  tx,
+  bloqueoRef,
+  ahoraTimestamp
+) {
+  tx.update(bloqueoRef, {
+    sesion_id: null,
+    realizacion_id: null,
+    tarea_id: null,
+    actividad_valida_hasta: null,
+    actualizado_en: ahoraTimestamp
+  });
+}
+
 function obtenerBloqueoRealizacionRef(
   uid,
   tareaId
@@ -931,6 +959,7 @@ async function obtenerSesionActivaUsuario(uid) {
 
 function calcularTiempoHastaAhora(
   sesion,
+  realizacion,
   ahoraActualMs = ahoraMs()
 ) {
   if (!sesion || sesion.activa !== true) {
@@ -947,23 +976,33 @@ function calcularTiempoHastaAhora(
       sesion.actividad_valida_hasta
     );
 
-  if (!ultimoPunto || !actividadHasta) {
-    return 0;
+  const vencimientoMs =
+    timestampMs(
+      realizacion?.fecha_vencimiento
+    );
+
+  if (
+    !Number.isFinite(ultimoPunto) ||
+    !Number.isFinite(actividadHasta) ||
+    !Number.isFinite(vencimientoMs)
+  ) {
+    throw new Error(
+      "FECHA_VENCIMIENTO_INVALIDA"
+    );
   }
 
-  const limite =
-    Math.min(
-      ahoraActualMs,
-      actividadHasta
-    );
+  const limite = Math.min(
+    ahoraActualMs,
+    actividadHasta,
+    vencimientoMs
+  );
 
   if (limite <= ultimoPunto) {
     return 0;
   }
 
   return limite - ultimoPunto;
-}
-
+ }
 
 function calcularNuevoTiempo(
   sesion,
@@ -1376,10 +1415,17 @@ async function obtenerEstado(uid, usuario, tarea) {
         realizacion.fecha_vencimiento
       );
 
-    if (
-      vencimientoMs &&
-      vencimientoMs <= ahoraMs()
-    ) {
+    if (!Number.isFinite(vencimientoMs)) {
+  throw new Error(
+    "FECHA_VENCIMIENTO_INVALIDA"
+  );
+}
+
+if (vencimientoMs <= ahoraMs()) {
+  throw new Error(
+    "REALIZACION_VENCIDA"
+  );
+}{
       await cerrarRealizacionPorCaducidad(
         realizacion.ref,
         "vencimiento_7_dias"
@@ -1425,10 +1471,17 @@ async function manejarInicio(
         realizacion.fecha_vencimiento
       );
 
-    if (
-      vencimientoMs &&
-      vencimientoMs <= ahoraMs()
-    ) {
+  if (!Number.isFinite(vencimientoMs)) {
+  throw new Error(
+    "FECHA_VENCIMIENTO_INVALIDA"
+  );
+}
+
+if (vencimientoMs <= ahoraMs()) {
+  throw new Error(
+    "REALIZACION_VENCIDA"
+  );
+} {
       await cerrarRealizacionPorCaducidad(
         realizacion.ref,
         "vencimiento_7_dias"
@@ -1822,10 +1875,17 @@ async function manejarActividad(
         realizacionActual.fecha_vencimiento
       );
 
-    if (
-      vencimientoMs &&
-      vencimientoMs <= ahoraActualMs
-    ) {
+    if (!Number.isFinite(vencimientoMs)) {
+  throw new Error(
+    "FECHA_VENCIMIENTO_INVALIDA"
+  );
+}
+
+if (vencimientoMs <= ahoraMs()) {
+  throw new Error(
+    "REALIZACION_VENCIDA"
+  );
+}{
       throw new Error(
         "REALIZACION_VENCIDA"
       );
@@ -2018,10 +2078,17 @@ async function manejarHeartbeat(
         realizacionActual.fecha_vencimiento
       );
 
-    if (
-      vencimientoMs &&
-      vencimientoMs <= ahoraActualMs
-    ) {
+    if (!Number.isFinite(vencimientoMs)) {
+  throw new Error(
+    "FECHA_VENCIMIENTO_INVALIDA"
+  );
+}
+
+if (vencimientoMs <= ahoraMs()) {
+  throw new Error(
+    "REALIZACION_VENCIDA"
+  );
+}{
       throw new Error(
         "REALIZACION_VENCIDA"
       );
@@ -2156,10 +2223,17 @@ async function manejarCompletar(
         realizacionActual.fecha_vencimiento
       );
 
-    if (
-      vencimientoMs &&
-      vencimientoMs <= ahoraActualMs
-    ) {
+if (!Number.isFinite(vencimientoMs)) {
+  throw new Error(
+    "FECHA_VENCIMIENTO_INVALIDA"
+  );
+}
+
+if (vencimientoMs <= ahoraMs()) {
+  throw new Error(
+    "REALIZACION_VENCIDA"
+  );
+}{
       throw new Error(
         "REALIZACION_VENCIDA"
       );
@@ -2930,10 +3004,17 @@ module.exports = async function handler(
         realizacion.fecha_vencimiento
       );
 
-    if (
-      vencimientoMs &&
-      vencimientoMs <= ahoraMs()
-    ) {
+    if (!Number.isFinite(vencimientoMs)) {
+  throw new Error(
+    "FECHA_VENCIMIENTO_INVALIDA"
+  );
+}
+
+if (vencimientoMs <= ahoraMs()) {
+  throw new Error(
+    "REALIZACION_VENCIDA"
+  );
+} {
       await cerrarRealizacionPorCaducidad(
         realizacion.ref,
         "vencimiento_7_dias"
