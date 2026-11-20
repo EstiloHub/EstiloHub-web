@@ -136,7 +136,7 @@ function faseCoincide(usuario, tarea) {
   );
 }
 
-  async function verificarToken(req) {
+async function verificarToken(req) {
   const authorization =
     req.headers.authorization || "";
 
@@ -155,14 +155,33 @@ function faseCoincide(usuario, tarea) {
     throw new Error("NO_AUTORIZADO");
   }
 
-  const decodedToken =
-    await auth.verifyIdToken(token);
+  try {
+    const decodedToken =
+      await auth.verifyIdToken(token);
 
-  if (!decodedToken?.uid) {
-    throw new Error("NO_AUTORIZADO");
+    if (!decodedToken?.uid) {
+      throw new Error("NO_AUTORIZADO");
+    }
+
+    return decodedToken;
+  } catch (error) {
+    const erroresTokenInvalidos = new Set([
+      "auth/argument-error",
+      "auth/id-token-expired",
+      "auth/id-token-revoked",
+      "auth/invalid-id-token",
+      "auth/invalid-credential"
+    ]);
+
+    if (
+      erroresTokenInvalidos.has(error?.code) ||
+      error?.message === "NO_AUTORIZADO"
+    ) {
+      throw new Error("NO_AUTORIZADO");
+    }
+
+    throw error;
   }
-
-  return decodedToken;
 }
 
 async function obtenerUsuario(uid) {
@@ -255,14 +274,9 @@ function realizacionPublica(realizacion) {
     Number(realizacion.tiempo_activo_valido);
 
   return {
-    id: realizacion.ref.id,
-    tarea_id: realizacion.tarea_id,
-    usuario_id: realizacion.usuario_id,
     fecha_inicio:
       realizacion.fecha_inicio || null,
-    fecha_vencimiento:
-      realizacion.fecha_vencimiento || null,
-    estado: realizacion.estado || null,
+
     tiempo_activo_valido:
       Number.isFinite(tiempoActivo) &&
       tiempoActivo > 0
@@ -569,14 +583,18 @@ activa: false,
 
   // Liberar solo el bloqueo correspondiente a esta sesión.
   if (
-    bloqueoSnap.exists &&
-    bloqueoSnap.data().usuario_id === actual.usuario_id &&
-    bloqueoSnap.data().sesion_id === sesion.ref.id &&
-    bloqueoSnap.data().realizacion_id === ref.id &&
-    bloqueoSnap.data().tarea_id === actual.tarea_id
-  ) {
-    tx.delete(bloqueoRef);
-  }
+  bloqueoSnap.exists &&
+  bloqueoCoincideConSesion(
+    bloqueoSnap.data(),
+    sesion
+  )
+) {
+  liberarBloqueoSesion(
+    tx,
+    bloqueoRef,
+    ahoraTimestamp
+  );
+    }
 }
 
 // Si no hay sesión, liberar el bloqueo solo si pertenece a esta realización.
@@ -645,6 +663,17 @@ tx.set(historialRef, {
   motivo_cierre: motivo,
 
   estado_final: "vencida",
+
+  tiempo_requerido_minutos:
+  actual.tiempo_requerido_minutos ?? null,
+
+fase_tarea:
+  actual.fase_tarea ?? null,
+
+repetible:
+  typeof actual.repetible === "boolean"
+    ? actual.repetible
+    : null,
 
   tiempo_requerido_ms:
     actual.tiempo_requerido_ms || null,
@@ -1074,6 +1103,7 @@ function calcularNuevoTiempo(
   const pendiente =
     calcularTiempoHastaAhora(
       sesion,
+      realizacion,
       ahoraActualMs
     );
 
@@ -1221,7 +1251,10 @@ async function cerrarSesionPorInactividad(sesion) {
       // Liberar únicamente el bloqueo de esta sesión.
       if (
         bloqueo &&
-        bloqueo.sesion_id === sesion.ref.id
+        bloqueoCoincideConSesion(
+          bloqueo,
+          sesionActual
+      )
       ) {
         tx.update(bloqueoRef, {
           sesion_id: null,
@@ -1268,7 +1301,10 @@ async function cerrarSesionPorInactividad(sesion) {
 
       if (
         bloqueo &&
-        bloqueo.sesion_id === sesion.ref.id
+        bloqueoCoincideConSesion(
+          bloqueo,
+          sesionActual
+      )
       ) {
         tx.update(bloqueoRef, {
           sesion_id: null,
@@ -1327,17 +1363,18 @@ async function cerrarSesionPorInactividad(sesion) {
     // a una sesión posterior.
     if (
       bloqueo &&
-      bloqueo.sesion_id === sesion.ref.id
+      bloqueoCoincideConSesion(
+        bloqueo,
+        sesionActual
+    )
     ) {
-      tx.update(bloqueoRef, {
-        sesion_id: null,
-        realizacion_id: null,
-        tarea_id: null,
-        actividad_valida_hasta: null,
-        actualizado_en: ahoraTimestamp
-      });
-    }
-  });
+liberarBloqueoSesion(
+  tx,
+  bloqueoRef,
+  ahoraTimestamp
+);
+}
+});
 }
 
 async function obtenerSesionActual(realizacionId) {
@@ -1649,6 +1686,26 @@ if (vencimientoMs <= ahoraMs()) {
       if (sesionesObsoletas.length > 0) {
         throw new Error("SESION_NO_ACTIVA");
       }
+
+// No sobrescribir un bloqueo que todavía
+// tenga referencias a una sesión anterior.
+if (bloqueo) {
+  const bloqueoTieneSesion =
+    Boolean(
+      bloqueo.sesion_id ||
+      bloqueo.realizacion_id ||
+      bloqueo.tarea_id
+    );
+
+  if (
+    bloqueo.usuario_id !== uid ||
+    bloqueoTieneSesion
+  ) {
+    throw new Error(
+      "BLOQUEO_SESION_INVALIDO"
+    );
+  }
+}
 
       const requeridoGuardado =
         Number(
@@ -2464,7 +2521,22 @@ if (vencimientoMs <= ahoraMs()) {
           ahoraTimestamp
       });
 
-      tx.delete(bloqueoRef);
+      if (
+  bloqueoCoincideConSesion(
+    bloqueo,
+    sesionActual
+  )
+) {
+  liberarBloqueoSesion(
+    tx,
+    bloqueoRef,
+    ahoraTimestamp
+  );
+} else {
+  throw new Error(
+    "BLOQUEO_SESION_INVALIDO"
+  );
+      }
     }
 
     tx.update(realizacionActual.ref, {
@@ -2520,6 +2592,17 @@ if (vencimientoMs <= ahoraMs()) {
 
       tiempo_requerido_ms:
         requeridoMs,
+
+     tiempo_requerido_minutos:
+       realizacionActual.tiempo_requerido_minutos ?? null,
+
+     fase_tarea:
+      realizacionActual.fase_tarea ?? null,
+
+     repetible:
+      typeof realizacionActual.repetible === "boolean"
+      ? realizacionActual.repetible
+      : null,
 
       tiempo_activo_valido:
         tiempoActivo,
@@ -2663,7 +2746,7 @@ function mensajeError(error) {
 
     USUARIO_INACTIVO: [
       403,
-      "El usuario está inactivo."
+      "No se puede acceder a la plataforma con esta cuenta."
     ],
 
     TAREA_ID_REQUERIDO: [
@@ -2703,7 +2786,7 @@ function mensajeError(error) {
 
     REALIZACIONES_DUPLICADAS: [
       409,
-      "Se detectaron realizaciones duplicadas. Se requiere revisión."
+      "No se pudo procesar la tarea. Intentá nuevamente más tarde."
     ],
 
     TIEMPO_REQUERIDO_INVALIDO: [
@@ -2728,12 +2811,12 @@ function mensajeError(error) {
 
     SESIONES_ACTIVAS_DUPLICADAS: [
       409,
-      "Se detectaron sesiones activas duplicadas. Se requiere revisión."
+      "No se pudo procesar la tarea. Intentá nuevamente más tarde."
     ],
 
     RELACION_SESION_INVALIDA: [
       409,
-      "La sesión no coincide con la realización correspondiente."
+      "No se pudo procesar la tarea. Intentá nuevamente más tarde."
     ],
 
     REALIZACION_NO_ENCONTRADA: [
@@ -3081,10 +3164,28 @@ if (vencimientoMs <= ahoraMs()) {
     const [status, mensaje] =
       mensajeError(error);
 
-    const codigoSeguro =
-      status >= 500
-        ? "ERROR_INTERNO"
-        : error?.message || "ERROR_INTERNO";
+const codigosPublicos = new Set([
+  "NO_AUTORIZADO",
+  "TAREA_ID_INVALIDO",
+  "TAREA_NO_ENCONTRADA",
+  "TAREA_NO_DISPONIBLE",
+  "TAREA_NO_CORRESPONDE",
+  "TAREA_YA_REALIZADA",
+  "REALIZACION_ANTERIOR_NO_COMPLETADA",
+  "OTRA_TAREA_ACTIVA",
+  "SESION_NO_ACTIVA",
+  "SESION_NO_ENCONTRADA",
+  "REALIZACION_NO_ENCONTRADA",
+  "REALIZACION_NO_DISPONIBLE",
+  "REALIZACION_VENCIDA",
+  "TIEMPO_INSUFICIENTE"
+]);
+
+const codigoSeguro =
+  status < 500 &&
+  codigosPublicos.has(error?.message)
+    ? error.message
+    : "ERROR_INTERNO";
 
     return respuesta(res, status, {
       ok: false,
